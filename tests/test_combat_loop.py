@@ -40,6 +40,23 @@ def test_end_turn_applies_the_monsters_fixed_attack_to_the_player():
     assert next_state.player_hp == state.player_hp - state.monster_attack
 
 
+# Per HOL-10: a real fight spans multiple turns, and the original
+# CombatState (HOL-6) only ever set energy once at construction — nothing
+# replenished it between turns. That cap (3 energy/fight = 18 max damage)
+# made the sim unwinnable against anything but the most trivial monster, so
+# `EndTurn` must refresh energy back to its starting amount each turn, the
+# same way Slay the Spire does.
+def test_end_turn_refreshes_player_energy_to_its_starting_amount():
+    state = CombatState(player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
+                        seed=42, hand=["Strike"])
+    spent = apply(apply(state, "PlayCard:Strike"), "SelectTarget:Monster")
+    assert spent.player_energy < state.player_energy
+
+    next_state = apply(spent, "EndTurn")
+
+    assert next_state.player_energy == state.player_energy
+
+
 def test_fresh_state_is_not_terminal():
     state = make_state()
 

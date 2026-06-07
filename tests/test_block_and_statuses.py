@@ -71,6 +71,54 @@ def test_playing_bash_against_the_monster_leaves_it_vulnerable():
 VULNERABLE_STRIKE_DAMAGE = 9
 
 
+# Per the Slay the Spire wiki, base (un-upgraded) Iron Wave deals 5 damage and
+# grants 5 block — a single targeted card whose effect pipeline both deals
+# damage (which needs the SelectTarget protocol) and grants block (which
+# doesn't), proving the pipeline composes ops of different shapes in one card.
+IRON_WAVE_DAMAGE = 5
+IRON_WAVE_BLOCK = 5
+
+
+def test_playing_iron_wave_deals_damage_and_grants_block_from_a_single_card():
+    state = make_state(hand=["Iron Wave"])
+    awaiting_target = apply(state, "PlayCard:Iron Wave")
+
+    resolved = apply(awaiting_target, "SelectTarget:Monster")
+
+    assert resolved.monster_hp == state.monster_hp - IRON_WAVE_DAMAGE
+    assert resolved.player_block == state.player_block + IRON_WAVE_BLOCK
+
+
+# Per the Slay the Spire wiki, base (un-upgraded) Inflame grants 2 Strength
+# (a permanent, stacking buff — unlike Vulnerable it never expires on its
+# own), and Strength adds its stack count to each attack's damage output.
+INFLAME_STRENGTH = 2
+STRIKE_DAMAGE_WITH_INFLAME = 6 + INFLAME_STRENGTH
+
+
+def test_playing_inflame_grants_the_player_strength_without_asking_for_a_target():
+    state = make_state(hand=["Inflame"])
+
+    resolved = apply(state, "PlayCard:Inflame")
+
+    assert "Strength" in resolved.player_statuses
+    assert resolved.pending is None
+
+
+def test_strength_increases_the_damage_dealt_by_a_subsequent_strike():
+    # Strength must amplify damage through the event-bus modifier pipeline
+    # reacting to the player's own Strength stacks — not a hardcoded
+    # `if has_strength` branch in the damage calculation, mirroring how
+    # Vulnerable amplifies damage taken from the target side.
+    state = make_state(hand=["Inflame", "Strike"])
+    strengthened = apply(state, "PlayCard:Inflame")
+
+    awaiting_target = apply(strengthened, "PlayCard:Strike")
+    resolved = apply(awaiting_target, "SelectTarget:Monster")
+
+    assert resolved.monster_hp == strengthened.monster_hp - STRIKE_DAMAGE_WITH_INFLAME
+
+
 def test_a_vulnerable_monster_takes_amplified_damage_from_a_subsequent_strike():
     # Bash (8 dmg, applies Vulnerable) then Strike — the amplification must
     # come from the event-bus modifier pipeline reacting to Vulnerable, not a
