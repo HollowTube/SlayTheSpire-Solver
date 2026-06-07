@@ -19,17 +19,21 @@ impl PendingDecision {
 /// A status that can be attached to a combatant. Each status declares which
 /// event-bus events it listens to and what modifier it contributes (see
 /// `Status::modifier_for`) — the generic damage pipeline applies whatever
-/// modifiers are currently registered without knowing what `Vulnerable` (or
-/// any future status, e.g. Strength) actually is.
+/// modifiers are currently registered without knowing what `Vulnerable` or
+/// `Strength` actually is.
 #[derive(Clone, PartialEq)]
 enum Status {
     Vulnerable,
+    // Carries its stack count — unlike Vulnerable (a binary on/off debuff),
+    // Strength's contribution scales with how many stacks are held.
+    Strength(i32),
 }
 
 impl Status {
     fn as_str(&self) -> &'static str {
         match self {
             Status::Vulnerable => "Vulnerable",
+            Status::Strength(_) => "Strength",
         }
     }
 }
@@ -48,6 +52,7 @@ enum EventType {
 #[derive(Clone, PartialEq)]
 enum Modifier {
     MultiplyDamage(f64),
+    AddDamage(i32),
 }
 
 impl Status {
@@ -58,27 +63,47 @@ impl Status {
             // Per the Slay the Spire wiki, Vulnerable increases damage taken
             // from attacks by 50%, rounded down.
             (Status::Vulnerable, EventType::OnDamageDealt) => Some(Modifier::MultiplyDamage(1.5)),
+            // Per the Slay the Spire wiki, each stack of Strength adds its
+            // count directly to attack damage dealt.
+            (Status::Strength(amount), EventType::OnDamageDealt) => {
+                Some(Modifier::AddDamage(*amount))
+            }
         }
     }
 }
 
-/// Runs `base` through every modifier that `statuses` (the *target's*
-/// statuses) register for `OnDamageDealt`, folding them generically.
-//
-// This data-only path covers a second *multiplicative, target-side* status
-// (e.g. Weak: reuse `Modifier::MultiplyDamage` and add a `modifier_for` entry
-// — no change here). It does NOT yet cover Strength: that's *additive* (needs
-// a new `Modifier::AddDamage` arm in this fold) and *attacker-side* (this fn
-// only ever sees the target's statuses — there's no `player_statuses` field
-// or attacker-side call site). Both are deferred until such a status exists.
-fn apply_damage_modifiers(base: i32, statuses: &[Status], event: EventType) -> i32 {
-    let modified = statuses
+/// Runs `base` through every modifier that `attacker_statuses` and
+/// `target_statuses` register for `event`, folding them generically in two
+/// passes — flat (`AddDamage`) contributions first, then multiplicative
+/// (`MultiplyDamage`) ones — matching the wiki's documented damage order
+/// (e.g. Strength applies before Vulnerable). Each pass ignores modifier
+/// kinds it doesn't handle, so a new status that contributes either kind from
+/// either side needs no change here, only a `modifier_for` entry.
+fn apply_damage_modifiers(
+    base: i32,
+    attacker_statuses: &[Status],
+    target_statuses: &[Status],
+    event: EventType,
+) -> i32 {
+    let modifiers: Vec<Modifier> = attacker_statuses
         .iter()
+        .chain(target_statuses.iter())
         .filter_map(|status| status.modifier_for(event))
-        .fold(base as f64, |amount, modifier| match modifier {
+        .collect();
+
+    let additive = modifiers.iter().fold(base, |amount, modifier| match modifier {
+        Modifier::AddDamage(delta) => amount + delta,
+        Modifier::MultiplyDamage(_) => amount,
+    });
+
+    let multiplied = modifiers
+        .iter()
+        .fold(additive as f64, |amount, modifier| match modifier {
             Modifier::MultiplyDamage(factor) => amount * factor,
+            Modifier::AddDamage(_) => amount,
         });
-    modified.floor() as i32
+
+    multiplied.floor() as i32
 }
 
 /// A single step in a card's declarative effect pipeline. A generic engine
@@ -88,7 +113,12 @@ fn apply_damage_modifiers(base: i32, statuses: &[Status], event: EventType) -> i
 enum EffectOp {
     DealDamage(i32),
     GainBlock(i32),
-    ApplyStatus(Status),
+    // Applies to whichever combatant the card resolved a target against
+    // (e.g. Bash's Vulnerable lands on the monster it struck).
+    ApplyStatusToTarget(Status),
+    // Applies to the player directly, regardless of targeting — for
+    // self-buffs like Inflame's Strength, which never go through SelectTarget.
+    ApplyStatusToSelf(Status),
 }
 
 /// A card's energy cost and declarative effect pipeline (run once any
@@ -121,8 +151,18 @@ fn card_data(name: &str) -> Option<CardData> {
             targeted: true,
             effects: vec![
                 EffectOp::DealDamage(8),
-                EffectOp::ApplyStatus(Status::Vulnerable),
+                EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
+        }),
+        "Iron Wave" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            effects: vec![EffectOp::DealDamage(5), EffectOp::GainBlock(5)],
+        }),
+        "Inflame" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))],
         }),
         _ => None,
     }
@@ -132,12 +172,17 @@ fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp]) {
     for op in ops {
         match op {
             EffectOp::DealDamage(amount) => {
-                let modified =
-                    apply_damage_modifiers(*amount, &state.monster_statuses, EventType::OnDamageDealt);
+                let modified = apply_damage_modifiers(
+                    *amount,
+                    &state.player_statuses,
+                    &state.monster_statuses,
+                    EventType::OnDamageDealt,
+                );
                 state.monster_hp -= modified;
             }
             EffectOp::GainBlock(amount) => state.player_block += amount,
-            EffectOp::ApplyStatus(status) => state.monster_statuses.push(status.clone()),
+            EffectOp::ApplyStatusToTarget(status) => state.monster_statuses.push(status.clone()),
+            EffectOp::ApplyStatusToSelf(status) => state.player_statuses.push(status.clone()),
         }
     }
 }
@@ -156,8 +201,17 @@ pub struct CombatState {
     player_max_hp: i32,
     #[pyo3(get)]
     player_energy: i32,
+    // What `EndTurn` refreshes `player_energy` back up to each turn — Slay
+    // the Spire characters draw a fixed energy amount every turn rather than
+    // carrying it over. Defaults to the starting `player_energy` (a fresh
+    // combat begins at full); the override exists for the same reason as
+    // `player_max_hp`/`monster_max_hp` — relics/potions that raise max energy
+    // mid-run are a real mechanic, and tests may want to start mid-turn with
+    // partially-spent energy without that looking like the per-turn maximum.
+    player_max_energy: i32,
     #[pyo3(get)]
     player_block: i32,
+    player_statuses: Vec<Status>,
     #[pyo3(get)]
     monster_hp: i32,
     // Always equal to the encounter's starting `monster_hp` in real play
@@ -179,7 +233,7 @@ pub struct CombatState {
 #[pymethods]
 impl CombatState {
     #[new]
-    #[pyo3(signature = (player_hp, player_energy, monster_hp, monster_attack, seed, hand=Vec::new(), player_max_hp=None, monster_max_hp=None))]
+    #[pyo3(signature = (player_hp, player_energy, monster_hp, monster_attack, seed, hand=Vec::new(), player_max_hp=None, monster_max_hp=None, player_max_energy=None))]
     fn new(
         player_hp: i32,
         player_energy: i32,
@@ -189,12 +243,15 @@ impl CombatState {
         hand: Vec<String>,
         player_max_hp: Option<i32>,
         monster_max_hp: Option<i32>,
+        player_max_energy: Option<i32>,
     ) -> Self {
         CombatState {
             player_hp,
             player_max_hp: player_max_hp.unwrap_or(player_hp),
             player_energy,
+            player_max_energy: player_max_energy.unwrap_or(player_energy),
             player_block: 0,
+            player_statuses: Vec::new(),
             monster_hp,
             monster_max_hp: monster_max_hp.unwrap_or(monster_hp),
             monster_attack,
@@ -216,6 +273,11 @@ impl CombatState {
         self.monster_statuses.iter().map(|s| s.as_str().to_string()).collect()
     }
 
+    #[getter]
+    fn player_statuses(&self) -> Vec<String> {
+        self.player_statuses.iter().map(|s| s.as_str().to_string()).collect()
+    }
+
     fn __copy__(&self) -> Self {
         self.clone()
     }
@@ -233,6 +295,14 @@ fn legal_actions(state: &CombatState) -> Vec<String> {
             let mut actions: Vec<String> = state
                 .hand
                 .iter()
+                // Mirrors Slay the Spire greying out cards you can't afford —
+                // unaffordable cards are never legal plays, so the engine
+                // never has to model (or reject) going into negative energy.
+                .filter(|name| {
+                    card_data(name)
+                        .map(|data| data.cost <= state.player_energy)
+                        .unwrap_or(false)
+                })
                 .map(|name| format!("PlayCard:{name}"))
                 .collect();
             actions.push("EndTurn".to_string());
@@ -251,6 +321,9 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             next.player_hp -= next.monster_attack - absorbed;
             // Block does not carry over between turns.
             next.player_block = 0;
+            // Energy refreshes to its per-turn maximum each turn — it does
+            // not carry over either.
+            next.player_energy = next.player_max_energy;
             Ok(next)
         }
         "SelectTarget:Monster" => match &state.pending {
@@ -273,6 +346,12 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     .iter()
                     .position(|c| c == card_name)
                     .ok_or_else(|| PyValueError::new_err(format!("{card_name} is not in hand")))?;
+                if data.cost > next.player_energy {
+                    return Err(PyValueError::new_err(format!(
+                        "cannot afford {card_name}: costs {} but only {} energy available",
+                        data.cost, next.player_energy
+                    )));
+                }
                 next.hand.remove(position);
                 next.player_energy -= data.cost;
                 if data.targeted {

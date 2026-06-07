@@ -1,3 +1,4 @@
+import pytest
 import copy
 
 from sts_sim import CombatState, apply, legal_actions
@@ -85,3 +86,22 @@ def test_legal_actions_never_offers_play_card_or_end_turn_mid_target_selection()
 
     assert "PlayCard:Strike" not in actions
     assert "EndTurn" not in actions
+
+
+def test_legal_actions_does_not_offer_cards_the_player_cannot_afford():
+    # Bash costs 2 energy; with only 1 energy available it shouldn't be
+    # offered as a play, mirroring how Slay the Spire greys out cards you
+    # can't afford rather than letting you go into negative energy.
+    state = CombatState(player_hp=80, player_energy=1, monster_hp=44, monster_attack=6,
+                        seed=42, hand=["Bash"])
+
+    assert "PlayCard:Bash" not in legal_actions(state)
+    assert legal_actions(state) == ["EndTurn"]
+
+
+def test_playing_a_card_the_player_cannot_afford_is_rejected():
+    state = CombatState(player_hp=80, player_energy=1, monster_hp=44, monster_attack=6,
+                        seed=42, hand=["Bash"])
+
+    with pytest.raises(ValueError):
+        apply(state, "PlayCard:Bash")
