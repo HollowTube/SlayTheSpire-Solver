@@ -1,0 +1,25 @@
+# Claude Code local settings
+.claude/
+
+# Rust
+/target/
+**/target/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# maturin / compiled extension modules
+dist/
+build/
+*.so
+*.pyd
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
