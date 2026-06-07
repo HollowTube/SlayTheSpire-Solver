@@ -1,0 +1,17 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "sts-sim"
+version = "0.1.0"
+description = "Slay the Spire combat simulator/solver"
+requires-python = ">=3.10"
+
+[tool.maturin]
+python-source = "python"
+module-name = "sts_sim._sts_sim"
+features = ["pyo3/extension-module"]
+
+[tool.uv]
+package = false
