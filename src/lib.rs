@@ -147,12 +147,24 @@ fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp]) {
 pub struct CombatState {
     #[pyo3(get)]
     player_hp: i32,
+    // The HP fraction `evaluate`/`reward` shape against — what an STS run
+    // actually optimizes for, since (unlike monster HP) player HP carries
+    // between fights. Defaults to the starting `player_hp` (combat begins at
+    // full); an explicit override exists so states that begin already short
+    // of full HP — the common case once multi-fight runs exist — can be
+    // constructed. No PyO3 getter: nothing outside the shaping formula reads it.
+    player_max_hp: i32,
     #[pyo3(get)]
     player_energy: i32,
     #[pyo3(get)]
     player_block: i32,
     #[pyo3(get)]
     monster_hp: i32,
+    // Always equal to the encounter's starting `monster_hp` in real play
+    // (monsters spawn at full HP each fight, no carry-over) — the override
+    // exists only so tests can construct an already-terminal state directly
+    // without making max==current==0 collapse the fraction to NaN.
+    monster_max_hp: i32,
     #[pyo3(get)]
     monster_attack: i32,
     monster_statuses: Vec<Status>,
@@ -167,7 +179,7 @@ pub struct CombatState {
 #[pymethods]
 impl CombatState {
     #[new]
-    #[pyo3(signature = (player_hp, player_energy, monster_hp, monster_attack, seed, hand=Vec::new()))]
+    #[pyo3(signature = (player_hp, player_energy, monster_hp, monster_attack, seed, hand=Vec::new(), player_max_hp=None, monster_max_hp=None))]
     fn new(
         player_hp: i32,
         player_energy: i32,
@@ -175,12 +187,16 @@ impl CombatState {
         monster_attack: i32,
         seed: u64,
         hand: Vec<String>,
+        player_max_hp: Option<i32>,
+        monster_max_hp: Option<i32>,
     ) -> Self {
         CombatState {
             player_hp,
+            player_max_hp: player_max_hp.unwrap_or(player_hp),
             player_energy,
             player_block: 0,
             monster_hp,
+            monster_max_hp: monster_max_hp.unwrap_or(monster_hp),
             monster_attack,
             monster_statuses: Vec::new(),
             turn: 0,
@@ -278,11 +294,24 @@ fn is_terminal(state: &CombatState) -> bool {
     state.player_hp <= 0 || state.monster_hp <= 0
 }
 
-/// Heuristic value of a state from the player's perspective: the HP margin.
-/// Positive favours the player, negative favours the monster.
+/// Heuristic value of a state from the player's perspective: each side's
+/// remaining HP as a fraction of its max (clamped at zero — overkill damage
+/// doesn't make a win "more lost"), player's fraction minus monster's.
+///
+/// This is deliberately the terminal `reward` formula generalized to every
+/// state, not just terminal ones (`evaluate` must be "computable from any
+/// reachable state" per HOL-9's AC, since MCTS needs to score states
+/// mid-search). The two coincide exactly at the boundary: in a win the
+/// monster's clamped fraction is 0, leaving `+player_fraction`; in a loss the
+/// player's clamped fraction is 0, leaving `-monster_fraction` — i.e.
+/// `(win ? +1 : -1) * hp_fraction` of the side that's still standing, which is
+/// what an actual STS run optimizes for (player HP carries between fights) and
+/// what an eventual RL value head learns to predict.
 #[pyfunction]
 fn evaluate(state: &CombatState) -> f64 {
-    (state.player_hp - state.monster_hp) as f64
+    let player_fraction = state.player_hp.max(0) as f64 / state.player_max_hp as f64;
+    let monster_fraction = state.monster_hp.max(0) as f64 / state.monster_max_hp as f64;
+    player_fraction - monster_fraction
 }
 
 /// Terminal reward signal: zero while combat is ongoing, otherwise the HP
