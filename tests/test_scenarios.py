@@ -1,4 +1,5 @@
 import random
+from collections import Counter
 
 from sts_sim import apply, is_terminal, legal_actions, reward
 from sts_sim.scenarios import (
@@ -13,7 +14,11 @@ def test_the_canonical_scenario_loads_with_the_documented_starting_loadout():
     state = ironclad_starter_deck_vs_jaw_worm(seed=42)
 
     assert state.player_hp == PLAYER_STARTING_HP
-    assert sorted(state.hand) == sorted(IRONCLAD_STARTING_DECK)
+    # Per HOL-13: combat starts with the deck shuffled into the draw pile and
+    # a real opening hand dealt from it — not the whole deck dumped into hand.
+    assert len(state.hand) == 5
+    assert sorted(state.hand + state.draw_pile) == sorted(IRONCLAD_STARTING_DECK)
+    assert state.discard_pile == []
     assert state.monster_name == "Jaw Worm"
     assert state.monster_hp == JAW_WORM_STARTING_HP
     # Per the Slay the Spire wiki, Jaw Worm always opens combat with Chomp.
@@ -35,10 +40,19 @@ def test_the_canonical_scenario_is_playable_through_the_existing_interface():
 def test_a_full_playthrough_plays_every_starting_card_in_some_sequence():
     # Per HOL-10's AC: "A full playthrough of the starter deck (all 10
     # starting cards playable in some sequence) completes without errors."
-    # Greedily play the cheapest-affordable card each turn (so energy is
-    # never wasted), targeting the monster whenever asked, and end the turn
-    # once nothing more is affordable — proving the whole 10-card deck runs
-    # through apply/legal_actions without error and without going terminal.
+    # Per HOL-13, the deck now cycles through hand -> discard -> (reshuffled)
+    # draw pile across many turns rather than sitting in hand all at once —
+    # so "every starting card played" becomes "every named card played at
+    # least as many times as it appears in the deck" (HOL-13's AC: "playing a
+    # card moves it to discard_pile rather than vanishing", so a card that
+    # cycles back can legitimately be played again before the deck is
+    # "exhausted" in this sense).
+    #
+    # Greedily play the cheapest-affordable card each turn (so energy is never
+    # wasted), targeting the monster whenever asked, and end the turn once
+    # nothing more is affordable — proving the whole engine (draw/discard/
+    # reshuffle/play/target) runs without error and without going terminal
+    # before the full deck has cycled through at least once.
     #
     # Unlike the placeholder monster HOL-10 was written against, Jaw Worm's
     # AI-driven block/Strength make the exact final HP an emergent property
@@ -47,24 +61,25 @@ def test_a_full_playthrough_plays_every_starting_card_in_some_sequence():
     # fight still ongoing), leaving "did the random fight end" to the
     # dedicated terminal-state tests below.
     state = ironclad_starter_deck_vs_jaw_worm(seed=42)
+    deck_counts = Counter(IRONCLAD_STARTING_DECK)
 
-    played = []
-    while state.hand:
+    played_counts = Counter()
+    while not played_counts >= deck_counts:
         playable = [a for a in legal_actions(state) if a.startswith("PlayCard:")]
         if not playable:
             state = apply(state, "EndTurn")
             assert not is_terminal(state)
             continue
         action = playable[0]
-        played.append(action)
+        played_counts[action.removeprefix("PlayCard:")] += 1
         state = apply(state, action)
         if state.pending == "SelectTarget":
             state = apply(state, "SelectTarget:Monster")
 
-    assert sorted(played) == sorted(f"PlayCard:{name}" for name in IRONCLAD_STARTING_DECK)
     # Pinned to seed=42, where the greedy line doesn't end the fight early —
     # in principle an unlucky seed could roll enough Jaw Worm damage to kill
-    # the player before all 10 cards are played, but 42 is known-safe here.
+    # the player before the whole deck has cycled through, but 42 is
+    # known-safe here.
     assert not is_terminal(state)
 
 
@@ -83,10 +98,12 @@ def test_complete_random_fights_against_the_jaw_worm_reach_correctly_shaped_term
     # nonetheless must terminate correctly either way), and check that
     # `is_terminal`/`reward` agree on which side actually won.
     #
-    # seed=0 happens to end in the player's death and seed=19 in the Jaw
-    # Worm's — sampled to guarantee this exercises *both* terminal outcomes
-    # rather than asserting only the (much more common) loss.
-    for seed in (0, 1, 2, 3, 19):
+    # Per HOL-13, drawing a real 5-card hand each turn (rather than holding
+    # the whole deck from turn one) makes wins far more common under random
+    # play — re-sampled so seed=11 ends in the player's death and the rest in
+    # the Jaw Worm's, guaranteeing this exercises *both* terminal outcomes
+    # rather than asserting only one.
+    for seed in (0, 1, 2, 3, 11):
         state = ironclad_starter_deck_vs_jaw_worm(seed=seed)
 
         final = play_randomly_to_terminal(state, seed=seed)
@@ -106,7 +123,7 @@ def test_random_play_can_both_win_and_lose_against_the_jaw_worm():
     # 44 HP Jaw Worm is genuinely beatable by the 38-raw-damage starter hand
     # when Bash's Vulnerable lands before the Strikes that benefit from it.
     outcomes = set()
-    for seed in (0, 1, 2, 3, 19):
+    for seed in (0, 1, 2, 3, 11):
         state = ironclad_starter_deck_vs_jaw_worm(seed=seed)
         final = play_randomly_to_terminal(state, seed=seed)
         outcomes.add(final.monster_hp <= 0)

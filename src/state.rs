@@ -1,8 +1,34 @@
 use crate::engine::{Actor, Status};
 use crate::monsters::opening_intent;
 use pyo3::prelude::*;
+use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use rand_pcg::Pcg32;
+
+/// Per the Slay the Spire wiki, the Ironclad opens combat with — and redraws
+/// up to — a 5-card hand each turn. Hard-coded for now since the Ironclad is
+/// the only character M1 models; a per-character value once others exist.
+pub(crate) const HAND_SIZE: usize = 5;
+
+/// Draws up to `count` cards from `state.draw_pile` into `state.hand`,
+/// reshuffling `state.discard_pile` back into the draw pile (via the embedded
+/// PRNG, so this stays replayable) whenever the draw pile runs dry mid-draw —
+/// mirroring documented Slay the Spire behavior exactly. Stops early if both
+/// piles are exhausted, since there's nothing left to draw.
+pub(crate) fn draw_cards(state: &mut CombatState, count: usize) {
+    for _ in 0..count {
+        if state.draw_pile.is_empty() {
+            if state.discard_pile.is_empty() {
+                return;
+            }
+            state.draw_pile.append(&mut state.discard_pile);
+            state.draw_pile.shuffle(&mut state.rng);
+        }
+        if let Some(card) = state.draw_pile.pop() {
+            state.hand.push(card);
+        }
+    }
+}
 
 #[derive(Clone, PartialEq)]
 pub(crate) enum PendingDecision {
@@ -79,6 +105,10 @@ pub struct CombatState {
     pub(crate) turn: u32,
     #[pyo3(get)]
     pub(crate) hand: Vec<String>,
+    #[pyo3(get)]
+    pub(crate) draw_pile: Vec<String>,
+    #[pyo3(get)]
+    pub(crate) discard_pile: Vec<String>,
     pub(crate) pending: Option<PendingDecision>,
     pub(crate) rng: Pcg32,
 }
@@ -86,7 +116,7 @@ pub struct CombatState {
 #[pymethods]
 impl CombatState {
     #[new]
-    #[pyo3(signature = (player_hp, player_energy, monster_hp, monster_attack, seed, hand=Vec::new(), player_max_hp=None, monster_max_hp=None, player_max_energy=None, monster_name=None))]
+    #[pyo3(signature = (player_hp, player_energy, monster_hp, monster_attack, seed, hand=Vec::new(), deck=None, player_max_hp=None, monster_max_hp=None, player_max_energy=None, monster_name=None))]
     fn new(
         player_hp: i32,
         player_energy: i32,
@@ -94,13 +124,26 @@ impl CombatState {
         monster_attack: i32,
         seed: u64,
         hand: Vec<String>,
+        deck: Option<Vec<String>>,
         player_max_hp: Option<i32>,
         monster_max_hp: Option<i32>,
         player_max_energy: Option<i32>,
         monster_name: Option<String>,
     ) -> Self {
         let monster_intent = monster_name.as_deref().and_then(opening_intent);
-        CombatState {
+        let mut rng = Pcg32::seed_from_u64(seed);
+        // A `deck` shuffles into the draw pile and deals an opening hand —
+        // the real-play path. Plain `hand` (no `deck`) is test scaffolding:
+        // it sets up a scripted hand directly, with empty piles, exactly as
+        // before this card-pile model existed.
+        let (hand, draw_pile, deal_opening_hand) = match deck {
+            Some(mut deck) => {
+                deck.shuffle(&mut rng);
+                (Vec::new(), deck, true)
+            }
+            None => (hand, Vec::new(), false),
+        };
+        let mut state = CombatState {
             player: Fighter {
                 hp: player_hp,
                 max_hp: player_max_hp.unwrap_or(player_hp),
@@ -122,9 +165,15 @@ impl CombatState {
             monster_move_streak: 0,
             turn: 0,
             hand,
+            draw_pile,
+            discard_pile: Vec::new(),
             pending: None,
-            rng: Pcg32::seed_from_u64(seed),
+            rng,
+        };
+        if deal_opening_hand {
+            draw_cards(&mut state, HAND_SIZE);
         }
+        state
     }
 
     // `Fighter`'s fields aren't `#[pyo3(get)]` themselves (the struct isn't a

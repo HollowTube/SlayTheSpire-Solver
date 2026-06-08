@@ -56,6 +56,14 @@ def test_playing_strike_spends_its_energy_cost_and_leaves_the_players_hand():
     assert awaiting_target.hand == []
 
 
+def test_playing_a_card_moves_it_from_hand_to_the_discard_pile_rather_than_vanishing():
+    state = make_state(hand=["Strike"])
+
+    awaiting_target = apply(state, "PlayCard:Strike")
+
+    assert awaiting_target.discard_pile == ["Strike"]
+
+
 # Per the Slay the Spire wiki, base (un-upgraded) Strike deals 6 damage.
 STRIKE_DAMAGE = 6
 

@@ -1,9 +1,9 @@
 from . import CombatState
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
-# 4 Defend, and 1 Bash — 10 cards total. There's no draw/discard model here:
-# the "deck" below is just the opening hand, dealt once — `EndTurn` never
-# draws or reshuffles, so all 10 cards sit in hand from turn one.
+# 4 Defend, and 1 Bash — 10 cards total. `CombatState`'s `deck` constructor
+# param shuffles this into the draw pile and deals a real opening hand from
+# it (see HOL-13), rather than dumping the whole deck into `hand` at once.
 IRONCLAD_STARTING_DECK = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
 
 # Per the Slay the Spire wiki, Burning Blood heals 6 HP at the *end* of
@@ -34,6 +34,6 @@ def ironclad_starter_deck_vs_jaw_worm(seed):
         # requires a value, so this is just a placeholder.
         monster_attack=0,
         seed=seed,
-        hand=list(IRONCLAD_STARTING_DECK),
+        deck=list(IRONCLAD_STARTING_DECK),
         monster_name="Jaw Worm",
     )

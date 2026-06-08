@@ -18,10 +18,70 @@ def make_state():
     )
 
 
+# Per the Slay the Spire wiki, the Ironclad opens combat with a 5-card hand.
+HAND_SIZE = 5
+
+
+def test_constructing_with_a_deck_shuffles_it_into_the_draw_pile_and_deals_an_opening_hand():
+    deck = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
+
+    state = CombatState(player_hp=80, player_energy=3, monster_hp=MONSTER_STARTING_HP,
+                        monster_attack=6, seed=42, deck=list(deck))
+
+    assert len(state.hand) == HAND_SIZE
+    assert len(state.draw_pile) == len(deck) - HAND_SIZE
+    assert sorted(state.hand + state.draw_pile) == sorted(deck)
+    assert state.discard_pile == []
+
+
+def test_fresh_state_exposes_empty_draw_and_discard_piles_by_default():
+    state = make_state()
+
+    assert state.draw_pile == []
+    assert state.discard_pile == []
+
+
 def test_fresh_state_only_legal_action_is_end_turn():
     state = make_state()
 
     assert legal_actions(state) == ["EndTurn"]
+
+
+def test_end_turn_discards_the_remaining_hand_then_draws_a_fresh_one_from_the_draw_pile():
+    # A full 10-card deck leaves enough in the draw pile that the post-end-turn
+    # redraw doesn't need to reshuffle the just-discarded hand back in — so the
+    # discarded cards stay observable in discard_pile, isolating "discard the
+    # old hand" from "redraw a fresh one" (the latter checked by hand size).
+    deck = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
+    state = CombatState(player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
+                        seed=42, deck=list(deck))
+    discarded_hand = list(state.hand)
+
+    next_state = apply(state, "EndTurn")
+
+    assert sorted(next_state.discard_pile) == sorted(discarded_hand)
+    assert len(next_state.hand) == HAND_SIZE
+    assert sorted(next_state.hand + next_state.draw_pile + next_state.discard_pile) == sorted(deck)
+
+
+def test_drawing_reshuffles_the_discard_pile_into_the_draw_pile_once_it_empties():
+    # A 10-card deck deals a 5-card opening hand, leaving exactly 5 in the
+    # draw pile — just enough for one more full draw, and no more: ending the
+    # first turn drains the draw pile to empty, so ending the second turn must
+    # reshuffle the (by-then 10-card) discard pile back in mid-draw to deal a
+    # fresh hand. This must happen without error, and every card must remain
+    # present across the piles (nothing vanishes or duplicates).
+    deck = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
+    state = CombatState(player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
+                        seed=42, deck=list(deck))
+
+    state = apply(state, "EndTurn")
+    assert state.draw_pile == []
+
+    state = apply(state, "EndTurn")
+
+    assert len(state.hand) == HAND_SIZE
+    assert sorted(state.hand + state.draw_pile + state.discard_pile) == sorted(deck)
 
 
 def test_end_turn_advances_the_turn_counter():
@@ -159,6 +219,25 @@ def test_apply_is_pure_replaying_the_same_actions_from_a_clone_yields_identical_
     clone = copy.deepcopy(state)
 
     assert play_out(state, 5) == play_out(clone, 5)
+
+
+def test_apply_is_pure_with_draw_and_reshuffle_in_play():
+    # Mirrors the test above, but over a real deck — driving enough turns to
+    # force at least one reshuffle (per the dedicated reshuffle test) — so the
+    # embedded-PRNG-driven shuffle/draw/reshuffle stays exactly as replayable
+    # as every other random event the engine models.
+    deck = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
+    state = CombatState(player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
+                        seed=42, deck=list(deck))
+    clone = copy.deepcopy(state)
+
+    replayed = play_out(state, 4)
+    replayed_clone = play_out(clone, 4)
+
+    assert replayed == replayed_clone
+    assert replayed.hand == replayed_clone.hand
+    assert replayed.draw_pile == replayed_clone.draw_pile
+    assert replayed.discard_pile == replayed_clone.discard_pile
 
 
 def test_apply_does_not_mutate_its_input():
