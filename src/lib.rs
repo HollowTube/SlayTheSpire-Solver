@@ -1,6 +1,6 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use rand::SeedableRng;
+use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
 
 #[derive(Clone, PartialEq)]
@@ -46,6 +46,18 @@ enum EventType {
     OnDamageDealt,
 }
 
+/// Which side of a damage exchange a status is sitting on — lets a status
+/// declare it only contributes when it's the one *dealing* damage (Strength)
+/// or only when it's the one *taking* it (Vulnerable). Without this, a status
+/// that happens to exist on both combatants (e.g. the monster gaining
+/// Strength via Bellow) would double-dip: amplifying its own attacks AND
+/// (wrongly) the damage it takes from the player.
+#[derive(Clone, Copy, PartialEq)]
+enum Side {
+    Attacker,
+    Target,
+}
+
 /// A contribution to a calculation pipeline from a listener. The pipeline
 /// (e.g. `apply_damage_modifiers`) folds these generically, so a new status
 /// that multiplies or adds to damage needs no change to the pipeline itself.
@@ -56,18 +68,26 @@ enum Modifier {
 }
 
 impl Status {
-    /// What this status contributes when `event` fires, if anything — the
-    /// "listener registration" half of the event-bus skeleton.
-    fn modifier_for(&self, event: EventType) -> Option<Modifier> {
-        match (self, event) {
+    /// What this status contributes when `event` fires while sitting on
+    /// `side`, if anything — the "listener registration" half of the
+    /// event-bus skeleton. Declaring the side here (not just the status type)
+    /// is what lets the same `Strength` show up on either combatant and only
+    /// ever amplify *that combatant's own* outgoing damage.
+    fn modifier_for(&self, side: Side, event: EventType) -> Option<Modifier> {
+        match (self, side, event) {
             // Per the Slay the Spire wiki, Vulnerable increases damage taken
-            // from attacks by 50%, rounded down.
-            (Status::Vulnerable, EventType::OnDamageDealt) => Some(Modifier::MultiplyDamage(1.5)),
+            // from attacks by 50%, rounded down — it amplifies what its
+            // holder *receives*, so it only contributes from the target side.
+            (Status::Vulnerable, Side::Target, EventType::OnDamageDealt) => {
+                Some(Modifier::MultiplyDamage(1.5))
+            }
             // Per the Slay the Spire wiki, each stack of Strength adds its
-            // count directly to attack damage dealt.
-            (Status::Strength(amount), EventType::OnDamageDealt) => {
+            // count directly to attack damage *dealt* — it only contributes
+            // from the attacker side, regardless of which combatant holds it.
+            (Status::Strength(amount), Side::Attacker, EventType::OnDamageDealt) => {
                 Some(Modifier::AddDamage(*amount))
             }
+            _ => None,
         }
     }
 }
@@ -87,8 +107,12 @@ fn apply_damage_modifiers(
 ) -> i32 {
     let modifiers: Vec<Modifier> = attacker_statuses
         .iter()
-        .chain(target_statuses.iter())
-        .filter_map(|status| status.modifier_for(event))
+        .filter_map(|status| status.modifier_for(Side::Attacker, event))
+        .chain(
+            target_statuses
+                .iter()
+                .filter_map(|status| status.modifier_for(Side::Target, event)),
+        )
         .collect();
 
     let additive = modifiers.iter().fold(base, |amount, modifier| match modifier {
@@ -104,6 +128,16 @@ fn apply_damage_modifiers(
         });
 
     multiplied.floor() as i32
+}
+
+/// Which combatant an effect pipeline is acting on behalf of — lets the same
+/// `EffectOp` vocabulary and `run_effect_ops` engine drive both the player's
+/// cards and the monster's moves, with "self"/"target" resolved generically
+/// to the right side rather than hardcoded to the player.
+#[derive(Clone, Copy, PartialEq)]
+enum Actor {
+    Player,
+    Monster,
 }
 
 /// A single step in a card's declarative effect pipeline. A generic engine
@@ -168,21 +202,114 @@ fn card_data(name: &str) -> Option<CardData> {
     }
 }
 
-fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp]) {
+/// The move a monster telegraphs before it has acted at all — Slay the
+/// Spire's documented monster patterns each name a fixed opening move (e.g.
+/// Jaw Worm always opens with Chomp) before any RNG-driven selection kicks in.
+fn opening_intent(monster_name: &str) -> Option<String> {
+    match monster_name {
+        "Jaw Worm" => Some("Chomp".to_string()),
+        _ => None,
+    }
+}
+
+/// A monster move's declarative effect pipeline — interpreted by the same
+/// generic `run_effect_ops` engine as cards (with `Actor::Monster`), so that
+/// adding an ordinary monster move means adding data here, not new logic.
+fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<EffectOp>> {
+    match (monster_name, move_name) {
+        // Per the Slay the Spire wiki, Jaw Worm's move pool:
+        ("Jaw Worm", "Chomp") => Some(vec![EffectOp::DealDamage(11)]),
+        ("Jaw Worm", "Thrash") => Some(vec![EffectOp::DealDamage(7), EffectOp::GainBlock(5)]),
+        ("Jaw Worm", "Bellow") => Some(vec![
+            EffectOp::ApplyStatusToSelf(Status::Strength(3)),
+            EffectOp::GainBlock(6),
+        ]),
+        _ => None,
+    }
+}
+
+/// How many times a move may occur back-to-back before the AI is forced to
+/// pick something else — per the wiki, Jaw Worm can't repeat Chomp or Bellow
+/// at all, but may Thrash up to twice in a row (i.e. not a 3rd time).
+fn max_streak(monster_name: &str, move_name: &str) -> u32 {
+    match (monster_name, move_name) {
+        ("Jaw Worm", "Thrash") => 2,
+        ("Jaw Worm", _) => 1,
+        _ => u32::MAX,
+    }
+}
+
+/// Rolls the monster's next telegraphed move from its documented weighted
+/// pattern, re-rolling whenever the result would extend a same-move streak
+/// past its limit — e.g. Jaw Worm picks Bellow 45% / Thrash 30% / Chomp 25%
+/// of the time, but never repeats Bellow/Chomp and never Thrashes a 3rd
+/// consecutive time. `last_move`/`streak` describe the run of moves leading
+/// up to (and including) the one that just resolved.
+fn select_next_intent(
+    monster_name: &str,
+    last_move: &Option<String>,
+    streak: u32,
+    rng: &mut Pcg32,
+) -> Option<String> {
+    match monster_name {
+        "Jaw Worm" => loop {
+            let roll = rng.gen_range(0..100);
+            let candidate = if roll < 45 {
+                "Bellow"
+            } else if roll < 75 {
+                "Thrash"
+            } else {
+                "Chomp"
+            };
+            let resulting_streak = if last_move.as_deref() == Some(candidate) {
+                streak + 1
+            } else {
+                1
+            };
+            if resulting_streak <= max_streak(monster_name, candidate) {
+                return Some(candidate.to_string());
+            }
+        },
+        _ => None,
+    }
+}
+
+/// Deals damage from `actor` to the opposing combatant, running it through
+/// that combatant's damage-modifier pipeline first and its block second —
+/// the same absorb-then-spill arithmetic regardless of which side is hitting
+/// which (mirrors Slay the Spire: block reduces incoming damage from anyone).
+fn deal_damage(state: &mut CombatState, actor: Actor, amount: i32) {
+    let (attacker_statuses, target_statuses) = match actor {
+        Actor::Player => (&state.player_statuses, &state.monster_statuses),
+        Actor::Monster => (&state.monster_statuses, &state.player_statuses),
+    };
+    let modified = apply_damage_modifiers(amount, attacker_statuses, target_statuses, EventType::OnDamageDealt);
+
+    let (target_hp, target_block) = match actor {
+        Actor::Player => (&mut state.monster_hp, &mut state.monster_block),
+        Actor::Monster => (&mut state.player_hp, &mut state.player_block),
+    };
+    let absorbed = modified.min(*target_block);
+    *target_block -= absorbed;
+    *target_hp -= modified - absorbed;
+}
+
+fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor) {
     for op in ops {
         match op {
-            EffectOp::DealDamage(amount) => {
-                let modified = apply_damage_modifiers(
-                    *amount,
-                    &state.player_statuses,
-                    &state.monster_statuses,
-                    EventType::OnDamageDealt,
-                );
-                state.monster_hp -= modified;
-            }
-            EffectOp::GainBlock(amount) => state.player_block += amount,
-            EffectOp::ApplyStatusToTarget(status) => state.monster_statuses.push(status.clone()),
-            EffectOp::ApplyStatusToSelf(status) => state.player_statuses.push(status.clone()),
+            EffectOp::DealDamage(amount) => deal_damage(state, actor, *amount),
+            EffectOp::GainBlock(amount) => match actor {
+                Actor::Player => state.player_block += amount,
+                Actor::Monster => state.monster_block += amount,
+            },
+            EffectOp::ApplyStatusToTarget(status) => match actor {
+                Actor::Player => state.monster_statuses.push(status.clone()),
+                Actor::Monster => state.player_statuses.push(status.clone()),
+            },
+            EffectOp::ApplyStatusToSelf(status) => match actor {
+                Actor::Player => state.player_statuses.push(status.clone()),
+                Actor::Monster => state.monster_statuses.push(status.clone()),
+            },
         }
     }
 }
@@ -221,7 +348,29 @@ pub struct CombatState {
     monster_max_hp: i32,
     #[pyo3(get)]
     monster_attack: i32,
+    // Mirrors `player_block`: absorbs incoming damage before HP, reset at the
+    // start of the monster's own turn (e.g. Jaw Worm's Thrash/Bellow grant it
+    // block that lasts through the player's turn). Always 0 for monsters with
+    // no move pool — nothing in the trivial flat-attacker model grants it.
+    #[pyo3(get)]
+    monster_block: i32,
     monster_statuses: Vec<Status>,
+    // The monster's species — looked up against move-pool data to drive
+    // intent-based AI (e.g. "Jaw Worm"). `None` (the default) keeps the
+    // original trivial fixed-`monster_attack` behavior used by the
+    // placeholder monster and every pre-HOL-11 test.
+    #[pyo3(get)]
+    monster_name: Option<String>,
+    // The move the monster has telegraphed for its next turn (e.g. "Chomp")
+    // — mirrors how Slay the Spire shows enemy intent before the player acts.
+    // `None` for monsters with no move pool (the trivial flat-attacker).
+    monster_intent: Option<String>,
+    // The name of the most recently *executed* move, and how many turns in a
+    // row it's now run — the minimal state `select_next_intent` needs to
+    // enforce "cannot repeat X" / "cannot use Y N times in a row" constraints
+    // without replaying full move history.
+    monster_last_move: Option<String>,
+    monster_move_streak: u32,
     #[pyo3(get)]
     turn: u32,
     #[pyo3(get)]
@@ -233,7 +382,7 @@ pub struct CombatState {
 #[pymethods]
 impl CombatState {
     #[new]
-    #[pyo3(signature = (player_hp, player_energy, monster_hp, monster_attack, seed, hand=Vec::new(), player_max_hp=None, monster_max_hp=None, player_max_energy=None))]
+    #[pyo3(signature = (player_hp, player_energy, monster_hp, monster_attack, seed, hand=Vec::new(), player_max_hp=None, monster_max_hp=None, player_max_energy=None, monster_name=None))]
     fn new(
         player_hp: i32,
         player_energy: i32,
@@ -244,7 +393,9 @@ impl CombatState {
         player_max_hp: Option<i32>,
         monster_max_hp: Option<i32>,
         player_max_energy: Option<i32>,
+        monster_name: Option<String>,
     ) -> Self {
+        let monster_intent = monster_name.as_deref().and_then(opening_intent);
         CombatState {
             player_hp,
             player_max_hp: player_max_hp.unwrap_or(player_hp),
@@ -255,7 +406,12 @@ impl CombatState {
             monster_hp,
             monster_max_hp: monster_max_hp.unwrap_or(monster_hp),
             monster_attack,
+            monster_block: 0,
             monster_statuses: Vec::new(),
+            monster_name,
+            monster_intent,
+            monster_last_move: None,
+            monster_move_streak: 0,
             turn: 0,
             hand,
             pending: None,
@@ -266,6 +422,11 @@ impl CombatState {
     #[getter]
     fn pending(&self) -> Option<String> {
         self.pending.as_ref().map(|p| p.as_str().to_string())
+    }
+
+    #[getter]
+    fn monster_intent(&self) -> Option<String> {
+        self.monster_intent.clone()
     }
 
     #[getter]
@@ -317,8 +478,40 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
         "EndTurn" => {
             let mut next = state.clone();
             next.turn += 1;
-            let absorbed = next.monster_attack.min(next.player_block);
-            next.player_hp -= next.monster_attack - absorbed;
+
+            match next.monster_name.clone() {
+                // Intent-driven monsters (e.g. Jaw Worm): their own turn
+                // starts here — block resets, then the telegraphed move
+                // resolves through the same generic effect-pipeline engine
+                // cards use (with the monster as the actor).
+                Some(name) => {
+                    next.monster_block = 0;
+                    if let Some(intent) = next.monster_intent.clone() {
+                        if let Some(effects) = monster_move(&name, &intent) {
+                            run_effect_ops(&mut next, &effects, Actor::Monster);
+                        }
+                        next.monster_move_streak = if next.monster_last_move.as_deref() == Some(intent.as_str()) {
+                            next.monster_move_streak + 1
+                        } else {
+                            1
+                        };
+                        next.monster_last_move = Some(intent.clone());
+                        next.monster_intent = select_next_intent(
+                            &name,
+                            &next.monster_last_move,
+                            next.monster_move_streak,
+                            &mut next.rng,
+                        );
+                    }
+                }
+                // The trivial flat-attacker (placeholder monster, every
+                // pre-HOL-11 test): always swings for `monster_attack`.
+                None => {
+                    let absorbed = next.monster_attack.min(next.player_block);
+                    next.player_hp -= next.monster_attack - absorbed;
+                }
+            }
+
             // Block does not carry over between turns.
             next.player_block = 0;
             // Energy refreshes to its per-turn maximum each turn — it does
@@ -330,7 +523,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             Some(PendingDecision::SelectTarget { card }) => {
                 let mut next = state.clone();
                 let data = card_data(card).expect("pending card is always known");
-                run_effect_ops(&mut next, &data.effects);
+                run_effect_ops(&mut next, &data.effects, Actor::Player);
                 next.pending = None;
                 Ok(next)
             }
@@ -359,7 +552,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                         card: card_name.to_string(),
                     });
                 } else {
-                    run_effect_ops(&mut next, &data.effects);
+                    run_effect_ops(&mut next, &data.effects, Actor::Player);
                 }
                 Ok(next)
             }
