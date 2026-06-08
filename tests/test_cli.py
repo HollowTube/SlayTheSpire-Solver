@@ -1,6 +1,7 @@
 from sts_sim import is_terminal, legal_actions, reward
 from sts_sim.cli import (
     format_action,
+    intent_description,
     prompt_for_choice,
     render_state,
     run_interactive,
@@ -231,3 +232,23 @@ def test_two_turn_trace_verifies_every_mechanical_interaction_step_by_step():
     assert len(after_turn_2.hand) == 5
     assert after_turn_2.monster_intent == "Bellow"
     assert "Vulnerable" in after_turn_2.monster_statuses
+
+
+def test_intent_description_returns_human_readable_move_effects():
+    assert intent_description("Jaw Worm", "Chomp") == "11 damage"
+    assert intent_description("Jaw Worm", "Thrash") == "7 damage, gain 5 block"
+    assert intent_description("Jaw Worm", "Bellow") == "gain 3 Strength, gain 6 block"
+    # Unknown intent falls back gracefully rather than crashing
+    assert intent_description("Jaw Worm", "???") == "???"
+    assert intent_description("Unknown Monster", "Bite") == "Bite"
+
+
+def test_render_state_includes_intent_description():
+    state = ironclad_starter_deck_vs_jaw_worm(seed=42)
+
+    text = render_state(state)
+
+    # Jaw Worm always opens with Chomp — its description must appear so the
+    # player knows how much damage they're about to take without needing to
+    # look it up.
+    assert "11 damage" in text
