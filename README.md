@@ -6,29 +6,30 @@ A Slay the Spire combat simulator and solver — a Rust engine exposed as a Pyth
 
 - Rust toolchain (`rustup` — any recent stable)
 - Python 3.10+
-- [uv](https://github.com/astral-sh/uv) (used for the virtual environment and package management)
-- [maturin](https://maturin.rs) (installed automatically via the venv)
+- [uv](https://github.com/astral-sh/uv) (for the virtual environment and package management)
 
 ## Build & install
 
 ```bash
-# Create and activate the virtual environment
+# 1. Create and activate the virtual environment
 uv venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
-# Install Python dependencies (click, maturin, pytest, ...)
-uv pip install -e ".[dev]"         # or: uv pip install click maturin pytest
-
-# Compile the Rust extension and install it into the venv
-maturin develop
+# 2. Build the Rust extension and install everything (including the sts-sim CLI entry point)
+uv pip install -e .
 ```
 
-After `maturin develop` the `sts_sim` package is importable from the active venv.
+> **The venv must be active for every command below.** If you open a new terminal, run `source .venv/bin/activate` again before using `sts-sim`, `python -m sts_sim.cli`, or `pytest`.
+
+To rebuild after changing Rust code:
+
+```bash
+maturin develop      # faster than a full re-install
+```
 
 ## Run the tests
 
 ```bash
-source .venv/bin/activate
 pytest tests/
 ```
 
@@ -37,8 +38,11 @@ pytest tests/
 Launch a human-playable REPL against the canonical scenario (Ironclad starter deck vs. Jaw Worm):
 
 ```bash
-python -m sts_sim.cli               # default seed 42
-python -m sts_sim.cli --seed 7      # reproducible fight with a different seed
+sts-sim                 # default seed 42
+sts-sim --seed 7        # reproducible fight with a different seed
+
+# or equivalently:
+python -m sts_sim.cli --seed 7
 ```
 
 Each turn the CLI renders the full game state and presents a numbered menu of legal actions. Type the number and press Enter:
@@ -72,12 +76,12 @@ Reward: 0.81 (evaluate: 0.81)
 A non-blocking, single-shot subcommand for automated play. Each invocation replays a given action history from a seed, applies one new action, and prints the resulting state, the new legal-actions menu, and an `updated_history` — then exits immediately.
 
 ```bash
-# First move: End Turn
-python -m sts_sim.cli step --seed 42 --history "" --action "EndTurn"
+# First move
+sts-sim step --seed 42 --history "" --action "EndTurn"
 
 # Chain: pass updated_history straight back as the next --history
-python -m sts_sim.cli step --seed 42 --history "EndTurn" --action "PlayCard:Strike"
-python -m sts_sim.cli step --seed 42 --history "EndTurn,PlayCard:Strike" --action "SelectTarget:Monster"
+sts-sim step --seed 42 --history "EndTurn" --action "PlayCard:Strike"
+sts-sim step --seed 42 --history "EndTurn,PlayCard:Strike" --action "SelectTarget:Monster"
 ```
 
 Example output:
