@@ -8,7 +8,7 @@ use engine::{run_effect_ops, Actor};
 use monsters::{monster_move, select_next_intent};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use state::{CombatState, PendingDecision};
+use state::{draw_cards, CombatState, PendingDecision, HAND_SIZE};
 
 #[pyfunction]
 fn legal_actions(state: &CombatState) -> Vec<String> {
@@ -40,6 +40,10 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
         "EndTurn" => {
             let mut next = state.clone();
             next.turn += 1;
+
+            // The remaining hand is discarded before the monster's turn
+            // resolves — mirrors Slay the Spire's end-of-turn cleanup.
+            next.discard_pile.append(&mut next.hand);
 
             match next.monster_name.clone() {
                 // Intent-driven monsters (e.g. Jaw Worm): their own turn
@@ -79,6 +83,9 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             // Energy refreshes to its per-turn maximum each turn — it does
             // not carry over either.
             next.player_energy = next.player_max_energy;
+            // Draw the next turn's opening hand (reshuffling the discard
+            // pile back in if the draw pile runs dry mid-draw).
+            draw_cards(&mut next, HAND_SIZE);
             Ok(next)
         }
         "SelectTarget:Monster" => match &state.pending {
@@ -107,7 +114,8 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                         data.cost, next.player_energy
                     )));
                 }
-                next.hand.remove(position);
+                let played = next.hand.remove(position);
+                next.discard_pile.push(played);
                 next.player_energy -= data.cost;
                 if data.targeted {
                     next.pending = Some(PendingDecision::SelectTarget {
