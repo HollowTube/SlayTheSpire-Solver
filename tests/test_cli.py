@@ -148,3 +148,86 @@ def test_agent_step_mode_can_play_a_complete_fight_via_pure_history_replay():
 
     assert is_terminal(state)
     assert reward(state) != 0
+
+
+def test_two_turn_trace_verifies_every_mechanical_interaction_step_by_step():
+    # A deterministic trace of the opening two turns (seed=42) that pins
+    # exact HP/block/energy/statuses at each decision point — proving the
+    # render surface exposed by the CLI faithfully reflects real engine
+    # mechanics and not stale or placeholder values.
+    #
+    # Verified by hand via `sts_sim cli step` (see PR description):
+    #   Turn 0: hand = Strike/Strike/Defend/Bash/Defend (5 cards), JW intent = Chomp
+    #     Strike vs JW:   6 dmg → JW 44→38 HP, energy 3→2
+    #     Defend:         5 block, energy 2→1
+    #     EndTurn:        JW Chomp (11 dmg), 5 block absorbs 5 → player 80→74 HP
+    #                     Player block resets. Energy refreshes to 3. 5 new cards drawn.
+    #   Turn 1: JW intent = Thrash. Fresh hand: Bash/Defend/Strike/Strike/Defend
+    #     Bash vs JW:     8 dmg → JW 38→30 HP, +Vulnerable ×2, energy 3→1
+    #     Strike vs JW:   Vulnerable ×50% → 9 dmg → JW 30→21 HP, energy 1→0
+    #     EndTurn:        JW Thrash (7 dmg + 5 block). Player 74→67 HP. JW block = 5.
+    #                     Intent rotates to Bellow. Energy refreshes to 3. 5 new cards.
+    from sts_sim import apply
+    from sts_sim.cli import run_step
+
+    seed = 42
+    history = []
+
+    def step(action):
+        nonlocal history
+        result = run_step(seed=seed, history=history, action=action)
+        history = result.updated_history
+        return result.state
+
+    # --- Turn 0 setup ---
+    initial = ironclad_starter_deck_vs_jaw_worm(seed=seed)
+    assert initial.turn == 0
+    assert initial.player_hp == 80
+    assert initial.player_energy == 3
+    assert initial.monster_hp == 44
+    assert initial.monster_intent == "Chomp"
+    assert len(initial.hand) == 5
+    assert "Strike" in initial.hand
+
+    # --- Strike deals 6 damage ---
+    step("PlayCard:Strike")
+    after_strike = step("SelectTarget:Monster")
+    assert after_strike.monster_hp == 38
+    assert after_strike.player_energy == 2
+
+    # --- Defend gives 5 block ---
+    after_defend = step("PlayCard:Defend")
+    assert after_defend.player_block == 5
+    assert after_defend.player_energy == 1
+
+    # --- EndTurn: Chomp (11) hits 5 block → 6 net HP lost; energy/draw reset ---
+    after_turn_1 = step("EndTurn")
+    assert after_turn_1.turn == 1
+    assert after_turn_1.player_hp == 74          # 80 - (11 - 5 block)
+    assert after_turn_1.player_block == 0        # block resets
+    assert after_turn_1.player_energy == 3       # energy refreshes
+    assert len(after_turn_1.hand) == 5           # full hand drawn
+    assert after_turn_1.monster_intent == "Thrash"
+
+    # --- Bash: 8 damage + Vulnerable ---
+    step("PlayCard:Bash")
+    after_bash = step("SelectTarget:Monster")
+    assert after_bash.monster_hp == 30           # 38 - 8
+    assert after_bash.player_energy == 1         # 3 - 2 (Bash costs 2)
+    assert "Vulnerable" in after_bash.monster_statuses
+
+    # --- Strike vs Vulnerable: 6 × 1.5 = 9 damage ---
+    step("PlayCard:Strike")
+    after_vuln_strike = step("SelectTarget:Monster")
+    assert after_vuln_strike.monster_hp == 21    # 30 - 9
+    assert after_vuln_strike.player_energy == 0  # 1 - 1
+
+    # --- EndTurn: Thrash (7 dmg to player, 5 block to JW) ---
+    after_turn_2 = step("EndTurn")
+    assert after_turn_2.turn == 2
+    assert after_turn_2.player_hp == 67          # 74 - 7
+    assert after_turn_2.monster_block == 5       # Thrash grants JW 5 block
+    assert after_turn_2.player_energy == 3
+    assert len(after_turn_2.hand) == 5
+    assert after_turn_2.monster_intent == "Bellow"
+    assert "Vulnerable" in after_turn_2.monster_statuses
