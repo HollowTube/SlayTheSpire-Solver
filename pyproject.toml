@@ -7,6 +7,10 @@ name = "sts-sim"
 version = "0.1.0"
 description = "Slay the Spire combat simulator/solver"
 requires-python = ">=3.10"
+dependencies = ["click"]
+
+[project.scripts]
+sts-sim = "sts_sim.cli:main"
 
 [tool.maturin]
 python-source = "python"
