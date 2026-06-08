@@ -24,6 +24,22 @@ _ACTION_LABELS = {
 }
 
 
+# Per src/monsters.rs: the exact effects of each monster's moves, mirrored
+# here for display only. Keyed by (monster_name, move_name).
+_INTENT_DESCRIPTIONS = {
+    ("Jaw Worm", "Chomp"):  "11 damage",
+    ("Jaw Worm", "Thrash"): "7 damage, gain 5 block",
+    ("Jaw Worm", "Bellow"): "gain 3 Strength, gain 6 block",
+}
+
+
+def intent_description(monster_name, intent):
+    """Return a plain-English description of what `intent` does, e.g.
+    '11 damage' for Jaw Worm's Chomp. Falls back to the intent name itself
+    for any (monster, move) pair not yet in the table."""
+    return _INTENT_DESCRIPTIONS.get((monster_name, intent), intent)
+
+
 def format_action(action):
     """Translate one `legal_actions` string into a human-readable label."""
     if action in _ACTION_LABELS:
@@ -58,7 +74,9 @@ def render_state(state):
         f"  Statuses: {_format_statuses(state.player_statuses)}",
         f"  Hand: {', '.join(state.hand) if state.hand else 'empty'}",
         f"{state.monster_name}: {state.monster_hp} HP | Block: {state.monster_block} | "
-        f"Intent: {state.monster_intent}",
+        f"Intent: {state.monster_intent}"
+        + (f" ({intent_description(state.monster_name, state.monster_intent)})"
+           if state.monster_intent and state.monster_name else ""),
         f"  Statuses: {_format_statuses(state.monster_statuses)}",
     ]
     return "\n".join(lines)
