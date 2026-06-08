@@ -195,7 +195,10 @@ def step(seed, history, action):
     invocation, then exits immediately (per HOL-14 user stories 14-15).
     """
     parsed_history = [a for a in history.split(",") if a]
-    result = run_step(seed=seed, history=parsed_history, action=action)
+    try:
+        result = run_step(seed=seed, history=parsed_history, action=action)
+    except ValueError as exc:
+        raise click.UsageError(str(exc)) from exc
     click.echo(render_step_result(result))
 
 
