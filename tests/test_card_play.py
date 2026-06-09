@@ -142,8 +142,12 @@ def test_exhausted_power_is_not_available_in_subsequent_turns():
     # Even after the discard reshuffles into the draw pile, exhausted cards
     # must not reappear — the exhaust pile is a permanent one-way sink.
     state = CombatState(
-        player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
-        seed=42, deck=["Inflame"],
+        player_hp=80,
+        player_energy=3,
+        monster_hp=44,
+        monster_attack=6,
+        seed=42,
+        deck=["Inflame"],
     )
     # Play Inflame from the opening hand.
     after_inflame = apply(state, "PlayCard:Inflame")
@@ -158,11 +162,16 @@ def test_exhausted_power_is_not_available_in_subsequent_turns():
 
 # ── New cards ─────────────────────────────────────────────────────────────────
 
+
 def test_ascenders_bane_cannot_be_played():
     # Ascender's Bane is a Curse — unplayable filler that clogs the hand.
     state = CombatState(
-        player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
-        seed=42, hand=["Ascender's Bane"],
+        player_hp=80,
+        player_energy=3,
+        monster_hp=44,
+        monster_attack=6,
+        seed=42,
+        hand=["Ascender's Bane"],
     )
     actions = legal_actions(state)
     assert "PlayCard:Ascender's Bane" not in actions
@@ -209,8 +218,12 @@ def test_rage_does_not_grant_block_for_skills():
 def test_pommel_strike_deals_9_damage_and_draws_1_card():
     # Pommel Strike: 1 energy Attack — deal 9 damage, draw 1 card.
     state = CombatState(
-        player_hp=80, player_energy=3, monster_hp=44, monster_attack=0,
-        seed=42, hand=["Pommel Strike", "Defend", "Defend", "Defend", "Defend"],
+        player_hp=80,
+        player_energy=3,
+        monster_hp=44,
+        monster_attack=0,
+        seed=42,
+        hand=["Pommel Strike", "Defend", "Defend", "Defend", "Defend"],
     )
     hand_size_before = len(state.hand)
     awaiting = apply(state, "PlayCard:Pommel Strike")
