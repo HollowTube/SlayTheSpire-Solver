@@ -8,6 +8,7 @@ use engine::{run_effect_ops, Actor};
 use monsters::{monster_move, select_next_intent};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use rand::Rng;
 use state::{draw_cards, CombatState, PendingDecision, HAND_SIZE};
 
 #[pyfunction]
@@ -168,6 +169,22 @@ fn reward(state: &CombatState) -> f64 {
     }
 }
 
+/// Run a complete random playout from `state` (re-seeded with `seed`) and
+/// return the terminal reward. Doing the hot loop in Rust eliminates the
+/// per-step Python/Rust FFI overhead that makes the Python rollout ~3x slower
+/// than raw `apply()` throughput — the tree (UCB1, selection, expansion,
+/// backprop) stays in Python so a future neural policy can plug in there.
+#[pyfunction]
+fn random_rollout(state: &CombatState, seed: u64) -> f64 {
+    let mut s = state.reseeded(seed);
+    while !is_terminal(&s) {
+        let actions = legal_actions(&s);
+        let idx = s.rng.gen_range(0..actions.len());
+        s = apply(&s, &actions[idx]).expect("legal action is always valid");
+    }
+    reward(&s)
+}
+
 #[pymodule]
 fn _sts_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<CombatState>()?;
@@ -176,5 +193,6 @@ fn _sts_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(is_terminal, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(reward, m)?)?;
+    m.add_function(wrap_pyfunction!(random_rollout, m)?)?;
     Ok(())
 }
