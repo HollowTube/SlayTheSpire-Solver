@@ -90,6 +90,12 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Rage)],
         }),
+        "Pommel Strike" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamage(9), EffectOp::DrawCards(1)],
+        }),
         _ => None,
     }
 }

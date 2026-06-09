@@ -1,4 +1,4 @@
-use crate::state::CombatState;
+use crate::state::{draw_cards, CombatState};
 
 /// Game events that statuses can react to via `Status::reactions`. These are
 /// coarser-grained than `EventType` (which drives the damage-modifier pipeline)
@@ -202,6 +202,7 @@ pub(crate) enum EffectOp {
     // Applies to the player directly, regardless of targeting — for
     // self-buffs like Inflame's Strength, which never go through SelectTarget.
     ApplyStatusToSelf(Status),
+    DrawCards(usize),
 }
 
 /// Deals damage from `actor` to the opposing combatant, running it through
@@ -260,6 +261,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
             EffectOp::ApplyStatusToSelf(status) => {
                 state.fighter_mut(actor).statuses.push(status.clone())
             }
+            EffectOp::DrawCards(n) => draw_cards(state, *n),
         }
     }
 }
