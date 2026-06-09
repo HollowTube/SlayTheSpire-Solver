@@ -62,3 +62,38 @@ def test_search_wins_the_fixed_scenario_at_a_reasonable_rate():
             wins += 1
 
     assert wins / runs >= 0.6
+
+
+def test_action_values_returns_a_value_for_every_legal_action():
+    state = ironclad_starter_deck_vs_jaw_worm(seed=42)
+
+    values = mcts.action_values(state, iterations=200, rng=random.Random(42))
+
+    for action in legal_actions(state):
+        assert action in values
+        assert -1.0 <= values[action] <= 1.0
+
+
+def test_action_values_ranks_bash_before_end_turn_from_opening():
+    # Bash (applies Vulnerable then Strike for 9 instead of 6) is the
+    # strongest opening play — MCTS should value it above ending the turn.
+    # seed=0 is used because Bash appears in that opening hand.
+    state = ironclad_starter_deck_vs_jaw_worm(seed=0)
+
+    values = mcts.action_values(state, iterations=200, rng=random.Random(0))
+
+    bash_action = next(a for a in values if "Bash" in a)
+    assert values[bash_action] > values["EndTurn"]
+
+
+def test_action_values_highest_value_action_is_legal():
+    # action_values uses avg reward (total_value/visits) — a quality signal
+    # for display, distinct from search()'s most-visited heuristic. Both are
+    # valid; this test just confirms the best action by value is actually
+    # playable from the current state.
+    state = ironclad_starter_deck_vs_jaw_worm(seed=42)
+
+    values = mcts.action_values(state, iterations=200, rng=random.Random(42))
+    best = max(values, key=values.__getitem__)
+
+    assert best in legal_actions(state)
