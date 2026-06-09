@@ -30,9 +30,9 @@ _INTENT_DESCRIPTIONS = {
     ("Jaw Worm", "Chomp"): "11 damage",
     ("Jaw Worm", "Thrash"): "7 damage, gain 5 block",
     ("Jaw Worm", "Bellow"): "gain 3 Strength, gain 6 block",
-    ("Gremlin Nob", "Bellow"): "gain 3 Strength",
+    ("Gremlin Nob", "Bellow"): "gain Enrage 2",
     ("Gremlin Nob", "Rush"): "14 damage",
-    ("Gremlin Nob", "Skull Bash"): "6 damage, apply Vulnerable",
+    ("Gremlin Nob", "Skull Bash"): "6 damage, apply 2 Vulnerable",
 }
 
 
