@@ -4,7 +4,7 @@ mod monsters;
 mod state;
 
 use cards::{card_data, CardType};
-use engine::{fire_event, run_effect_ops, Actor, GameEvent};
+use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent};
 use monsters::{monster_move, select_next_intent};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -46,6 +46,10 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             // resolves — mirrors Slay the Spire's end-of-turn cleanup.
             next.discard_pile.append(&mut next.hand);
 
+            // Player's debuffs (e.g. Vulnerable) tick down at the end of the
+            // player's turn — before the monster acts.
+            tick_debuffs(&mut next.player.statuses);
+
             match next.monster_name.clone() {
                 // Intent-driven monsters (e.g. Jaw Worm): their own turn
                 // starts here — block resets, then the telegraphed move
@@ -78,6 +82,10 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     next.player.hp -= next.monster_attack - absorbed;
                 }
             }
+
+            // Monster's debuffs (e.g. Vulnerable) tick down at the end of
+            // the monster's turn — after it has acted.
+            tick_debuffs(&mut next.monster.statuses);
 
             // Block does not carry over between turns.
             next.player.block = 0;

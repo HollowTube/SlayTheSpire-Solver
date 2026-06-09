@@ -97,6 +97,26 @@ enum Modifier {
     AddDamage(i32),
 }
 
+/// Whether a status is a binary debuff (any number of stacks = same effect;
+/// stacks extend duration, not strength). Binary debuffs must only contribute
+/// one modifier per side regardless of how many stacks are present.
+fn is_binary_debuff(s: &Status) -> bool {
+    matches!(s, Status::Vulnerable)
+}
+
+/// Collect modifier contributions from `statuses` acting on `side` for
+/// `event`, deduplicating binary debuffs so N stacks still yields one modifier
+/// (e.g. 2 Vulnerable stacks → one `MultiplyDamage(1.5)`, not two).
+fn collect_modifiers(statuses: &[Status], side: Side, event: EventType) -> Vec<Modifier> {
+    let mut seen_binary: std::collections::HashSet<&'static str> =
+        std::collections::HashSet::new();
+    statuses
+        .iter()
+        .filter(|s| !is_binary_debuff(s) || seen_binary.insert(s.as_str()))
+        .filter_map(|s| s.modifier_for(side, event))
+        .collect()
+}
+
 /// Runs `base` through every modifier that `attacker_statuses` and
 /// `target_statuses` register for `event`, folding them generically in two
 /// passes — flat (`AddDamage`) contributions first, then multiplicative
@@ -110,14 +130,9 @@ fn apply_damage_modifiers(
     target_statuses: &[Status],
     event: EventType,
 ) -> i32 {
-    let modifiers: Vec<Modifier> = attacker_statuses
-        .iter()
-        .filter_map(|status| status.modifier_for(Side::Attacker, event))
-        .chain(
-            target_statuses
-                .iter()
-                .filter_map(|status| status.modifier_for(Side::Target, event)),
-        )
+    let modifiers: Vec<Modifier> = collect_modifiers(attacker_statuses, Side::Attacker, event)
+        .into_iter()
+        .chain(collect_modifiers(target_statuses, Side::Target, event))
         .collect();
 
     let additive = modifiers.iter().fold(base, |amount, modifier| match modifier {
@@ -204,6 +219,16 @@ pub(crate) fn fire_event(state: &mut CombatState, event: GameEvent) {
             .flat_map(|s| s.reactions(event))
             .collect();
         run_effect_ops(state, &ops, actor);
+    }
+}
+
+/// Removes one stack of each per-turn debuff (currently only Vulnerable) from
+/// `statuses` — mirrors Slay the Spire's end-of-turn debuff countdown. Called
+/// once per combatant per turn: player debuffs tick when the player ends their
+/// turn, monster debuffs tick after the monster has acted.
+pub(crate) fn tick_debuffs(statuses: &mut Vec<Status>) {
+    if let Some(pos) = statuses.iter().position(|s| matches!(s, Status::Vulnerable)) {
+        statuses.remove(pos);
     }
 }
 

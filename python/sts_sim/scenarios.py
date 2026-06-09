@@ -25,27 +25,35 @@ JAW_WORM_STARTING_HP = 44
 GREMLIN_NOB_STARTING_HP = 85
 
 
-def ironclad_starter_deck_vs_gremlin_nob(seed):
+def ironclad_starter_deck_vs_gremlin_nob(seed, deck=None):
     """Harder canonical scenario: Ironclad's starting loadout against Gremlin
     Nob (Act 1 elite). Nob opens with Bellow (+3 Strength), then alternates
     Rush (14 damage) / Skull Bash (6 damage + permanent Vulnerable) — making
-    deck composition measurably more important than Jaw Worm."""
+    deck composition measurably more important than Jaw Worm.
+
+    Pass `deck` to override the default IRONCLAD_STARTING_DECK (used by
+    benchmarking to test alternative deck configurations).
+    """
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
         monster_hp=GREMLIN_NOB_STARTING_HP,
         monster_attack=0,
         seed=seed,
-        deck=list(IRONCLAD_STARTING_DECK),
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
         monster_name="Gremlin Nob",
     )
 
 
-def ironclad_starter_deck_vs_jaw_worm(seed):
+def ironclad_starter_deck_vs_jaw_worm(seed, deck=None):
     """The fixed canonical M1 scenario (HOL-5/HOL-10/HOL-11) named in the M1
     exit criteria: Ironclad's starting loadout against a single Jaw Worm,
     whose AI-driven move pool (HOL-11) replaces the placeholder monster's
-    flat attack without changing the player's loadout."""
+    flat attack without changing the player's loadout.
+
+    Pass `deck` to override the default IRONCLAD_STARTING_DECK (used by
+    benchmarking to test alternative deck configurations).
+    """
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
@@ -55,6 +63,6 @@ def ironclad_starter_deck_vs_jaw_worm(seed):
         # requires a value, so this is just a placeholder.
         monster_attack=0,
         seed=seed,
-        deck=list(IRONCLAD_STARTING_DECK),
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
         monster_name="Jaw Worm",
     )
