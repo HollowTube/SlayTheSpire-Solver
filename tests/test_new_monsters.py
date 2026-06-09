@@ -1,4 +1,5 @@
 """Behavioural tests for Nibbit and Fuzzy Wurm Crawler."""
+
 from sts_sim import CombatState, apply
 
 
@@ -29,6 +30,7 @@ def _fwc(seed=0, hand=None, deck=None):
 
 
 # ── Nibbit ────────────────────────────────────────────────────────────────────
+
 
 def test_nibbit_opens_with_butt():
     state = _nibbit()
@@ -84,9 +86,9 @@ def test_nibbit_hiss_grants_two_strength():
 def test_nibbit_hiss_strength_amplifies_subsequent_butt():
     # After one Hiss (2 Str), the next Butt deals 12+2=14.
     state = _nibbit()
-    after_butt = apply(state, "EndTurn")       # Butt (12 dmg)
+    after_butt = apply(state, "EndTurn")  # Butt (12 dmg)
     after_hesitant = apply(after_butt, "EndTurn")  # Hesitant Slice
-    after_hiss = apply(after_hesitant, "EndTurn")   # Hiss (+2 Str)
+    after_hiss = apply(after_hesitant, "EndTurn")  # Hiss (+2 Str)
     assert after_hiss.monster_intent == "Butt"
 
     hp_before = after_hiss.player_hp
@@ -95,6 +97,7 @@ def test_nibbit_hiss_strength_amplifies_subsequent_butt():
 
 
 # ── Fuzzy Wurm Crawler ────────────────────────────────────────────────────────
+
 
 def test_fwc_opens_with_acid_goop():
     state = _fwc()
@@ -135,7 +138,7 @@ def test_fwc_inhale_grants_seven_strength():
 def test_fwc_acid_goop_scales_with_accumulated_strength():
     # After one Inhale (7 Str), Acid Goop deals 4+7=11.
     state = _fwc()
-    after_goop = apply(state, "EndTurn")    # Acid Goop (4 dmg)
+    after_goop = apply(state, "EndTurn")  # Acid Goop (4 dmg)
     after_inhale = apply(after_goop, "EndTurn")  # Inhale (+7 Str)
     assert after_inhale.monster_intent == "Acid Goop"
     assert after_inhale.monster_strength == 7
