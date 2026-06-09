@@ -36,8 +36,14 @@ def test_render_state_shows_the_information_a_player_needs_to_decide():
 def test_render_state_shows_status_effects_by_name_and_stack_count():
     from sts_sim import CombatState, apply
 
-    state = CombatState(player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
-                        seed=42, hand=["Bash"])
+    state = CombatState(
+        player_hp=80,
+        player_energy=3,
+        monster_hp=44,
+        monster_attack=6,
+        seed=42,
+        hand=["Bash"],
+    )
     struck = apply(apply(state, "PlayCard:Bash"), "SelectTarget:Monster")
 
     text = render_state(struck)
@@ -47,11 +53,14 @@ def test_render_state_shows_status_effects_by_name_and_stack_count():
     # Vulnerable on the monster, so its name must appear in the render.
     assert "Vulnerable" in text
 
+
 def test_prompt_for_choice_returns_the_action_at_the_chosen_menu_number():
     actions = ["PlayCard:Strike", "EndTurn"]
     inputs = iter(["2"])
 
-    chosen = prompt_for_choice(actions, input_fn=lambda _: next(inputs), output_fn=lambda _: None)
+    chosen = prompt_for_choice(
+        actions, input_fn=lambda _: next(inputs), output_fn=lambda _: None
+    )
 
     assert chosen == "EndTurn"
 
@@ -64,7 +73,9 @@ def test_prompt_for_choice_rejects_invalid_input_and_reprompts():
     inputs = iter(["banana", "0", "99", "1"])
     messages = []
 
-    chosen = prompt_for_choice(actions, input_fn=lambda _: next(inputs), output_fn=messages.append)
+    chosen = prompt_for_choice(
+        actions, input_fn=lambda _: next(inputs), output_fn=messages.append
+    )
 
     assert chosen == "PlayCard:Strike"
     # Three bad inputs ("banana", "0", "99") should each have produced some
@@ -85,7 +96,9 @@ def test_run_interactive_plays_a_full_fight_to_a_coherent_terminal_outcome():
     state = ironclad_starter_deck_vs_jaw_worm(seed=42)
     messages = []
 
-    final_state = run_interactive(state, input_fn=lambda _: "1", output_fn=messages.append)
+    final_state = run_interactive(
+        state, input_fn=lambda _: "1", output_fn=messages.append
+    )
 
     assert is_terminal(final_state)
     r = reward(final_state)
@@ -168,7 +181,6 @@ def test_two_turn_trace_verifies_every_mechanical_interaction_step_by_step():
     #     Strike vs JW:   Vulnerable ×50% → 9 dmg → JW 30→21 HP, energy 1→0
     #     EndTurn:        JW Thrash (7 dmg + 5 block). Player 74→67 HP. JW block = 5.
     #                     Intent rotates to Bellow. Energy refreshes to 3. 5 new cards.
-    from sts_sim import apply
     from sts_sim.cli import run_step
 
     seed = 42
@@ -204,30 +216,30 @@ def test_two_turn_trace_verifies_every_mechanical_interaction_step_by_step():
     # --- EndTurn: Chomp (11) hits 5 block → 6 net HP lost; energy/draw reset ---
     after_turn_1 = step("EndTurn")
     assert after_turn_1.turn == 1
-    assert after_turn_1.player_hp == 74          # 80 - (11 - 5 block)
-    assert after_turn_1.player_block == 0        # block resets
-    assert after_turn_1.player_energy == 3       # energy refreshes
-    assert len(after_turn_1.hand) == 5           # full hand drawn
+    assert after_turn_1.player_hp == 74  # 80 - (11 - 5 block)
+    assert after_turn_1.player_block == 0  # block resets
+    assert after_turn_1.player_energy == 3  # energy refreshes
+    assert len(after_turn_1.hand) == 5  # full hand drawn
     assert after_turn_1.monster_intent == "Thrash"
 
     # --- Bash: 8 damage + Vulnerable ---
     step("PlayCard:Bash")
     after_bash = step("SelectTarget:Monster")
-    assert after_bash.monster_hp == 30           # 38 - 8
-    assert after_bash.player_energy == 1         # 3 - 2 (Bash costs 2)
+    assert after_bash.monster_hp == 30  # 38 - 8
+    assert after_bash.player_energy == 1  # 3 - 2 (Bash costs 2)
     assert "Vulnerable" in after_bash.monster_statuses
 
     # --- Strike vs Vulnerable: 6 × 1.5 = 9 damage ---
     step("PlayCard:Strike")
     after_vuln_strike = step("SelectTarget:Monster")
-    assert after_vuln_strike.monster_hp == 21    # 30 - 9
+    assert after_vuln_strike.monster_hp == 21  # 30 - 9
     assert after_vuln_strike.player_energy == 0  # 1 - 1
 
     # --- EndTurn: Thrash (7 dmg to player, 5 block to JW) ---
     after_turn_2 = step("EndTurn")
     assert after_turn_2.turn == 2
-    assert after_turn_2.player_hp == 67          # 74 - 7
-    assert after_turn_2.monster_block == 5       # Thrash grants JW 5 block
+    assert after_turn_2.player_hp == 67  # 74 - 7
+    assert after_turn_2.monster_block == 5  # Thrash grants JW 5 block
     assert after_turn_2.player_energy == 3
     assert len(after_turn_2.hand) == 5
     assert after_turn_2.monster_intent == "Bellow"
