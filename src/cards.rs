@@ -1,5 +1,12 @@
 use crate::engine::{EffectOp, Status};
 
+#[derive(Clone, PartialEq)]
+pub(crate) enum CardType {
+    Attack,
+    Skill,
+    Power,
+}
+
 /// A card's energy cost and declarative effect pipeline (run once any
 /// `RequestChoice` steps, e.g. `SelectTarget`, have been resolved into a
 /// `PendingDecision`). Adding an ordinary card means adding an entry here,
@@ -10,6 +17,7 @@ use crate::engine::{EffectOp, Status};
 pub(crate) struct CardData {
     pub(crate) cost: i32,
     pub(crate) targeted: bool,
+    pub(crate) card_type: CardType,
     pub(crate) effects: Vec<EffectOp>,
 }
 
@@ -18,16 +26,19 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
         "Strike" => Some(CardData {
             cost: 1,
             targeted: true,
+            card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(6)],
         }),
         "Defend" => Some(CardData {
             cost: 1,
             targeted: false,
+            card_type: CardType::Skill,
             effects: vec![EffectOp::GainBlock(5)],
         }),
         "Bash" => Some(CardData {
             cost: 2,
             targeted: true,
+            card_type: CardType::Skill,
             effects: vec![
                 EffectOp::DealDamage(8),
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
@@ -36,11 +47,13 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
         "Iron Wave" => Some(CardData {
             cost: 1,
             targeted: true,
+            card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(5), EffectOp::GainBlock(5)],
         }),
         "Inflame" => Some(CardData {
             cost: 1,
             targeted: false,
+            card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))],
         }),
         _ => None,

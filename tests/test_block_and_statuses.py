@@ -1,3 +1,4 @@
+import pytest
 from sts_sim import CombatState, apply
 
 
@@ -131,3 +132,63 @@ def test_a_vulnerable_monster_takes_amplified_damage_from_a_subsequent_strike():
     resolved = apply(awaiting_target, "SelectTarget:Monster")
 
     assert resolved.monster_hp == hp_before_strike - VULNERABLE_STRIKE_DAMAGE
+
+
+def _gremlin_nob(seed, hand=None, deck=None):
+    return CombatState(
+        player_hp=80,
+        player_energy=3,
+        monster_hp=85,
+        monster_attack=0,
+        seed=seed,
+        hand=hand or [],
+        deck=deck,
+        monster_name="Gremlin Nob",
+    )
+
+
+def test_gremlin_nob_skull_bash_applies_two_vulnerable_to_the_player():
+    # Per the wiki, Skull Bash applies 2 Vulnerable stacks — find a seed
+    # where Skull Bash fires as the second move (after the mandatory Bellow)
+    # and verify the player accumulates exactly two stacks.
+    for seed in range(200):
+        state = _gremlin_nob(seed)
+        after_bellow = apply(state, "EndTurn")
+        if after_bellow.monster_intent == "Skull Bash":
+            after_skull_bash = apply(after_bellow, "EndTurn")
+            assert after_skull_bash.player_statuses.count("Vulnerable") == 2
+            return
+    pytest.fail("Could not find a seed where Skull Bash fires as the second move")
+
+
+def test_gremlin_nob_bellow_grants_enrage_not_strength():
+    # Per the wiki, Bellow gives Enrage(2) — NOT Strength(3).
+    state = _gremlin_nob(seed=42)
+    after_bellow = apply(state, "EndTurn")
+    assert "Enrage" in after_bellow.monster_statuses
+    assert "Strength" not in after_bellow.monster_statuses
+
+
+def test_playing_a_skill_card_when_monster_has_enrage_gives_monster_strength():
+    # Enrage(2): each time the player plays a Skill, the monster gains 2 Strength.
+    # Path: Bellow fires (Enrage 2 on monster), then player plays Defend (a Skill).
+    # Using deck=["Defend"]*5 ensures Defends cycle back into hand after Bellow.
+    state = _gremlin_nob(seed=42, deck=["Defend"] * 5)
+    after_bellow = apply(state, "EndTurn")
+    assert "Enrage" in after_bellow.monster_statuses
+
+    # Play the first Defend in hand — Enrage should fire.
+    after_defend = apply(after_bellow, "PlayCard:Defend")
+    assert "Strength" in after_defend.monster_statuses
+
+
+def test_playing_an_attack_card_when_monster_has_enrage_does_not_trigger_it():
+    # Only Skill cards trigger Enrage — Attacks must not.
+    state = _gremlin_nob(seed=42, deck=["Strike"] * 5)
+    after_bellow = apply(state, "EndTurn")
+    assert "Enrage" in after_bellow.monster_statuses
+
+    # Strike is an Attack — playing it should NOT add Strength to the monster.
+    awaiting_target = apply(after_bellow, "PlayCard:Strike")
+    after_strike = apply(awaiting_target, "SelectTarget:Monster")
+    assert "Strength" not in after_strike.monster_statuses

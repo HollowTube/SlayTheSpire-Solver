@@ -28,10 +28,13 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
             EffectOp::GainBlock(6),
         ]),
         // Per the Slay the Spire wiki, Gremlin Nob's move pool:
-        ("Gremlin Nob", "Bellow") => Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(3))]),
+        // Bellow grants Enrage(2) — not Strength; Enrage triggers on Skill plays.
+        ("Gremlin Nob", "Bellow") => Some(vec![EffectOp::ApplyStatusToSelf(Status::Enrage(2))]),
         ("Gremlin Nob", "Rush") => Some(vec![EffectOp::DealDamage(14)]),
+        // Skull Bash applies 2 Vulnerable stacks (not 1) per the wiki.
         ("Gremlin Nob", "Skull Bash") => Some(vec![
             EffectOp::DealDamage(6),
+            EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             EffectOp::ApplyStatusToTarget(Status::Vulnerable),
         ]),
         _ => None,

@@ -3,8 +3,8 @@ mod engine;
 mod monsters;
 mod state;
 
-use cards::card_data;
-use engine::{run_effect_ops, Actor};
+use cards::{card_data, CardType};
+use engine::{run_effect_ops, Actor, Status};
 use monsters::{monster_move, select_next_intent};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -32,6 +32,24 @@ fn legal_actions(state: &CombatState) -> Vec<String> {
             actions.push("EndTurn".to_string());
             actions
         }
+    }
+}
+
+/// Fires the Enrage trigger: sum all Enrage stacks on the monster and push
+/// one Strength status equal to the total. Called after any Skill card resolves
+/// (non-targeted Skills immediately; targeted Skills after SelectTarget).
+fn trigger_enrage_if_skill(state: &mut CombatState, card_type: &CardType) {
+    if *card_type != CardType::Skill {
+        return;
+    }
+    let total: i32 = state
+        .monster
+        .statuses
+        .iter()
+        .filter_map(|s| if let Status::Enrage(n) = s { Some(*n) } else { None })
+        .sum();
+    if total > 0 {
+        state.monster.statuses.push(Status::Strength(total));
     }
 }
 
@@ -94,6 +112,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                 let mut next = state.clone();
                 let data = card_data(card).expect("pending card is always known");
                 run_effect_ops(&mut next, &data.effects, Actor::Player);
+                trigger_enrage_if_skill(&mut next, &data.card_type);
                 next.pending = None;
                 Ok(next)
             }
@@ -124,6 +143,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     });
                 } else {
                     run_effect_ops(&mut next, &data.effects, Actor::Player);
+                    trigger_enrage_if_skill(&mut next, &data.card_type);
                 }
                 Ok(next)
             }

@@ -11,6 +11,11 @@ pub(crate) enum Status {
     // Carries its stack count — unlike Vulnerable (a binary on/off debuff),
     // Strength's contribution scales with how many stacks are held.
     Strength(i32),
+    // Per the wiki, Gremlin Nob's Bellow grants Enrage(n): each time the
+    // player plays a Skill card, the monster gains n Strength. Reactive
+    // — contributes nothing to the damage pipeline itself, but triggers
+    // in `apply()` when a Skill resolves (both targeted and untargeted).
+    Enrage(i32),
 }
 
 impl Status {
@@ -18,6 +23,7 @@ impl Status {
         match self {
             Status::Vulnerable => "Vulnerable",
             Status::Strength(_) => "Strength",
+            Status::Enrage(_) => "Enrage",
         }
     }
 
