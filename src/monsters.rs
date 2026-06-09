@@ -8,6 +8,9 @@ use rand_pcg::Pcg32;
 pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
     match monster_name {
         "Jaw Worm" => Some("Chomp".to_string()),
+        // Per the wiki, Gremlin Nob always opens with Bellow — it only
+        // enters the Rush/Skull Bash rotation on turn 2.
+        "Gremlin Nob" => Some("Bellow".to_string()),
         _ => None,
     }
 }
@@ -24,6 +27,13 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
             EffectOp::ApplyStatusToSelf(Status::Strength(3)),
             EffectOp::GainBlock(6),
         ]),
+        // Per the Slay the Spire wiki, Gremlin Nob's move pool:
+        ("Gremlin Nob", "Bellow") => Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(3))]),
+        ("Gremlin Nob", "Rush") => Some(vec![EffectOp::DealDamage(14)]),
+        ("Gremlin Nob", "Skull Bash") => Some(vec![
+            EffectOp::DealDamage(6),
+            EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+        ]),
         _ => None,
     }
 }
@@ -35,6 +45,10 @@ fn max_streak(monster_name: &str, move_name: &str) -> u32 {
     match (monster_name, move_name) {
         ("Jaw Worm", "Thrash") => 2,
         ("Jaw Worm", _) => 1,
+        // Skull Bash applies Vulnerable permanently — repeating it is pointless
+        // and the wiki confirms Nob never uses it twice in a row.
+        ("Gremlin Nob", "Rush") => 2,
+        ("Gremlin Nob", _) => 1,
         _ => u32::MAX,
     }
 }
@@ -61,6 +75,20 @@ pub(crate) fn select_next_intent(
             } else {
                 "Chomp"
             };
+            let resulting_streak = if last_move.as_deref() == Some(candidate) {
+                streak + 1
+            } else {
+                1
+            };
+            if resulting_streak <= max_streak(monster_name, candidate) {
+                return Some(candidate.to_string());
+            }
+        },
+        // Per the wiki, Gremlin Nob's post-opening pattern: 67% Rush, 33%
+        // Skull Bash, never Bellow again, streak limits enforced as above.
+        "Gremlin Nob" => loop {
+            let roll = rng.gen_range(0..100);
+            let candidate = if roll < 67 { "Rush" } else { "Skull Bash" };
             let resulting_streak = if last_move.as_deref() == Some(candidate) {
                 streak + 1
             } else {
