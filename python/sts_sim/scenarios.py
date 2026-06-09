@@ -24,6 +24,12 @@ JAW_WORM_STARTING_HP = 44
 # 85 pins the canonical scenario to a challenging but beatable value.
 GREMLIN_NOB_STARTING_HP = 85
 
+# Nibbit HP: 42-46 normal, 44-48 on A9. 44 used as canonical value.
+NIBBIT_STARTING_HP = 44
+
+# Fuzzy Wurm Crawler HP: 55-57 normal. 56 used as canonical value.
+FUZZY_WURM_CRAWLER_STARTING_HP = 56
+
 
 def ironclad_starter_deck_vs_gremlin_nob(seed, deck=None):
     """Harder canonical scenario: Ironclad's starting loadout against Gremlin
@@ -42,6 +48,36 @@ def ironclad_starter_deck_vs_gremlin_nob(seed, deck=None):
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
         monster_name="Gremlin Nob",
+    )
+
+
+def ironclad_starter_deck_vs_nibbit(seed, deck=None):
+    """Ironclad's starting loadout against a Nibbit (fixed cycle: Butt →
+    Hesitant Slice → Hiss → repeat). Hiss accumulates Strength indefinitely,
+    making the fight increasingly punishing the longer it runs."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monster_hp=NIBBIT_STARTING_HP,
+        monster_attack=0,
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+        monster_name="Nibbit",
+    )
+
+
+def ironclad_starter_deck_vs_fuzzy_wurm_crawler(seed, deck=None):
+    """Ironclad's starting loadout against a Fuzzy Wurm Crawler (alternating
+    Acid Goop / Inhale). Each Inhale grants +7 Strength, making every
+    subsequent Acid Goop hit harder than the last."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monster_hp=FUZZY_WURM_CRAWLER_STARTING_HP,
+        monster_attack=0,
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+        monster_name="Fuzzy Wurm Crawler",
     )
 
 

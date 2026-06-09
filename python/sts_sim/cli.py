@@ -14,13 +14,17 @@ import click
 
 from . import apply, evaluate, is_terminal, legal_actions, reward
 from .scenarios import (
+    ironclad_starter_deck_vs_fuzzy_wurm_crawler,
     ironclad_starter_deck_vs_gremlin_nob,
     ironclad_starter_deck_vs_jaw_worm,
+    ironclad_starter_deck_vs_nibbit,
 )
 
 _SCENARIOS = {
     "jaw-worm": ironclad_starter_deck_vs_jaw_worm,
     "gremlin-nob": ironclad_starter_deck_vs_gremlin_nob,
+    "nibbit": ironclad_starter_deck_vs_nibbit,
+    "fuzzy-wurm-crawler": ironclad_starter_deck_vs_fuzzy_wurm_crawler,
 }
 
 # Translates the engine's internal action-string vocabulary into labels a
@@ -39,6 +43,9 @@ _INTENT_BASE_DAMAGE = {
     ("Jaw Worm", "Thrash"): 7,
     ("Gremlin Nob", "Rush"): 14,
     ("Gremlin Nob", "Skull Bash"): 6,
+    ("Nibbit", "Butt"): 12,
+    ("Nibbit", "Hesitant Slice"): 6,
+    ("Fuzzy Wurm Crawler", "Acid Goop"): 4,
 }
 
 # Human-readable description of each move's full effect list (display only).
@@ -49,6 +56,11 @@ _INTENT_DESCRIPTIONS = {
     ("Gremlin Nob", "Bellow"): "gain Enrage 2",
     ("Gremlin Nob", "Rush"): "14 damage",
     ("Gremlin Nob", "Skull Bash"): "6 damage, apply 2 Vulnerable",
+    ("Nibbit", "Butt"): "12 damage",
+    ("Nibbit", "Hesitant Slice"): "6 damage, gain 5 block",
+    ("Nibbit", "Hiss"): "gain 2 Strength",
+    ("Fuzzy Wurm Crawler", "Acid Goop"): "4 damage",
+    ("Fuzzy Wurm Crawler", "Inhale"): "gain 7 Strength",
 }
 
 
