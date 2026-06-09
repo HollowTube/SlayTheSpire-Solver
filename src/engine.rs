@@ -56,6 +56,14 @@ impl Status {
         }
     }
 
+    /// Whether one stack of this status is consumed at the end of its holder's
+    /// turn. Debuffs with a duration counter (Vulnerable, Weak) return true;
+    /// permanent buffs (Strength, Enrage) return false and are never removed
+    /// by `tick_debuffs`.
+    pub(crate) fn decays_per_turn(&self) -> bool {
+        matches!(self, Status::Vulnerable)
+    }
+
     /// What `EffectOp`s this status fires when `event` occurs, from the
     /// perspective of the combatant holding it. An empty vec means no reaction.
     pub(crate) fn reactions(&self, event: GameEvent) -> Vec<EffectOp> {
@@ -97,11 +105,11 @@ enum Modifier {
     AddDamage(i32),
 }
 
-/// Whether a status is a binary debuff (any number of stacks = same effect;
-/// stacks extend duration, not strength). Binary debuffs must only contribute
-/// one modifier per side regardless of how many stacks are present.
+/// Whether a status is a binary debuff (stacks extend duration, not effect
+/// strength). Binary debuffs must only contribute one modifier per side
+/// regardless of how many stacks are present.
 fn is_binary_debuff(s: &Status) -> bool {
-    matches!(s, Status::Vulnerable)
+    s.decays_per_turn()
 }
 
 /// Collect modifier contributions from `statuses` acting on `side` for
@@ -222,12 +230,12 @@ pub(crate) fn fire_event(state: &mut CombatState, event: GameEvent) {
     }
 }
 
-/// Removes one stack of each per-turn debuff (currently only Vulnerable) from
-/// `statuses` — mirrors Slay the Spire's end-of-turn debuff countdown. Called
-/// once per combatant per turn: player debuffs tick when the player ends their
-/// turn, monster debuffs tick after the monster has acted.
+/// Removes one stack of each duration-based debuff from `statuses` — mirrors
+/// Slay the Spire's end-of-turn debuff countdown. Only statuses where
+/// `decays_per_turn()` is true are touched; permanent statuses (Strength,
+/// Enrage) are never affected.
 pub(crate) fn tick_debuffs(statuses: &mut Vec<Status>) {
-    if let Some(pos) = statuses.iter().position(|s| matches!(s, Status::Vulnerable)) {
+    if let Some(pos) = statuses.iter().position(|s| s.decays_per_turn()) {
         statuses.remove(pos);
     }
 }
