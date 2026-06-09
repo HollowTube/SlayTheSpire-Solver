@@ -20,6 +20,27 @@ PLAYER_STARTING_HP = 80
 JAW_WORM_STARTING_HP = 44
 
 
+# Per the Slay the Spire wiki, Gremlin Nob is an Act 1 elite with 82-86 HP.
+# 85 pins the canonical scenario to a challenging but beatable value.
+GREMLIN_NOB_STARTING_HP = 85
+
+
+def ironclad_starter_deck_vs_gremlin_nob(seed):
+    """Harder canonical scenario: Ironclad's starting loadout against Gremlin
+    Nob (Act 1 elite). Nob opens with Bellow (+3 Strength), then alternates
+    Rush (14 damage) / Skull Bash (6 damage + permanent Vulnerable) — making
+    deck composition measurably more important than Jaw Worm."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monster_hp=GREMLIN_NOB_STARTING_HP,
+        monster_attack=0,
+        seed=seed,
+        deck=list(IRONCLAD_STARTING_DECK),
+        monster_name="Gremlin Nob",
+    )
+
+
 def ironclad_starter_deck_vs_jaw_worm(seed):
     """The fixed canonical M1 scenario (HOL-5/HOL-10/HOL-11) named in the M1
     exit criteria: Ironclad's starting loadout against a single Jaw Worm,
