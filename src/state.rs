@@ -233,13 +233,17 @@ impl CombatState {
     /// the search averages over possible futures rather than optimizing for
     /// the one fixed shuffle the original state would produce.
     fn with_rng_seed(&self, seed: u64) -> Self {
-        let mut copy = self.clone();
-        copy.rng = Pcg32::seed_from_u64(seed);
-        copy
+        self.reseeded(seed)
     }
 }
 
 impl CombatState {
+    pub(crate) fn reseeded(&self, seed: u64) -> Self {
+        let mut copy = self.clone();
+        copy.rng = Pcg32::seed_from_u64(seed);
+        copy
+    }
+
     /// Resolves an `Actor` identity to its `Fighter` — the single chokepoint
     /// that lets the generic, `Actor`-aware engine (`run_effect_ops`,
     /// `deal_damage`, ...) reach either combatant's HP/block/statuses
