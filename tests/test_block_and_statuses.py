@@ -67,6 +67,35 @@ def test_playing_bash_against_the_monster_leaves_it_vulnerable():
     assert "Vulnerable" in resolved.monster_statuses
 
 
+def test_monster_vulnerable_decays_by_one_per_turn():
+    # Per the wiki, Bash applies 2 Vulnerable stacks. After one EndTurn one
+    # stack decays, leaving 1. After a second EndTurn, the last stack decays.
+    state = make_state(hand=["Bash"])
+    with_vulnerable = apply(apply(state, "PlayCard:Bash"), "SelectTarget:Monster")
+    assert with_vulnerable.monster_statuses.count("Vulnerable") == 2
+
+    after_one_turn = apply(with_vulnerable, "EndTurn")
+    assert after_one_turn.monster_statuses.count("Vulnerable") == 1
+
+    after_two_turns = apply(after_one_turn, "EndTurn")
+    assert after_two_turns.monster_statuses.count("Vulnerable") == 0
+
+
+def test_player_vulnerable_from_skull_bash_decays_by_one_per_turn():
+    # Gremlin Nob's Skull Bash applies 2 Vulnerable to the player.
+    # After EndTurn (player's debuffs tick before monster acts), one stack is removed.
+    for seed in range(200):
+        state = _gremlin_nob(seed)
+        after_bellow = apply(state, "EndTurn")
+        if after_bellow.monster_intent == "Skull Bash":
+            after_skull_bash = apply(after_bellow, "EndTurn")
+            assert after_skull_bash.player_statuses.count("Vulnerable") == 2
+            after_next_turn = apply(after_skull_bash, "EndTurn")
+            assert after_next_turn.player_statuses.count("Vulnerable") == 1
+            return
+    pytest.fail("Could not find a seed where Skull Bash fires as the second move")
+
+
 # Per the Slay the Spire wiki, Vulnerable increases damage taken from attacks
 # by 50%, rounded down: floor(STRIKE_DAMAGE * 1.5) == 9.
 VULNERABLE_STRIKE_DAMAGE = 9

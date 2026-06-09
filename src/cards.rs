@@ -35,12 +35,15 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::GainBlock(5)],
         }),
+        // Per the Slay the Spire wiki, base Bash deals 8 damage and applies
+        // 2 Vulnerable stacks (not 1).
         "Bash" => Some(CardData {
             cost: 2,
             targeted: true,
             card_type: CardType::Skill,
             effects: vec![
                 EffectOp::DealDamage(8),
+                EffectOp::ApplyStatusToTarget(Status::Vulnerable),
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
         }),
