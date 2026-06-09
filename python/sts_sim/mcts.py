@@ -54,10 +54,12 @@ class _Node:
 def _rollout(state, rng):
     """Play uniformly-random legal actions to a terminal state and score it.
 
-    This is the "full-random-rollout simulation" leg of MCTS: a maximally
-    dumb policy that nonetheless reaches a correctly-shaped terminal reward
-    either way, giving the backprop step a real signal to learn from.
+    Re-seeds the embedded PRNG before rolling out so each rollout explores a
+    different draw sequence (single-observer determinization). Without this,
+    every rollout from the same node sees the same fixed shuffle and MCTS
+    optimizes for one future rather than averaging over possible draw orders.
     """
+    state = state.with_rng_seed(rng.randint(0, 2**64 - 1))
     while not is_terminal(state):
         state = apply(state, rng.choice(legal_actions(state)))
     return reward(state)

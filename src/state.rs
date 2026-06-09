@@ -227,6 +227,16 @@ impl CombatState {
     fn __deepcopy__(&self, _memo: Bound<'_, PyAny>) -> Self {
         self.clone()
     }
+
+    /// Return a copy of this state with the embedded PRNG re-seeded from
+    /// `seed`. Used by MCTS to give each rollout a fresh draw sequence so
+    /// the search averages over possible futures rather than optimizing for
+    /// the one fixed shuffle the original state would produce.
+    fn with_rng_seed(&self, seed: u64) -> Self {
+        let mut copy = self.clone();
+        copy.rng = Pcg32::seed_from_u64(seed);
+        copy
+    }
 }
 
 impl CombatState {
