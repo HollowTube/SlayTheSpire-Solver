@@ -15,6 +15,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field
 
 from ..scenarios import (
+    PLAYER_STARTING_HP,
     ironclad_starter_deck_vs_gremlin_nob,
     ironclad_starter_deck_vs_jaw_worm,
 )
@@ -46,6 +47,10 @@ class BenchResult:
     hp_outcomes: list[int] = field(default_factory=list)
 
     @property
+    def hp_lost_outcomes(self) -> list[int]:
+        return [PLAYER_STARTING_HP - hp for hp in self.hp_outcomes]
+
+    @property
     def total(self) -> int:
         return len(self.hp_outcomes)
 
@@ -58,43 +63,36 @@ class BenchResult:
         return self.wins / self.total if self.total else 0.0
 
     @property
-    def winning_hp(self) -> list[int]:
-        return [hp for hp in self.hp_outcomes if hp > 0]
+    def mean_hp_lost(self) -> float:
+        return statistics.mean(self.hp_lost_outcomes) if self.hp_lost_outcomes else 0.0
 
     @property
-    def mean_hp(self) -> float:
-        return statistics.mean(self.hp_outcomes) if self.hp_outcomes else 0.0
-
-    @property
-    def stderr_hp(self) -> float:
-        if len(self.hp_outcomes) < 2:
+    def stderr_hp_lost(self) -> float:
+        lost = self.hp_lost_outcomes
+        if len(lost) < 2:
             return 0.0
-        return statistics.stdev(self.hp_outcomes) / math.sqrt(len(self.hp_outcomes))
+        return statistics.stdev(lost) / math.sqrt(len(lost))
 
     @property
     def p25(self) -> float:
-        return (
-            statistics.quantiles(self.hp_outcomes, n=4)[0] if self.hp_outcomes else 0.0
-        )
+        lost = self.hp_lost_outcomes
+        return statistics.quantiles(lost, n=4)[0] if lost else 0.0
 
     @property
     def p50(self) -> float:
-        return statistics.median(self.hp_outcomes) if self.hp_outcomes else 0.0
+        lost = self.hp_lost_outcomes
+        return statistics.median(lost) if lost else 0.0
 
     @property
     def p75(self) -> float:
-        return (
-            statistics.quantiles(self.hp_outcomes, n=4)[2] if self.hp_outcomes else 0.0
-        )
+        lost = self.hp_lost_outcomes
+        return statistics.quantiles(lost, n=4)[2] if lost else 0.0
 
     def __str__(self) -> str:
-        winning = self.winning_hp
-        avg_win_hp = f"{statistics.mean(winning):.1f}" if winning else "n/a"
         return (
             f"{self.label:<38}"
             f"  wins={self.wins}/{self.total}"
-            f"  avg_hp={self.mean_hp:5.1f} ±{self.stderr_hp:.1f}"
-            f"  win_hp={avg_win_hp}"
+            f"  avg_lost={self.mean_hp_lost:5.1f} ±{self.stderr_hp_lost:.1f}"
             f"  p25/p50/p75={self.p25:.0f}/{self.p50:.0f}/{self.p75:.0f}"
         )
 
