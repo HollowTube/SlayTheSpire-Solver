@@ -7,6 +7,7 @@ use crate::state::CombatState;
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) enum GameEvent {
     SkillPlayed,
+    AttackPlayed,
 }
 
 /// A status that can be attached to a combatant. Each status participates in
@@ -16,20 +17,25 @@ pub(crate) enum GameEvent {
 #[derive(Clone, PartialEq)]
 pub(crate) enum Status {
     Vulnerable,
+    Weak,
     // Carries its stack count — unlike Vulnerable (a binary on/off debuff),
     // Strength's contribution scales with how many stacks are held.
     Strength(i32),
     // Per the wiki, Gremlin Nob's Bellow grants Enrage(n): each time the
     // player plays a Skill card, the holder gains n Strength.
     Enrage(i32),
+    // Grants 2 Block each time the holder plays an Attack for this combat.
+    Rage,
 }
 
 impl Status {
     pub(crate) fn as_str(&self) -> &'static str {
         match self {
             Status::Vulnerable => "Vulnerable",
+            Status::Weak => "Weak",
             Status::Strength(_) => "Strength",
             Status::Enrage(_) => "Enrage",
+            Status::Rage => "Rage",
         }
     }
 
@@ -40,15 +46,15 @@ impl Status {
     /// only ever amplify *that combatant's own* outgoing damage.
     fn modifier_for(&self, side: Side, event: EventType) -> Option<Modifier> {
         match (self, side, event) {
-            // Per the Slay the Spire wiki, Vulnerable increases damage taken
-            // from attacks by 50%, rounded down — it amplifies what its
-            // holder *receives*, so it only contributes from the target side.
+            // Vulnerable: +50% damage taken, rounded down (target side only).
             (Status::Vulnerable, Side::Target, EventType::OnDamageDealt) => {
                 Some(Modifier::MultiplyDamage(1.5))
             }
-            // Per the Slay the Spire wiki, each stack of Strength adds its
-            // count directly to attack damage *dealt* — it only contributes
-            // from the attacker side, regardless of which combatant holds it.
+            // Weak: −25% damage dealt, rounded down (attacker side only).
+            (Status::Weak, Side::Attacker, EventType::OnDamageDealt) => {
+                Some(Modifier::MultiplyDamage(0.75))
+            }
+            // Strength: flat bonus to damage dealt (attacker side only).
             (Status::Strength(amount), Side::Attacker, EventType::OnDamageDealt) => {
                 Some(Modifier::AddDamage(*amount))
             }
@@ -61,7 +67,7 @@ impl Status {
     /// permanent buffs (Strength, Enrage) return false and are never removed
     /// by `tick_debuffs`.
     pub(crate) fn decays_per_turn(&self) -> bool {
-        matches!(self, Status::Vulnerable)
+        matches!(self, Status::Vulnerable | Status::Weak)
     }
 
     /// What `EffectOp`s this status fires when `event` occurs, from the
@@ -70,6 +76,9 @@ impl Status {
         match (self, event) {
             (Status::Enrage(n), GameEvent::SkillPlayed) => {
                 vec![EffectOp::ApplyStatusToSelf(Status::Strength(*n))]
+            }
+            (Status::Rage, GameEvent::AttackPlayed) => {
+                vec![EffectOp::GainBlock(2)]
             }
             _ => vec![],
         }

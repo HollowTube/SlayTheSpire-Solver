@@ -46,10 +46,6 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             // resolves — mirrors Slay the Spire's end-of-turn cleanup.
             next.discard_pile.append(&mut next.hand);
 
-            // Player's debuffs (e.g. Vulnerable) tick down at the end of the
-            // player's turn — before the monster acts.
-            tick_debuffs(&mut next.player.statuses);
-
             match next.monster_name.clone() {
                 // Intent-driven monsters (e.g. Jaw Worm): their own turn
                 // starts here — block resets, then the telegraphed move
@@ -95,6 +91,10 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             // Draw the next turn's opening hand (reshuffling the discard
             // pile back in if the draw pile runs dry mid-draw).
             draw_cards(&mut next, HAND_SIZE);
+            // Player's duration debuffs (e.g. Vulnerable) tick at the start
+            // of the player's turn — after the monster has already attacked,
+            // matching Slay the Spire's documented turn structure.
+            tick_debuffs(&mut next.player.statuses);
             Ok(next)
         }
         "SelectTarget:Monster" => match &state.pending {
@@ -102,8 +102,10 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                 let mut next = state.clone();
                 let data = card_data(card).expect("pending card is always known");
                 run_effect_ops(&mut next, &data.effects, Actor::Player);
-                if data.card_type == CardType::Skill {
-                    fire_event(&mut next, GameEvent::SkillPlayed);
+                match data.card_type {
+                    CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
+                    CardType::Attack => fire_event(&mut next, GameEvent::AttackPlayed),
+                    CardType::Power => {}
                 }
                 next.pending = None;
                 Ok(next)
@@ -127,7 +129,11 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     )));
                 }
                 let played = next.hand.remove(position);
-                next.discard_pile.push(played);
+                if data.card_type == CardType::Power {
+                    next.exhaust_pile.push(played);
+                } else {
+                    next.discard_pile.push(played);
+                }
                 next.player_energy -= data.cost;
                 if data.targeted {
                     next.pending = Some(PendingDecision::SelectTarget {
@@ -135,8 +141,10 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     });
                 } else {
                     run_effect_ops(&mut next, &data.effects, Actor::Player);
-                    if data.card_type == CardType::Skill {
-                        fire_event(&mut next, GameEvent::SkillPlayed);
+                    match data.card_type {
+                        CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
+                        CardType::Attack => fire_event(&mut next, GameEvent::AttackPlayed),
+                        CardType::Power => {}
                     }
                 }
                 Ok(next)

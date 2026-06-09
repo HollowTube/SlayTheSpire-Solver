@@ -109,6 +109,8 @@ pub struct CombatState {
     pub(crate) draw_pile: Vec<String>,
     #[pyo3(get)]
     pub(crate) discard_pile: Vec<String>,
+    #[pyo3(get)]
+    pub(crate) exhaust_pile: Vec<String>,
     pub(crate) pending: Option<PendingDecision>,
     pub(crate) rng: Pcg32,
 }
@@ -167,6 +169,7 @@ impl CombatState {
             hand,
             draw_pile,
             discard_pile: Vec::new(),
+            exhaust_pile: Vec::new(),
             pending: None,
             rng,
         };

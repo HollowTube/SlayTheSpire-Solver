@@ -125,3 +125,82 @@ def test_playing_a_card_the_player_cannot_afford_is_rejected():
 
     with pytest.raises(ValueError):
         apply(state, "PlayCard:Bash")
+
+
+def test_playing_a_power_card_moves_it_to_the_exhaust_pile_not_discard():
+    # Powers are played once per combat and never cycle back — they go to the
+    # exhaust pile, not discard, so they can never be redrawn.
+    state = make_state(hand=["Inflame"])
+
+    resolved = apply(state, "PlayCard:Inflame")
+
+    assert "Inflame" not in resolved.discard_pile
+    assert "Inflame" in resolved.exhaust_pile
+
+
+def test_exhausted_power_is_not_available_in_subsequent_turns():
+    # Even after the discard reshuffles into the draw pile, exhausted cards
+    # must not reappear — the exhaust pile is a permanent one-way sink.
+    state = CombatState(
+        player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
+        seed=42, deck=["Inflame"],
+    )
+    # Play Inflame from the opening hand.
+    after_inflame = apply(state, "PlayCard:Inflame")
+    # End the turn — discard reshuffles, new hand drawn.
+    after_turn = apply(after_inflame, "EndTurn")
+
+    assert "Inflame" not in after_turn.hand
+    assert "Inflame" not in after_turn.draw_pile
+    assert "Inflame" not in after_turn.discard_pile
+    assert "Inflame" in after_turn.exhaust_pile
+
+
+# ── New cards ─────────────────────────────────────────────────────────────────
+
+def test_ascenders_bane_cannot_be_played():
+    # Ascender's Bane is a Curse — unplayable filler that clogs the hand.
+    state = CombatState(
+        player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
+        seed=42, hand=["Ascender's Bane"],
+    )
+    actions = legal_actions(state)
+    assert "PlayCard:Ascender's Bane" not in actions
+
+
+def test_sword_boomerang_deals_three_hits_of_three_damage_each():
+    # Sword Boomerang hits a random enemy 3 times for 3 each = 9 total.
+    # Against a single monster the hits always land on the same target.
+    state = make_state(hand=["Sword Boomerang"])
+    resolved = apply(apply(state, "PlayCard:Sword Boomerang"), "SelectTarget:Monster")
+    assert resolved.monster_hp == state.monster_hp - 9
+
+
+def test_thunderclap_deals_damage_and_applies_vulnerable_without_selecting_a_target():
+    # Thunderclap hits all enemies for 4 and applies 1 Vulnerable to each —
+    # it resolves immediately (no SelectTarget step).
+    state = make_state(hand=["Thunderclap"])
+    resolved = apply(state, "PlayCard:Thunderclap")
+    assert resolved.pending is None
+    assert resolved.monster_hp == state.monster_hp - 4
+    assert "Vulnerable" in resolved.monster_statuses
+
+
+def test_rage_grants_block_when_an_attack_is_played_afterward():
+    # Playing Rage (a Skill) installs the Rage status. Each subsequent
+    # Attack played should grant 2 Block to the player.
+    state = make_state(hand=["Rage", "Strike"])
+    after_rage = apply(state, "PlayCard:Rage")
+    assert "Rage" in after_rage.player_statuses
+
+    after_strike = apply(apply(after_rage, "PlayCard:Strike"), "SelectTarget:Monster")
+    assert after_strike.player_block == 2
+
+
+def test_rage_does_not_grant_block_for_skills():
+    # Only Attacks trigger Rage — playing another Skill must not give block.
+    state = make_state(hand=["Rage", "Defend"])
+    after_rage = apply(state, "PlayCard:Rage")
+    after_defend = apply(after_rage, "PlayCard:Defend")
+    # Block comes from Defend (5), not Rage — Rage adds nothing for Skills.
+    assert after_defend.player_block == 5
