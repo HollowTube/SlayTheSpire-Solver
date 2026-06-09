@@ -204,3 +204,17 @@ def test_rage_does_not_grant_block_for_skills():
     after_defend = apply(after_rage, "PlayCard:Defend")
     # Block comes from Defend (5), not Rage — Rage adds nothing for Skills.
     assert after_defend.player_block == 5
+
+
+def test_pommel_strike_deals_9_damage_and_draws_1_card():
+    # Pommel Strike: 1 energy Attack — deal 9 damage, draw 1 card.
+    state = CombatState(
+        player_hp=80, player_energy=3, monster_hp=44, monster_attack=0,
+        seed=42, hand=["Pommel Strike", "Defend", "Defend", "Defend", "Defend"],
+    )
+    hand_size_before = len(state.hand)
+    awaiting = apply(state, "PlayCard:Pommel Strike")
+    resolved = apply(awaiting, "SelectTarget:Monster")
+
+    assert resolved.monster_hp == state.monster_hp - 9
+    assert len(resolved.hand) == hand_size_before - 1 + 1  # spent Pommel Strike, drew 1
