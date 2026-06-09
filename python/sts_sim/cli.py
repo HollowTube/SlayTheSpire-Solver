@@ -13,7 +13,12 @@ from dataclasses import dataclass
 import click
 
 from . import apply, evaluate, is_terminal, legal_actions, reward
-from .scenarios import ironclad_starter_deck_vs_jaw_worm
+from .scenarios import ironclad_starter_deck_vs_gremlin_nob, ironclad_starter_deck_vs_jaw_worm
+
+_SCENARIOS = {
+    "jaw-worm": ironclad_starter_deck_vs_jaw_worm,
+    "gremlin-nob": ironclad_starter_deck_vs_gremlin_nob,
+}
 
 # Translates the engine's internal action-string vocabulary into labels a
 # human can read without knowing the `"PlayCard:Strike"` format. The engine
@@ -162,7 +167,7 @@ def run_interactive(state, input_fn=input, output_fn=print, analysis=False):
     return state
 
 
-def replay_history(seed, history):
+def replay_history(seed, history, monster="jaw-worm"):
     """Reconstruct the state reached by `history` from a fresh `seed`.
 
     Leans entirely on the property M1 already guarantees — `CombatState`
@@ -170,7 +175,10 @@ def replay_history(seed, history):
     history)` fully reconstructs any reachable state — exactly the
     seed+history replay contract HOL-14 chose over persistent sessions.
     """
-    state = ironclad_starter_deck_vs_jaw_worm(seed=seed)
+    scenario_fn = _SCENARIOS.get(monster)
+    if scenario_fn is None:
+        raise ValueError(f"unknown monster {monster!r}; choices: {', '.join(_SCENARIOS)}")
+    state = scenario_fn(seed=seed)
     for action in history:
         state = apply(state, action)
     return state
@@ -188,14 +196,14 @@ class StepResult:
     updated_history: list
 
 
-def run_step(seed, history, action):
+def run_step(seed, history, action, monster="jaw-worm"):
     """One non-blocking agent-mode step, per HOL-14 user story 14.
 
     Replays `history` from `seed`, applies `action`, and returns the
     resulting state, its render, its legal-action menu, and the updated
     history — all in one shot. No persistent process, no new engine state.
     """
-    state = apply(replay_history(seed, history), action)
+    state = apply(replay_history(seed, history, monster=monster), action)
     return StepResult(
         state=state,
         rendered=render_state(state),
@@ -225,22 +233,36 @@ def render_step_result(result):
     help="RNG seed for the canonical scenario (replayable).",
 )
 @click.option(
+    "--monster",
+    type=click.Choice(list(_SCENARIOS)),
+    default="jaw-worm",
+    show_default=True,
+    help="Which enemy to fight.",
+)
+@click.option(
     "--analysis",
     is_flag=True,
     default=False,
     help="Show MCTS value estimates per action before each decision.",
 )
 @click.pass_context
-def main(ctx, seed, analysis):
+def main(ctx, seed, monster, analysis):
     """Play a fight against the sts_sim simulator from the terminal."""
     if ctx.invoked_subcommand is None:
-        state = ironclad_starter_deck_vs_jaw_worm(seed=seed)
+        state = _SCENARIOS[monster](seed=seed)
         run_interactive(state, analysis=analysis)
 
 
 @main.command()
 @click.option(
     "--seed", type=int, required=True, help="RNG seed identifying the scenario."
+)
+@click.option(
+    "--monster",
+    type=click.Choice(list(_SCENARIOS)),
+    default="jaw-worm",
+    show_default=True,
+    help="Which enemy to fight.",
 )
 @click.option(
     "--history",
@@ -250,7 +272,7 @@ def main(ctx, seed, analysis):
 @click.option(
     "--action", required=True, help="The new action to apply after replaying --history."
 )
-def step(seed, history, action):
+def step(seed, monster, history, action):
     """Agent mode: replay HISTORY from SEED, apply ACTION, print the result.
 
     Non-blocking and stateless — prints the resulting state, the new
@@ -259,7 +281,7 @@ def step(seed, history, action):
     """
     parsed_history = [a for a in history.split(",") if a]
     try:
-        result = run_step(seed=seed, history=parsed_history, action=action)
+        result = run_step(seed=seed, history=parsed_history, action=action, monster=monster)
     except ValueError as exc:
         raise click.UsageError(str(exc)) from exc
     click.echo(render_step_result(result))
