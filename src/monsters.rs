@@ -8,9 +8,9 @@ use rand_pcg::Pcg32;
 pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
     match monster_name {
         "Jaw Worm" => Some("Chomp".to_string()),
-        // Per the wiki, Gremlin Nob always opens with Bellow — it only
-        // enters the Rush/Skull Bash rotation on turn 2.
         "Gremlin Nob" => Some("Bellow".to_string()),
+        "Nibbit" => Some("Butt".to_string()),
+        "Fuzzy Wurm Crawler" => Some("Acid Goop".to_string()),
         _ => None,
     }
 }
@@ -31,12 +31,23 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
         // Bellow grants Enrage(2) — not Strength; Enrage triggers on Skill plays.
         ("Gremlin Nob", "Bellow") => Some(vec![EffectOp::ApplyStatusToSelf(Status::Enrage(2))]),
         ("Gremlin Nob", "Rush") => Some(vec![EffectOp::DealDamage(14)]),
-        // Skull Bash applies 2 Vulnerable stacks (not 1) per the wiki.
         ("Gremlin Nob", "Skull Bash") => Some(vec![
             EffectOp::DealDamage(6),
             EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             EffectOp::ApplyStatusToTarget(Status::Vulnerable),
         ]),
+        // Nibbit: fixed 3-move cycle (Butt → Hesitant Slice → Hiss → repeat).
+        ("Nibbit", "Butt") => Some(vec![EffectOp::DealDamage(12)]),
+        ("Nibbit", "Hesitant Slice") => Some(vec![
+            EffectOp::DealDamage(6),
+            EffectOp::GainBlock(5),
+        ]),
+        ("Nibbit", "Hiss") => Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))]),
+        // Fuzzy Wurm Crawler: alternating Acid Goop / Inhale.
+        ("Fuzzy Wurm Crawler", "Acid Goop") => Some(vec![EffectOp::DealDamage(4)]),
+        ("Fuzzy Wurm Crawler", "Inhale") => {
+            Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(7))])
+        }
         _ => None,
     }
 }
@@ -100,6 +111,17 @@ pub(crate) fn select_next_intent(
             if resulting_streak <= max_streak(monster_name, candidate) {
                 return Some(candidate.to_string());
             }
+        },
+        // Nibbit cycles deterministically: Butt → Hesitant Slice → Hiss → Butt…
+        "Nibbit" => match last_move.as_deref() {
+            Some("Butt") => Some("Hesitant Slice".to_string()),
+            Some("Hesitant Slice") => Some("Hiss".to_string()),
+            _ => Some("Butt".to_string()),
+        },
+        // Fuzzy Wurm Crawler alternates: Acid Goop ↔ Inhale.
+        "Fuzzy Wurm Crawler" => match last_move.as_deref() {
+            Some("Acid Goop") => Some("Inhale".to_string()),
+            _ => Some("Acid Goop".to_string()),
         },
         _ => None,
     }

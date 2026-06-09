@@ -16,13 +16,17 @@ from dataclasses import dataclass, field
 
 from ..scenarios import (
     PLAYER_STARTING_HP,
+    ironclad_starter_deck_vs_fuzzy_wurm_crawler,
     ironclad_starter_deck_vs_gremlin_nob,
     ironclad_starter_deck_vs_jaw_worm,
+    ironclad_starter_deck_vs_nibbit,
 )
 
 _SCENARIOS = {
     "jaw-worm": ironclad_starter_deck_vs_jaw_worm,
     "gremlin-nob": ironclad_starter_deck_vs_gremlin_nob,
+    "nibbit": ironclad_starter_deck_vs_nibbit,
+    "fuzzy-wurm-crawler": ironclad_starter_deck_vs_fuzzy_wurm_crawler,
 }
 
 # Named deck configurations. Each is a list of card names passed as `deck` to
