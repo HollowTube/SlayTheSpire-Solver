@@ -382,8 +382,12 @@ def test_with_rng_seed_produces_different_draws_for_different_seeds():
     # orders on the very next turn.
     deck = ["Strike", "Strike", "Defend", "Defend", "Bash"]
     state = CombatState(
-        player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
-        seed=42, deck=list(deck),
+        player_hp=80,
+        player_energy=3,
+        monster_hp=44,
+        monster_attack=6,
+        seed=42,
+        deck=list(deck),
     )
 
     from sts_sim import apply
