@@ -13,7 +13,10 @@ from dataclasses import dataclass
 import click
 
 from . import apply, evaluate, is_terminal, legal_actions, reward
-from .scenarios import ironclad_starter_deck_vs_gremlin_nob, ironclad_starter_deck_vs_jaw_worm
+from .scenarios import (
+    ironclad_starter_deck_vs_gremlin_nob,
+    ironclad_starter_deck_vs_jaw_worm,
+)
 
 _SCENARIOS = {
     "jaw-worm": ironclad_starter_deck_vs_jaw_worm,
@@ -177,7 +180,9 @@ def replay_history(seed, history, monster="jaw-worm"):
     """
     scenario_fn = _SCENARIOS.get(monster)
     if scenario_fn is None:
-        raise ValueError(f"unknown monster {monster!r}; choices: {', '.join(_SCENARIOS)}")
+        raise ValueError(
+            f"unknown monster {monster!r}; choices: {', '.join(_SCENARIOS)}"
+        )
     state = scenario_fn(seed=seed)
     for action in history:
         state = apply(state, action)
@@ -281,7 +286,9 @@ def step(seed, monster, history, action):
     """
     parsed_history = [a for a in history.split(",") if a]
     try:
-        result = run_step(seed=seed, history=parsed_history, action=action, monster=monster)
+        result = run_step(
+            seed=seed, history=parsed_history, action=action, monster=monster
+        )
     except ValueError as exc:
         raise click.UsageError(str(exc)) from exc
     click.echo(render_step_result(result))
