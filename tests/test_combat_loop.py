@@ -25,8 +25,14 @@ HAND_SIZE = 5
 def test_constructing_with_a_deck_shuffles_it_into_the_draw_pile_and_deals_an_opening_hand():
     deck = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
 
-    state = CombatState(player_hp=80, player_energy=3, monster_hp=MONSTER_STARTING_HP,
-                        monster_attack=6, seed=42, deck=list(deck))
+    state = CombatState(
+        player_hp=80,
+        player_energy=3,
+        monster_hp=MONSTER_STARTING_HP,
+        monster_attack=6,
+        seed=42,
+        deck=list(deck),
+    )
 
     assert len(state.hand) == HAND_SIZE
     assert len(state.draw_pile) == len(deck) - HAND_SIZE
@@ -53,15 +59,23 @@ def test_end_turn_discards_the_remaining_hand_then_draws_a_fresh_one_from_the_dr
     # discarded cards stay observable in discard_pile, isolating "discard the
     # old hand" from "redraw a fresh one" (the latter checked by hand size).
     deck = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
-    state = CombatState(player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
-                        seed=42, deck=list(deck))
+    state = CombatState(
+        player_hp=80,
+        player_energy=3,
+        monster_hp=44,
+        monster_attack=6,
+        seed=42,
+        deck=list(deck),
+    )
     discarded_hand = list(state.hand)
 
     next_state = apply(state, "EndTurn")
 
     assert sorted(next_state.discard_pile) == sorted(discarded_hand)
     assert len(next_state.hand) == HAND_SIZE
-    assert sorted(next_state.hand + next_state.draw_pile + next_state.discard_pile) == sorted(deck)
+    assert sorted(
+        next_state.hand + next_state.draw_pile + next_state.discard_pile
+    ) == sorted(deck)
 
 
 def test_drawing_reshuffles_the_discard_pile_into_the_draw_pile_once_it_empties():
@@ -72,8 +86,14 @@ def test_drawing_reshuffles_the_discard_pile_into_the_draw_pile_once_it_empties(
     # fresh hand. This must happen without error, and every card must remain
     # present across the piles (nothing vanishes or duplicates).
     deck = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
-    state = CombatState(player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
-                        seed=42, deck=list(deck))
+    state = CombatState(
+        player_hp=80,
+        player_energy=3,
+        monster_hp=44,
+        monster_attack=6,
+        seed=42,
+        deck=list(deck),
+    )
 
     state = apply(state, "EndTurn")
     assert state.draw_pile == []
@@ -107,8 +127,14 @@ def test_end_turn_applies_the_monsters_fixed_attack_to_the_player():
 # `EndTurn` must refresh energy back to its starting amount each turn, the
 # same way Slay the Spire does.
 def test_end_turn_refreshes_player_energy_to_its_starting_amount():
-    state = CombatState(player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
-                        seed=42, hand=["Strike"])
+    state = CombatState(
+        player_hp=80,
+        player_energy=3,
+        monster_hp=44,
+        monster_attack=6,
+        seed=42,
+        hand=["Strike"],
+    )
     spent = apply(apply(state, "PlayCard:Strike"), "SelectTarget:Monster")
     assert spent.player_energy < state.player_energy
 
@@ -124,7 +150,9 @@ def test_fresh_state_is_not_terminal():
 
 
 def test_state_is_terminal_once_player_hp_reaches_zero():
-    state = CombatState(player_hp=5, player_energy=3, monster_hp=44, monster_attack=6, seed=42)
+    state = CombatState(
+        player_hp=5, player_energy=3, monster_hp=44, monster_attack=6, seed=42
+    )
 
     next_state = apply(state, "EndTurn")
 
@@ -133,30 +161,60 @@ def test_state_is_terminal_once_player_hp_reaches_zero():
 
 
 def test_state_is_terminal_once_monster_hp_reaches_zero():
-    state = CombatState(player_hp=80, player_energy=3, monster_hp=0, monster_attack=6, seed=42)
+    state = CombatState(
+        player_hp=80, player_energy=3, monster_hp=0, monster_attack=6, seed=42
+    )
 
     assert is_terminal(state) is True
 
 
 def test_reward_is_positive_when_the_player_wins():
-    won = CombatState(player_hp=80, player_max_hp=80, monster_hp=0, monster_max_hp=44,
-                      player_energy=3, monster_attack=6, seed=42)
+    won = CombatState(
+        player_hp=80,
+        player_max_hp=80,
+        monster_hp=0,
+        monster_max_hp=44,
+        player_energy=3,
+        monster_attack=6,
+        seed=42,
+    )
 
     assert reward(won) > 0
 
 
 def test_reward_is_negative_when_the_player_loses():
-    lost = CombatState(player_hp=0, player_max_hp=80, monster_hp=44, monster_max_hp=44,
-                       player_energy=3, monster_attack=6, seed=42)
+    lost = CombatState(
+        player_hp=0,
+        player_max_hp=80,
+        monster_hp=44,
+        monster_max_hp=44,
+        player_energy=3,
+        monster_attack=6,
+        seed=42,
+    )
 
     assert reward(lost) < 0
 
 
 def test_reward_rewards_decisive_wins_more_than_narrow_wins():
-    decisive_win = CombatState(player_hp=80, player_max_hp=80, monster_hp=0, monster_max_hp=44,
-                               player_energy=3, monster_attack=6, seed=42)
-    narrow_win = CombatState(player_hp=1, player_max_hp=80, monster_hp=0, monster_max_hp=44,
-                             player_energy=3, monster_attack=6, seed=42)
+    decisive_win = CombatState(
+        player_hp=80,
+        player_max_hp=80,
+        monster_hp=0,
+        monster_max_hp=44,
+        player_energy=3,
+        monster_attack=6,
+        seed=42,
+    )
+    narrow_win = CombatState(
+        player_hp=1,
+        player_max_hp=80,
+        monster_hp=0,
+        monster_max_hp=44,
+        player_energy=3,
+        monster_attack=6,
+        seed=42,
+    )
 
     assert reward(decisive_win) > reward(narrow_win)
 
@@ -172,8 +230,15 @@ def test_reward_is_zero_for_a_non_terminal_state():
 # this is what an actual STS run optimizes for (player HP carries between
 # fights) and what an eventual RL value head learns to predict.
 def test_reward_matches_the_shaped_formula_for_a_win_at_partial_hp():
-    won_at_half_hp = CombatState(player_hp=40, player_max_hp=80, monster_hp=0, monster_max_hp=44,
-                                 player_energy=3, monster_attack=6, seed=42)
+    won_at_half_hp = CombatState(
+        player_hp=40,
+        player_max_hp=80,
+        monster_hp=0,
+        monster_max_hp=44,
+        player_energy=3,
+        monster_attack=6,
+        seed=42,
+    )
 
     assert reward(won_at_half_hp) == 0.5
 
@@ -184,8 +249,14 @@ def test_reward_matches_the_shaped_formula_for_a_loss_with_the_monster_at_partia
     # then check the shaped reward against that fraction directly, rather than
     # constructing an artificial "pre-damaged" monster (which can't occur in
     # real play, since monsters always start an encounter at full HP).
-    weak_player = CombatState(player_hp=5, player_energy=3, monster_hp=MONSTER_STARTING_HP,
-                              monster_attack=6, seed=42, hand=["Strike"])
+    weak_player = CombatState(
+        player_hp=5,
+        player_energy=3,
+        monster_hp=MONSTER_STARTING_HP,
+        monster_attack=6,
+        seed=42,
+        hand=["Strike"],
+    )
     chipped = apply(apply(weak_player, "PlayCard:Strike"), "SelectTarget:Monster")
     lost = apply(chipped, "EndTurn")
 
@@ -194,8 +265,14 @@ def test_reward_matches_the_shaped_formula_for_a_loss_with_the_monster_at_partia
 
 
 def test_evaluate_favours_the_side_with_relatively_more_remaining_hp():
-    armed = CombatState(player_hp=80, player_energy=3, monster_hp=MONSTER_STARTING_HP,
-                        monster_attack=6, seed=42, hand=["Strike"])
+    armed = CombatState(
+        player_hp=80,
+        player_energy=3,
+        monster_hp=MONSTER_STARTING_HP,
+        monster_attack=6,
+        seed=42,
+        hand=["Strike"],
+    )
 
     # Deal Strike damage to the monster within a single turn, taking no return
     # damage — the monster ends up relatively worse off than the player.
@@ -227,8 +304,14 @@ def test_apply_is_pure_with_draw_and_reshuffle_in_play():
     # embedded-PRNG-driven shuffle/draw/reshuffle stays exactly as replayable
     # as every other random event the engine models.
     deck = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
-    state = CombatState(player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
-                        seed=42, deck=list(deck))
+    state = CombatState(
+        player_hp=80,
+        player_energy=3,
+        monster_hp=44,
+        monster_attack=6,
+        seed=42,
+        deck=list(deck),
+    )
     clone = copy.deepcopy(state)
 
     replayed = play_out(state, 4)
@@ -270,8 +353,14 @@ def test_a_scripted_fight_with_strike_and_defend_runs_the_whole_stack_to_a_termi
     # block) is all the starting energy allows; riding the rest out on EndTurn
     # alone can't kill a 44-HP monster, so this scripted opening always ends in
     # a loss, with the monster frozen at whatever HP the opening Strike left it.
-    state = CombatState(player_hp=80, player_energy=3, monster_hp=MONSTER_STARTING_HP,
-                        monster_attack=6, seed=42, hand=["Strike", "Defend"])
+    state = CombatState(
+        player_hp=80,
+        player_energy=3,
+        monster_hp=MONSTER_STARTING_HP,
+        monster_attack=6,
+        seed=42,
+        hand=["Strike", "Defend"],
+    )
 
     awaiting_target = apply(state, "PlayCard:Strike")
     struck = apply(awaiting_target, "SelectTarget:Monster")

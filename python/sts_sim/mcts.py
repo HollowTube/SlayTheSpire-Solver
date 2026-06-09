@@ -33,7 +33,9 @@ class _Node:
 
     def ucb1(self):
         exploitation = self.total_value / self.visits
-        exploration = EXPLORATION_CONSTANT * math.sqrt(math.log(self.parent.visits) / self.visits)
+        exploration = EXPLORATION_CONSTANT * math.sqrt(
+            math.log(self.parent.visits) / self.visits
+        )
         return exploitation + exploration
 
     def select_child(self):
@@ -93,7 +95,9 @@ def search(state, iterations=DEFAULT_ITERATIONS, rng=None):
         if node.untried_actions:
             node = node.expand(rng)
 
-        value = reward(node.state) if is_terminal(node.state) else _rollout(node.state, rng)
+        value = (
+            reward(node.state) if is_terminal(node.state) else _rollout(node.state, rng)
+        )
         _backpropagate(node, value)
 
     return root.most_visited_action()

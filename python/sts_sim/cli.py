@@ -27,7 +27,7 @@ _ACTION_LABELS = {
 # Per src/monsters.rs: the exact effects of each monster's moves, mirrored
 # here for display only. Keyed by (monster_name, move_name).
 _INTENT_DESCRIPTIONS = {
-    ("Jaw Worm", "Chomp"):  "11 damage",
+    ("Jaw Worm", "Chomp"): "11 damage",
     ("Jaw Worm", "Thrash"): "7 damage, gain 5 block",
     ("Jaw Worm", "Bellow"): "gain 3 Strength, gain 6 block",
 }
@@ -75,8 +75,11 @@ def render_state(state):
         f"  Hand: {', '.join(state.hand) if state.hand else 'empty'}",
         f"{state.monster_name}: {state.monster_hp} HP | Block: {state.monster_block} | "
         f"Intent: {state.monster_intent}"
-        + (f" ({intent_description(state.monster_name, state.monster_intent)})"
-           if state.monster_intent and state.monster_name else ""),
+        + (
+            f" ({intent_description(state.monster_name, state.monster_intent)})"
+            if state.monster_intent and state.monster_name
+            else ""
+        ),
         f"  Statuses: {_format_statuses(state.monster_statuses)}",
     ]
     return "\n".join(lines)
@@ -191,8 +194,13 @@ def render_step_result(result):
 
 
 @click.group(invoke_without_command=True)
-@click.option("--seed", type=int, default=42, show_default=True,
-              help="RNG seed for the canonical scenario (replayable).")
+@click.option(
+    "--seed",
+    type=int,
+    default=42,
+    show_default=True,
+    help="RNG seed for the canonical scenario (replayable).",
+)
 @click.pass_context
 def main(ctx, seed):
     """Play a fight against the sts_sim simulator from the terminal."""
@@ -202,9 +210,17 @@ def main(ctx, seed):
 
 
 @main.command()
-@click.option("--seed", type=int, required=True, help="RNG seed identifying the scenario.")
-@click.option("--history", default="", help="Comma-separated action history replayed before --action.")
-@click.option("--action", required=True, help="The new action to apply after replaying --history.")
+@click.option(
+    "--seed", type=int, required=True, help="RNG seed identifying the scenario."
+)
+@click.option(
+    "--history",
+    default="",
+    help="Comma-separated action history replayed before --action.",
+)
+@click.option(
+    "--action", required=True, help="The new action to apply after replaying --history."
+)
 def step(seed, history, action):
     """Agent mode: replay HISTORY from SEED, apply ACTION, print the result.
 

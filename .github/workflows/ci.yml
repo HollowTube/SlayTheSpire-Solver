@@ -31,11 +31,16 @@ jobs:
       - name: Check Rust (no warnings)
         run: cargo check
 
-      - name: Lint with flake8
+      - name: Lint with ruff
         run: |
           source .venv/bin/activate
-          # Fail on syntax errors and undefined names — these are real bugs
-          flake8 python/ tests/ --count --select=E9,F63,F7,F82 --show-source
+          ruff check python/ tests/
+          ruff format --check python/ tests/
+
+      - name: Type-check with mypy
+        run: |
+          source .venv/bin/activate
+          mypy python/ tests/ --ignore-missing-imports
 
       - name: Run tests
         run: |
