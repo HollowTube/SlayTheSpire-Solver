@@ -1,10 +1,18 @@
 use crate::state::CombatState;
 
-/// A status that can be attached to a combatant. Each status declares which
-/// event-bus events it listens to and what modifier it contributes (see
-/// `Status::modifier_for`) — the generic damage pipeline applies whatever
-/// modifiers are currently registered without knowing what `Vulnerable` or
-/// `Strength` actually is.
+/// Game events that statuses can react to via `Status::reactions`. These are
+/// coarser-grained than `EventType` (which drives the damage-modifier pipeline)
+/// — a `GameEvent` fires once per game action and may produce `EffectOp`s
+/// rather than just numeric modifiers.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum GameEvent {
+    SkillPlayed,
+}
+
+/// A status that can be attached to a combatant. Each status participates in
+/// two pipelines: `modifier_for` (damage calculation, numeric contributions)
+/// and `reactions` (game events, producing `EffectOp`s). Adding a new reactive
+/// status means adding arms to both methods — no new engine logic.
 #[derive(Clone, PartialEq)]
 pub(crate) enum Status {
     Vulnerable,
@@ -12,9 +20,7 @@ pub(crate) enum Status {
     // Strength's contribution scales with how many stacks are held.
     Strength(i32),
     // Per the wiki, Gremlin Nob's Bellow grants Enrage(n): each time the
-    // player plays a Skill card, the monster gains n Strength. Reactive
-    // — contributes nothing to the damage pipeline itself, but triggers
-    // in `apply()` when a Skill resolves (both targeted and untargeted).
+    // player plays a Skill card, the holder gains n Strength.
     Enrage(i32),
 }
 
@@ -29,9 +35,9 @@ impl Status {
 
     /// What this status contributes when `event` fires while sitting on
     /// `side`, if anything — the "listener registration" half of the
-    /// event-bus skeleton. Declaring the side here (not just the status type)
-    /// is what lets the same `Strength` show up on either combatant and only
-    /// ever amplify *that combatant's own* outgoing damage.
+    /// damage-modifier pipeline. Declaring the side here (not just the status
+    /// type) is what lets the same `Strength` show up on either combatant and
+    /// only ever amplify *that combatant's own* outgoing damage.
     fn modifier_for(&self, side: Side, event: EventType) -> Option<Modifier> {
         match (self, side, event) {
             // Per the Slay the Spire wiki, Vulnerable increases damage taken
@@ -47,6 +53,17 @@ impl Status {
                 Some(Modifier::AddDamage(*amount))
             }
             _ => None,
+        }
+    }
+
+    /// What `EffectOp`s this status fires when `event` occurs, from the
+    /// perspective of the combatant holding it. An empty vec means no reaction.
+    pub(crate) fn reactions(&self, event: GameEvent) -> Vec<EffectOp> {
+        match (self, event) {
+            (Status::Enrage(n), GameEvent::SkillPlayed) => {
+                vec![EffectOp::ApplyStatusToSelf(Status::Strength(*n))]
+            }
+            _ => vec![],
         }
     }
 }
@@ -172,6 +189,22 @@ fn deal_damage(state: &mut CombatState, actor: Actor, amount: i32) {
     let absorbed = modified.min(target.block);
     target.block -= absorbed;
     target.hp -= modified - absorbed;
+}
+
+/// Fires `event` against every status on both combatants, collecting their
+/// `reactions` and running the resulting `EffectOp`s on behalf of the holder.
+/// Adding a new reactive status only requires a `Status::reactions` arm — no
+/// changes here.
+pub(crate) fn fire_event(state: &mut CombatState, event: GameEvent) {
+    for actor in [Actor::Monster, Actor::Player] {
+        let ops: Vec<EffectOp> = state
+            .fighter(actor)
+            .statuses
+            .iter()
+            .flat_map(|s| s.reactions(event))
+            .collect();
+        run_effect_ops(state, &ops, actor);
+    }
 }
 
 pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor) {
