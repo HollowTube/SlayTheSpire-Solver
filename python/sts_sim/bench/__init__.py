@@ -155,6 +155,7 @@ def run_deck(
 
     result = BenchResult(label=label or repr(deck))
 
+    arg_list: list[tuple]
     if policy == "mcts":
         worker_fn = _run_one_mcts
         arg_list = [(seed, deck, monster, iterations) for seed in range(seeds)]
@@ -162,13 +163,13 @@ def run_deck(
         worker_fn = _run_one_random
         arg_list = [(seed, deck, monster) for seed in range(seeds)]
 
-    outcomes = [None] * seeds
+    hp_by_seed: dict[int, int] = {}
     with ProcessPoolExecutor(max_workers=workers) as pool:
         futures = {pool.submit(worker_fn, args): args[0] for args in arg_list}
         for fut in as_completed(futures):
-            outcomes[futures[fut]] = fut.result()
+            hp_by_seed[futures[fut]] = fut.result()
 
-    result.hp_outcomes = outcomes
+    result.hp_outcomes = [hp_by_seed[i] for i in range(seeds)]
     return result
 
 
