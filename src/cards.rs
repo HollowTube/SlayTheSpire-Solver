@@ -59,6 +59,37 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))],
         }),
+        // 3 hits of 3 damage each to a random enemy (always the same target
+        // in single-enemy fights). Targeted so SelectTarget resolves first.
+        "Sword Boomerang" => Some(CardData {
+            cost: 2,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![
+                EffectOp::DealDamage(3),
+                EffectOp::DealDamage(3),
+                EffectOp::DealDamage(3),
+            ],
+        }),
+        // Hits all enemies for 4 and applies 1 Vulnerable to each.
+        // Not targeted — resolves immediately against all enemies (single
+        // enemy = the monster).
+        "Thunderclap" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Attack,
+            effects: vec![
+                EffectOp::DealDamage(4),
+                EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+            ],
+        }),
+        // Installs the Rage status: gain 2 Block each time you play an Attack.
+        "Rage" => Some(CardData {
+            cost: 0,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Rage)],
+        }),
         _ => None,
     }
 }
