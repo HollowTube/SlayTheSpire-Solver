@@ -32,8 +32,16 @@ _ACTION_LABELS = {
 }
 
 
-# Per src/monsters.rs: the exact effects of each monster's moves, mirrored
-# here for display only. Keyed by (monster_name, move_name).
+# Per src/monsters.rs: base attack damage of each move, before Strength.
+# Only moves that deal damage appear here; non-attacks have no entry.
+_INTENT_BASE_DAMAGE = {
+    ("Jaw Worm", "Chomp"): 11,
+    ("Jaw Worm", "Thrash"): 7,
+    ("Gremlin Nob", "Rush"): 14,
+    ("Gremlin Nob", "Skull Bash"): 6,
+}
+
+# Human-readable description of each move's full effect list (display only).
 _INTENT_DESCRIPTIONS = {
     ("Jaw Worm", "Chomp"): "11 damage",
     ("Jaw Worm", "Thrash"): "7 damage, gain 5 block",
@@ -45,10 +53,25 @@ _INTENT_DESCRIPTIONS = {
 
 
 def intent_description(monster_name, intent):
-    """Return a plain-English description of what `intent` does, e.g.
-    '11 damage' for Jaw Worm's Chomp. Falls back to the intent name itself
-    for any (monster, move) pair not yet in the table."""
+    """Return a plain-English description of what `intent` does.
+    Falls back to the intent name for any pair not in the table."""
     return _INTENT_DESCRIPTIONS.get((monster_name, intent), intent)
+
+
+def effective_intent_description(state):
+    """Like intent_description but adjusts attack damage by the monster's
+    current Strength so the displayed number matches what will actually land."""
+    name = state.monster_name
+    intent = state.monster_intent
+    if not name or not intent:
+        return intent or ""
+    strength = state.monster_strength
+    base = _INTENT_BASE_DAMAGE.get((name, intent), 0)
+    desc = _INTENT_DESCRIPTIONS.get((name, intent), intent)
+    if base > 0 and strength > 0:
+        effective = base + strength
+        desc = desc.replace(f"{base} damage", f"{effective} damage (+{strength} Str)")
+    return desc
 
 
 def format_action(action):
@@ -87,7 +110,7 @@ def render_state(state):
         f"{state.monster_name}: {state.monster_hp} HP | Block: {state.monster_block} | "
         f"Intent: {state.monster_intent}"
         + (
-            f" ({intent_description(state.monster_name, state.monster_intent)})"
+            f" ({effective_intent_description(state)})"
             if state.monster_intent and state.monster_name
             else ""
         ),
@@ -133,6 +156,37 @@ def prompt_for_choice(actions, input_fn, output_fn, values=None):
         return actions[choice - 1]
 
 
+def describe_turn_outcome(before, after):
+    """One-line summary of what the monster did on its turn.
+
+    Compares the player's HP/block before and after EndTurn to derive the
+    net incoming damage and how much block absorbed, without needing a
+    separate engine event stream.
+    """
+    name = before.monster_name or "Monster"
+    intent = before.monster_intent or "?"
+    desc = effective_intent_description(before)
+
+    hp_lost = before.player_hp - after.player_hp
+    block_before = before.player_block
+
+    if hp_lost > 0:
+        raw = hp_lost + block_before
+        if block_before > 0:
+            damage_line = (
+                f"{raw} damage dealt → {block_before} blocked, {hp_lost} HP lost"
+            )
+        else:
+            damage_line = f"{hp_lost} HP lost"
+    elif block_before > 0:
+        # Fully blocked — we know the attack was ≤ block_before
+        damage_line = "fully blocked — no HP lost"
+    else:
+        damage_line = "no damage"
+
+    return f"  {name} used {intent} ({desc}) → {damage_line}"
+
+
 def _report_outcome(state, output_fn):
     outcome = "won" if state.monster_hp <= 0 else "lost"
     output_fn(f"You {outcome}! Final HP: {state.player_hp}")
@@ -162,7 +216,10 @@ def run_interactive(state, input_fn=input, output_fn=print, analysis=False):
             state_value = max(values.values())
             output_fn(f"State value: {state_value:+.2f} (MCTS, optimal play)")
         action = prompt_for_choice(actions, input_fn, output_fn, values=values)
+        prev = state
         state = apply(state, action)
+        if action == "EndTurn":
+            output_fn(describe_turn_outcome(prev, state))
 
     output_fn("")
     output_fn(render_state(state))
@@ -199,6 +256,8 @@ class StepResult:
     rendered: str
     legal_actions: list
     updated_history: list
+    action: str = ""
+    previous_state: object = None
 
 
 def run_step(seed, history, action, monster="jaw-worm"):
@@ -208,18 +267,24 @@ def run_step(seed, history, action, monster="jaw-worm"):
     resulting state, its render, its legal-action menu, and the updated
     history — all in one shot. No persistent process, no new engine state.
     """
-    state = apply(replay_history(seed, history, monster=monster), action)
+    before = replay_history(seed, history, monster=monster)
+    state = apply(before, action)
     return StepResult(
         state=state,
         rendered=render_state(state),
         legal_actions=legal_actions(state),
         updated_history=list(history) + [action],
+        action=action,
+        previous_state=before,
     )
 
 
 def render_step_result(result):
     """Render a `StepResult` as the text the agent-mode `step` command prints."""
-    lines = [result.rendered, "", _menu_text(result.legal_actions)]
+    lines = [result.rendered]
+    if result.action == "EndTurn" and result.previous_state is not None:
+        lines.append(describe_turn_outcome(result.previous_state, result.state))
+    lines += ["", _menu_text(result.legal_actions)]
     if is_terminal(result.state):
         lines.append("")
         outcome = "won" if result.state.monster_hp <= 0 else "lost"

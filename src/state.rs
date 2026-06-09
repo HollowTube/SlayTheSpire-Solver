@@ -220,6 +220,22 @@ impl CombatState {
         self.player.statuses.iter().map(|s| s.as_str().to_string()).collect()
     }
 
+    #[getter]
+    fn monster_strength(&self) -> i32 {
+        self.monster.statuses.iter().filter_map(|s| match s {
+            Status::Strength(n) => Some(*n),
+            _ => None,
+        }).sum()
+    }
+
+    #[getter]
+    fn player_strength(&self) -> i32 {
+        self.player.statuses.iter().filter_map(|s| match s {
+            Status::Strength(n) => Some(*n),
+            _ => None,
+        }).sum()
+    }
+
     fn __copy__(&self) -> Self {
         self.clone()
     }
