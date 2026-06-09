@@ -373,3 +373,26 @@ def test_a_scripted_fight_with_strike_and_defend_runs_the_whole_stack_to_a_termi
     assert final_state.player_hp <= 0
     assert final_state.monster_hp == struck.monster_hp
     assert reward(final_state) == -1 * (final_state.monster_hp / MONSTER_STARTING_HP)
+
+
+def test_with_rng_seed_produces_different_draws_for_different_seeds():
+    # Use a 5-card deck so that the opening draw exhausts it entirely; EndTurn
+    # then forces a reshuffle of the discard pile to refill the draw pile — the
+    # shuffle uses the embedded PRNG, so different seeds produce different draw
+    # orders on the very next turn.
+    deck = ["Strike", "Strike", "Defend", "Defend", "Bash"]
+    state = CombatState(
+        player_hp=80, player_energy=3, monster_hp=44, monster_attack=6,
+        seed=42, deck=list(deck),
+    )
+
+    from sts_sim import apply
+
+    hands = set()
+    for seed in range(20):
+        reseeded = state.with_rng_seed(seed)
+        after = apply(reseeded, "EndTurn")
+        # Don't sort — we're checking that draw *order* differs, not just content.
+        hands.add(tuple(after.hand))
+
+    assert len(hands) > 1
