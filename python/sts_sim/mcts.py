@@ -1,7 +1,7 @@
 import math
 import random
 
-from . import apply, is_terminal, legal_actions, reward
+from . import apply, is_terminal, legal_actions, random_rollout, reward
 
 # Standard UCB1 exploration constant (sqrt(2)) — balances exploiting the
 # best-known action against trying under-visited ones.
@@ -52,17 +52,14 @@ class _Node:
 
 
 def _rollout(state, rng):
-    """Play uniformly-random legal actions to a terminal state and score it.
+    """Run a complete random playout via the Rust `random_rollout` function.
 
-    Re-seeds the embedded PRNG before rolling out so each rollout explores a
-    different draw sequence (single-observer determinization). Without this,
-    every rollout from the same node sees the same fixed shuffle and MCTS
-    optimizes for one future rather than averaging over possible draw orders.
+    Delegates the hot per-step loop to Rust, eliminating Python/Rust FFI
+    overhead on each apply()/legal_actions() call. The seed passed in is
+    derived from the Python MCTS rng so each rollout explores a different
+    draw sequence (single-observer determinization).
     """
-    state = state.with_rng_seed(rng.randint(0, 2**64 - 1))
-    while not is_terminal(state):
-        state = apply(state, rng.choice(legal_actions(state)))
-    return reward(state)
+    return random_rollout(state, rng.randint(0, 2**64 - 1))
 
 
 def _backpropagate(node, value):
