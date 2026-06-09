@@ -1,5 +1,4 @@
 """Behavioural tests for Nibbit and Fuzzy Wurm Crawler."""
-import pytest
 from sts_sim import CombatState, apply
 
 
