@@ -70,6 +70,22 @@ def _backpropagate(node, value):
         node = node.parent
 
 
+def _build_tree(state, iterations, rng):
+    """Run `iterations` of MCTS from `state` and return the root node."""
+    root = _Node(state)
+    for _ in range(iterations):
+        node = root
+        while not node.untried_actions and node.children:
+            node = node.select_child()
+        if node.untried_actions:
+            node = node.expand(rng)
+        value = (
+            reward(node.state) if is_terminal(node.state) else _rollout(node.state, rng)
+        )
+        _backpropagate(node, value)
+    return root
+
+
 def search(state, iterations=DEFAULT_ITERATIONS, rng=None):
     """Run MCTS from `state` and return the most-promising legal action.
 
@@ -85,19 +101,18 @@ def search(state, iterations=DEFAULT_ITERATIONS, rng=None):
     turn) already flows through.
     """
     rng = rng if rng is not None else random.Random()
-    root = _Node(state)
+    return _build_tree(state, iterations, rng).most_visited_action()
 
-    for _ in range(iterations):
-        node = root
-        while not node.untried_actions and node.children:
-            node = node.select_child()
 
-        if node.untried_actions:
-            node = node.expand(rng)
+def action_values(state, iterations=DEFAULT_ITERATIONS, rng=None):
+    """Run MCTS from `state` and return the estimated value for every legal
+    action as a dict mapping action string → float in [-1, 1].
 
-        value = (
-            reward(node.state) if is_terminal(node.state) else _rollout(node.state, rng)
-        )
-        _backpropagate(node, value)
-
-    return root.most_visited_action()
+    The value for each action is `total_value / visits` across all rollouts
+    that passed through that child — higher is better for the player. All
+    legal actions are guaranteed to appear (the tree always expands every
+    child at least once before revisiting).
+    """
+    rng = rng if rng is not None else random.Random()
+    root = _build_tree(state, iterations, rng)
+    return {child.action: child.total_value / child.visits for child in root.children}

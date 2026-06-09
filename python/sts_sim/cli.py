@@ -85,11 +85,20 @@ def render_state(state):
     return "\n".join(lines)
 
 
-def _menu_text(actions):
-    return "\n".join(f"  {i + 1}. {format_action(a)}" for i, a in enumerate(actions))
+def _menu_text(actions, values=None):
+    lines = []
+    for i, a in enumerate(actions):
+        label = format_action(a)
+        if values and a in values:
+            v = values[a]
+            annotation = f"  [{v:+.2f}]"
+        else:
+            annotation = ""
+        lines.append(f"  {i + 1}. {label}{annotation}")
+    return "\n".join(lines)
 
 
-def prompt_for_choice(actions, input_fn, output_fn):
+def prompt_for_choice(actions, input_fn, output_fn, values=None):
     """Read a 1-based menu choice from `input_fn`, re-prompting on bad input.
 
     `input_fn(prompt_text)` and `output_fn(message)` are injected so this —
@@ -97,7 +106,7 @@ def prompt_for_choice(actions, input_fn, output_fn):
     (per HOL-14's Testing Decisions) without touching real stdin/stdout.
     """
     output_fn("Choose an action:")
-    output_fn(_menu_text(actions))
+    output_fn(_menu_text(actions, values))
     while True:
         raw = input_fn("> ")
         try:
@@ -119,18 +128,29 @@ def _report_outcome(state, output_fn):
     output_fn(f"Reward: {reward(state):.2f} (evaluate: {evaluate(state):.2f})")
 
 
-def run_interactive(state, input_fn=input, output_fn=print):
+def run_interactive(state, input_fn=input, output_fn=print, analysis=False):
     """The human-facing REPL core loop, per HOL-14 user stories 1-7.
 
     Render -> menu -> read+validate a numeric choice -> apply -> repeat
     until terminal, then report the outcome. Pure consumer of the public
     `CombatState`/`apply`/`legal_actions`/`is_terminal`/`reward`/`evaluate`
     interface — no engine-side seams of its own.
+
+    When `analysis=True`, runs MCTS before each decision to annotate the
+    menu with per-action value estimates and the overall state value.
     """
+    from . import mcts as _mcts
+
     while not is_terminal(state):
         output_fn("")
         output_fn(render_state(state))
-        action = prompt_for_choice(legal_actions(state), input_fn, output_fn)
+        actions = legal_actions(state)
+        values = None
+        if analysis:
+            values = _mcts.action_values(state)
+            state_value = max(values.values())
+            output_fn(f"State value: {state_value:+.2f} (MCTS, optimal play)")
+        action = prompt_for_choice(actions, input_fn, output_fn, values=values)
         state = apply(state, action)
 
     output_fn("")
@@ -201,12 +221,18 @@ def render_step_result(result):
     show_default=True,
     help="RNG seed for the canonical scenario (replayable).",
 )
+@click.option(
+    "--analysis",
+    is_flag=True,
+    default=False,
+    help="Show MCTS value estimates per action before each decision.",
+)
 @click.pass_context
-def main(ctx, seed):
+def main(ctx, seed, analysis):
     """Play a fight against the sts_sim simulator from the terminal."""
     if ctx.invoked_subcommand is None:
         state = ironclad_starter_deck_vs_jaw_worm(seed=seed)
-        run_interactive(state)
+        run_interactive(state, analysis=analysis)
 
 
 @main.command()

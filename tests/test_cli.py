@@ -264,3 +264,20 @@ def test_render_state_includes_intent_description():
     # player knows how much damage they're about to take without needing to
     # look it up.
     assert "11 damage" in text
+
+
+def test_analysis_mode_annotates_menu_with_action_values():
+    from sts_sim.cli import run_interactive
+
+    state = ironclad_starter_deck_vs_jaw_worm(seed=42)
+    messages = []
+
+    run_interactive(
+        state, input_fn=lambda _: "1", output_fn=messages.append, analysis=True
+    )
+
+    transcript = "\n".join(messages)
+    # Each action in the menu should have a value annotation like [+0.65]
+    assert "[+" in transcript or "[-" in transcript
+    # The state value header should appear each turn
+    assert "State value" in transcript
