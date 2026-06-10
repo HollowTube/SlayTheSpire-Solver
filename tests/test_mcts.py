@@ -24,8 +24,8 @@ def test_search_returns_a_legal_action_mid_target_selection():
 
     action = mcts.search(awaiting_target)
 
-    assert action == "SelectTarget:Monster"
-    assert legal_actions(awaiting_target) == ["SelectTarget:Monster"]
+    assert action == "SelectTarget:Monster:0"
+    assert legal_actions(awaiting_target) == ["SelectTarget:Monster:0"]
 
 
 def play_with_mcts_to_terminal(state, rng, iterations=50):
@@ -58,7 +58,7 @@ def test_search_wins_the_fixed_scenario_at_a_reasonable_rate():
     for seed in range(runs):
         state = ironclad_starter_deck_vs_jaw_worm(seed=seed)
         final = play_with_mcts_to_terminal(state, rng=random.Random(seed))
-        if final.monster_hp <= 0:
+        if final.monsters[0].hp <= 0:
             wins += 1
 
     assert wins / runs >= 0.6

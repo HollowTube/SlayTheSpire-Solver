@@ -1,4 +1,4 @@
-from sts_sim import is_terminal, legal_actions, reward
+from sts_sim import Monster, is_terminal, legal_actions, reward
 from sts_sim.cli import (
     format_action,
     intent_description,
@@ -12,7 +12,7 @@ from sts_sim.scenarios import ironclad_starter_deck_vs_jaw_worm
 def test_format_action_translates_engine_strings_into_human_readable_labels():
     assert format_action("PlayCard:Strike") == "Play Strike"
     assert format_action("PlayCard:Bash") == "Play Bash"
-    assert format_action("SelectTarget:Monster") == "Target Monster"
+    assert format_action("SelectTarget:Monster:0") == "Target Monster:0"
     assert format_action("EndTurn") == "End Turn"
 
 
@@ -26,9 +26,9 @@ def test_render_state_shows_the_information_a_player_needs_to_decide():
     assert f"Turn {state.turn}" in text
     assert str(state.player_hp) in text
     assert str(state.player_energy) in text
-    assert state.monster_name in text
-    assert str(state.monster_hp) in text
-    assert state.monster_intent in text
+    assert state.monsters[0].name in text
+    assert str(state.monsters[0].hp) in text
+    assert state.monsters[0].intent in text
     for card in state.hand:
         assert card in text
 
@@ -39,12 +39,11 @@ def test_render_state_shows_status_effects_by_name_and_stack_count():
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=6,
+        monsters=[Monster(hp=44, attack=6)],
         seed=42,
         hand=["Bash"],
     )
-    struck = apply(apply(state, "PlayCard:Bash"), "SelectTarget:Monster")
+    struck = apply(apply(state, "PlayCard:Bash"), "SelectTarget:Monster:0")
 
     text = render_state(struck)
 
@@ -119,9 +118,9 @@ def test_replay_history_reconstructs_state_by_reapplying_each_action_from_the_se
     seed = 42
     state = ironclad_starter_deck_vs_jaw_worm(seed=seed)
     awaiting_target = apply(state, "PlayCard:Strike")
-    expected = apply(awaiting_target, "SelectTarget:Monster")
+    expected = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    replayed = replay_history(seed, ["PlayCard:Strike", "SelectTarget:Monster"])
+    replayed = replay_history(seed, ["PlayCard:Strike", "SelectTarget:Monster:0"])
 
     assert replayed == expected
 
@@ -197,15 +196,15 @@ def test_two_turn_trace_verifies_every_mechanical_interaction_step_by_step():
     assert initial.turn == 0
     assert initial.player_hp == 80
     assert initial.player_energy == 3
-    assert initial.monster_hp == 44
-    assert initial.monster_intent == "Chomp"
+    assert initial.monsters[0].hp == 44
+    assert initial.monsters[0].intent == "Chomp"
     assert len(initial.hand) == 5
     assert "Strike" in initial.hand
 
     # --- Strike deals 6 damage ---
     step("PlayCard:Strike")
-    after_strike = step("SelectTarget:Monster")
-    assert after_strike.monster_hp == 38
+    after_strike = step("SelectTarget:Monster:0")
+    assert after_strike.monsters[0].hp == 38
     assert after_strike.player_energy == 2
 
     # --- Defend gives 5 block ---
@@ -220,30 +219,30 @@ def test_two_turn_trace_verifies_every_mechanical_interaction_step_by_step():
     assert after_turn_1.player_block == 0  # block resets
     assert after_turn_1.player_energy == 3  # energy refreshes
     assert len(after_turn_1.hand) == 5  # full hand drawn
-    assert after_turn_1.monster_intent == "Thrash"
+    assert after_turn_1.monsters[0].intent == "Thrash"
 
     # --- Bash: 8 damage + Vulnerable ---
     step("PlayCard:Bash")
-    after_bash = step("SelectTarget:Monster")
-    assert after_bash.monster_hp == 30  # 38 - 8
+    after_bash = step("SelectTarget:Monster:0")
+    assert after_bash.monsters[0].hp == 30  # 38 - 8
     assert after_bash.player_energy == 1  # 3 - 2 (Bash costs 2)
-    assert "Vulnerable" in after_bash.monster_statuses
+    assert "Vulnerable" in after_bash.monsters[0].statuses
 
     # --- Strike vs Vulnerable: 6 × 1.5 = 9 damage ---
     step("PlayCard:Strike")
-    after_vuln_strike = step("SelectTarget:Monster")
-    assert after_vuln_strike.monster_hp == 21  # 30 - 9
+    after_vuln_strike = step("SelectTarget:Monster:0")
+    assert after_vuln_strike.monsters[0].hp == 21  # 30 - 9
     assert after_vuln_strike.player_energy == 0  # 1 - 1
 
     # --- EndTurn: Thrash (7 dmg to player, 5 block to JW) ---
     after_turn_2 = step("EndTurn")
     assert after_turn_2.turn == 2
     assert after_turn_2.player_hp == 67  # 74 - 7
-    assert after_turn_2.monster_block == 5  # Thrash grants JW 5 block
+    assert after_turn_2.monsters[0].block == 5  # Thrash grants JW 5 block
     assert after_turn_2.player_energy == 3
     assert len(after_turn_2.hand) == 5
-    assert after_turn_2.monster_intent == "Bellow"
-    assert "Vulnerable" in after_turn_2.monster_statuses
+    assert after_turn_2.monsters[0].intent == "Bellow"
+    assert "Vulnerable" in after_turn_2.monsters[0].statuses
 
 
 def test_intent_description_returns_human_readable_move_effects():

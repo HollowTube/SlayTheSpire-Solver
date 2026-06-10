@@ -1,13 +1,12 @@
 import pytest
-from sts_sim import CombatState, apply
+from sts_sim import CombatState, Monster, apply
 
 
 def make_state(hand):
     return CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=6,
+        monsters=[Monster(hp=44, attack=6)],
         seed=42,
         hand=list(hand),
     )
@@ -62,23 +61,23 @@ def test_playing_bash_against_the_monster_leaves_it_vulnerable():
     state = make_state(hand=["Bash"])
     awaiting_target = apply(state, "PlayCard:Bash")
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster")
+    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    assert "Vulnerable" in resolved.monster_statuses
+    assert "Vulnerable" in resolved.monsters[0].statuses
 
 
 def test_monster_vulnerable_decays_by_one_per_turn():
     # Per the wiki, Bash applies 2 Vulnerable stacks. After one EndTurn one
     # stack decays, leaving 1. After a second EndTurn, the last stack decays.
     state = make_state(hand=["Bash"])
-    with_vulnerable = apply(apply(state, "PlayCard:Bash"), "SelectTarget:Monster")
-    assert with_vulnerable.monster_statuses.count("Vulnerable") == 2
+    with_vulnerable = apply(apply(state, "PlayCard:Bash"), "SelectTarget:Monster:0")
+    assert with_vulnerable.monsters[0].statuses.count("Vulnerable") == 2
 
     after_one_turn = apply(with_vulnerable, "EndTurn")
-    assert after_one_turn.monster_statuses.count("Vulnerable") == 1
+    assert after_one_turn.monsters[0].statuses.count("Vulnerable") == 1
 
     after_two_turns = apply(after_one_turn, "EndTurn")
-    assert after_two_turns.monster_statuses.count("Vulnerable") == 0
+    assert after_two_turns.monsters[0].statuses.count("Vulnerable") == 0
 
 
 def test_player_vulnerable_from_skull_bash_decays_by_one_per_turn():
@@ -89,7 +88,7 @@ def test_player_vulnerable_from_skull_bash_decays_by_one_per_turn():
     for seed in range(200):
         state = _gremlin_nob(seed)
         after_bellow = apply(state, "EndTurn")
-        if after_bellow.monster_intent == "Skull Bash":
+        if after_bellow.monsters[0].intent == "Skull Bash":
             after_skull_bash = apply(after_bellow, "EndTurn")
             assert after_skull_bash.player_statuses.count("Vulnerable") == 1
             after_next_turn = apply(after_skull_bash, "EndTurn")
@@ -115,9 +114,9 @@ def test_playing_iron_wave_deals_damage_and_grants_block_from_a_single_card():
     state = make_state(hand=["Iron Wave"])
     awaiting_target = apply(state, "PlayCard:Iron Wave")
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster")
+    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    assert resolved.monster_hp == state.monster_hp - IRON_WAVE_DAMAGE
+    assert resolved.monsters[0].hp == state.monsters[0].hp - IRON_WAVE_DAMAGE
     assert resolved.player_block == state.player_block + IRON_WAVE_BLOCK
 
 
@@ -146,9 +145,12 @@ def test_strength_increases_the_damage_dealt_by_a_subsequent_strike():
     strengthened = apply(state, "PlayCard:Inflame")
 
     awaiting_target = apply(strengthened, "PlayCard:Strike")
-    resolved = apply(awaiting_target, "SelectTarget:Monster")
+    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    assert resolved.monster_hp == strengthened.monster_hp - STRIKE_DAMAGE_WITH_INFLAME
+    assert (
+        resolved.monsters[0].hp
+        == strengthened.monsters[0].hp - STRIKE_DAMAGE_WITH_INFLAME
+    )
 
 
 def test_a_vulnerable_monster_takes_amplified_damage_from_a_subsequent_strike():
@@ -156,25 +158,23 @@ def test_a_vulnerable_monster_takes_amplified_damage_from_a_subsequent_strike():
     # come from the event-bus modifier pipeline reacting to Vulnerable, not a
     # hardcoded `if has_vulnerable` branch in the damage calculation.
     state = make_state(hand=["Bash", "Strike"])
-    vulnerable = apply(apply(state, "PlayCard:Bash"), "SelectTarget:Monster")
-    hp_before_strike = vulnerable.monster_hp
+    vulnerable = apply(apply(state, "PlayCard:Bash"), "SelectTarget:Monster:0")
+    hp_before_strike = vulnerable.monsters[0].hp
 
     awaiting_target = apply(vulnerable, "PlayCard:Strike")
-    resolved = apply(awaiting_target, "SelectTarget:Monster")
+    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    assert resolved.monster_hp == hp_before_strike - VULNERABLE_STRIKE_DAMAGE
+    assert resolved.monsters[0].hp == hp_before_strike - VULNERABLE_STRIKE_DAMAGE
 
 
 def _gremlin_nob(seed, hand=None, deck=None):
     return CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=85,
-        monster_attack=0,
+        monsters=[Monster(hp=85, attack=0, name="Gremlin Nob")],
         seed=seed,
         hand=hand or [],
         deck=deck,
-        monster_name="Gremlin Nob",
     )
 
 
@@ -186,7 +186,7 @@ def test_gremlin_nob_skull_bash_applies_two_vulnerable_to_the_player():
     for seed in range(200):
         state = _gremlin_nob(seed)
         after_bellow = apply(state, "EndTurn")
-        if after_bellow.monster_intent == "Skull Bash":
+        if after_bellow.monsters[0].intent == "Skull Bash":
             after_skull_bash = apply(after_bellow, "EndTurn")
             # 2 applied by Skull Bash, 1 ticked at start of new turn → 1 left.
             assert after_skull_bash.player_statuses.count("Vulnerable") == 1
@@ -200,8 +200,8 @@ def test_gremlin_nob_bellow_grants_enrage_not_strength():
     # Per the wiki, Bellow gives Enrage(2) — NOT Strength(3).
     state = _gremlin_nob(seed=42)
     after_bellow = apply(state, "EndTurn")
-    assert "Enrage" in after_bellow.monster_statuses
-    assert "Strength" not in after_bellow.monster_statuses
+    assert "Enrage" in after_bellow.monsters[0].statuses
+    assert "Strength" not in after_bellow.monsters[0].statuses
 
 
 def test_playing_a_skill_card_when_monster_has_enrage_gives_monster_strength():
@@ -210,23 +210,23 @@ def test_playing_a_skill_card_when_monster_has_enrage_gives_monster_strength():
     # Using deck=["Defend"]*5 ensures Defends cycle back into hand after Bellow.
     state = _gremlin_nob(seed=42, deck=["Defend"] * 5)
     after_bellow = apply(state, "EndTurn")
-    assert "Enrage" in after_bellow.monster_statuses
+    assert "Enrage" in after_bellow.monsters[0].statuses
 
     # Play the first Defend in hand — Enrage should fire.
     after_defend = apply(after_bellow, "PlayCard:Defend")
-    assert "Strength" in after_defend.monster_statuses
+    assert "Strength" in after_defend.monsters[0].statuses
 
 
 def test_playing_an_attack_card_when_monster_has_enrage_does_not_trigger_it():
     # Only Skill cards trigger Enrage — Attacks must not.
     state = _gremlin_nob(seed=42, deck=["Strike"] * 5)
     after_bellow = apply(state, "EndTurn")
-    assert "Enrage" in after_bellow.monster_statuses
+    assert "Enrage" in after_bellow.monsters[0].statuses
 
     # Strike is an Attack — playing it should NOT add Strength to the monster.
     awaiting_target = apply(after_bellow, "PlayCard:Strike")
-    after_strike = apply(awaiting_target, "SelectTarget:Monster")
-    assert "Strength" not in after_strike.monster_statuses
+    after_strike = apply(awaiting_target, "SelectTarget:Monster:0")
+    assert "Strength" not in after_strike.monsters[0].statuses
 
 
 def test_player_vulnerable_ticks_after_monster_attacks_not_before():
@@ -239,12 +239,12 @@ def test_player_vulnerable_ticks_after_monster_attacks_not_before():
     for seed in range(200):
         state = _gremlin_nob(seed)
         after_bellow = apply(state, "EndTurn")
-        if after_bellow.monster_intent != "Skull Bash":
+        if after_bellow.monsters[0].intent != "Skull Bash":
             continue
         # Skull Bash fires; player enters next turn with 1 Vulnerable (2−1 tick).
         after_skull_bash = apply(after_bellow, "EndTurn")
         assert after_skull_bash.player_statuses.count("Vulnerable") == 1
-        if after_skull_bash.monster_intent != "Rush":
+        if after_skull_bash.monsters[0].intent != "Rush":
             continue
         # Rush fires while player still has 1 Vulnerable.
         hp_before = after_skull_bash.player_hp
