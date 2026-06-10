@@ -11,6 +11,17 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         "Gremlin Nob" => Some("Bellow".to_string()),
         "Nibbit" => Some("Butt".to_string()),
         "Fuzzy Wurm Crawler" => Some("Acid Goop".to_string()),
+        "Twig Slime (S)" => Some("Tackle".to_string()),
+        "Shrinker Beetle" => Some("Shrink".to_string()),
+        // Per the wiki, Leaf Slime (S) opens with a 50/50 roll between Tackle
+        // and Goop; `opening_intent` has no RNG access (mirrors every other
+        // monster's fixed opener), so Tackle is picked deterministically —
+        // it then strictly alternates with Goop forever regardless.
+        "Leaf Slime (S)" => Some("Tackle".to_string()),
+        // Leaf Slime (M) always opens with StickyShot.
+        "Leaf Slime (M)" => Some("StickyShot".to_string()),
+        // Twig Slime (M) always opens with StickyShot.
+        "Twig Slime (M)" => Some("StickyShot".to_string()),
         _ => None,
     }
 }
@@ -48,6 +59,34 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
         ("Fuzzy Wurm Crawler", "Inhale") => {
             Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(7))])
         }
+        // Twig Slime (S): a single repeating Tackle for 4 damage.
+        ("Twig Slime (S)", "Tackle") => Some(vec![EffectOp::DealDamage(4)]),
+        // Shrinker Beetle: opens with Shrink (applies Status::Shrink to the
+        // player, no damage), then alternates Chomp (7) <-> Stomp (13).
+        ("Shrinker Beetle", "Shrink") => {
+            Some(vec![EffectOp::ApplyStatusToTarget(Status::Shrink)])
+        }
+        ("Shrinker Beetle", "Chomp") => Some(vec![EffectOp::DealDamage(7)]),
+        ("Shrinker Beetle", "Stomp") => Some(vec![EffectOp::DealDamage(13)]),
+        // Leaf Slime (S): Tackle for 3, or Goop a "Slimed" card into the
+        // player's discard pile (no damage).
+        ("Leaf Slime (S)", "Tackle") => Some(vec![EffectOp::DealDamage(3)]),
+        ("Leaf Slime (S)", "Goop") => {
+            Some(vec![EffectOp::ApplyCardToTarget("Slimed".to_string())])
+        }
+        // Leaf Slime (M): StickyShot gives the player two "Slimed" cards (no
+        // damage); ClumpShot deals 8.
+        ("Leaf Slime (M)", "StickyShot") => Some(vec![
+            EffectOp::ApplyCardToTarget("Slimed".to_string()),
+            EffectOp::ApplyCardToTarget("Slimed".to_string()),
+        ]),
+        ("Leaf Slime (M)", "ClumpShot") => Some(vec![EffectOp::DealDamage(8)]),
+        // Twig Slime (M): StickyShot gives the player one "Slimed" card (no
+        // damage); ClumpShot deals 11.
+        ("Twig Slime (M)", "StickyShot") => {
+            Some(vec![EffectOp::ApplyCardToTarget("Slimed".to_string())])
+        }
+        ("Twig Slime (M)", "ClumpShot") => Some(vec![EffectOp::DealDamage(11)]),
         _ => None,
     }
 }
@@ -63,6 +102,8 @@ fn max_streak(monster_name: &str, move_name: &str) -> u32 {
         // and the wiki confirms Nob never uses it twice in a row.
         ("Gremlin Nob", "Rush") => 2,
         ("Gremlin Nob", _) => 1,
+        // Twig Slime (M)'s StickyShot can never repeat consecutively.
+        ("Twig Slime (M)", "StickyShot") => 1,
         _ => u32::MAX,
     }
 }
@@ -122,6 +163,39 @@ pub(crate) fn select_next_intent(
         "Fuzzy Wurm Crawler" => match last_move.as_deref() {
             Some("Acid Goop") => Some("Inhale".to_string()),
             _ => Some("Acid Goop".to_string()),
+        },
+        // Twig Slime (S) has a single move and repeats it forever.
+        "Twig Slime (S)" => Some("Tackle".to_string()),
+        // Shrinker Beetle: Shrink only ever opens the fight; afterward it
+        // alternates Chomp <-> Stomp forever.
+        "Shrinker Beetle" => match last_move.as_deref() {
+            Some("Chomp") => Some("Stomp".to_string()),
+            _ => Some("Chomp".to_string()),
+        },
+        // Leaf Slime (S) strictly alternates Tackle <-> Goop forever.
+        "Leaf Slime (S)" => match last_move.as_deref() {
+            Some("Tackle") => Some("Goop".to_string()),
+            _ => Some("Tackle".to_string()),
+        },
+        // Leaf Slime (M) strictly alternates StickyShot <-> ClumpShot forever.
+        "Leaf Slime (M)" => match last_move.as_deref() {
+            Some("StickyShot") => Some("ClumpShot".to_string()),
+            _ => Some("StickyShot".to_string()),
+        },
+        // Per the wiki, Twig Slime (M)'s post-opening pattern: 67% ClumpShot,
+        // 33% StickyShot, with StickyShot never repeating consecutively
+        // (enforced via `max_streak`).
+        "Twig Slime (M)" => loop {
+            let roll = rng.gen_range(0..100);
+            let candidate = if roll < 67 { "ClumpShot" } else { "StickyShot" };
+            let resulting_streak = if last_move.as_deref() == Some(candidate) {
+                streak + 1
+            } else {
+                1
+            };
+            if resulting_streak <= max_streak(monster_name, candidate) {
+                return Some(candidate.to_string());
+            }
         },
         _ => None,
     }

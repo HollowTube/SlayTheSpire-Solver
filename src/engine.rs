@@ -26,6 +26,9 @@ pub(crate) enum Status {
     Enrage(i32),
     // Grants 2 Block each time the holder plays an Attack for this combat.
     Rage,
+    // The Shrinker Beetle's Shrink: −30% damage dealt by its holder, rounded
+    // down (attacker side only) — like Weak but permanent (never decays).
+    Shrink,
 }
 
 impl Status {
@@ -36,6 +39,7 @@ impl Status {
             Status::Strength(_) => "Strength",
             Status::Enrage(_) => "Enrage",
             Status::Rage => "Rage",
+            Status::Shrink => "Shrink",
         }
     }
 
@@ -53,6 +57,10 @@ impl Status {
             // Weak: −25% damage dealt, rounded down (attacker side only).
             (Status::Weak, Side::Attacker, EventType::OnDamageDealt) => {
                 Some(Modifier::MultiplyDamage(0.75))
+            }
+            // Shrink: −30% damage dealt, rounded down (attacker side only).
+            (Status::Shrink, Side::Attacker, EventType::OnDamageDealt) => {
+                Some(Modifier::MultiplyDamage(0.70))
             }
             // Strength: flat bonus to damage dealt (attacker side only).
             (Status::Strength(amount), Side::Attacker, EventType::OnDamageDealt) => {
@@ -194,6 +202,11 @@ pub(crate) enum EffectOp {
     // self-buffs like Inflame's Strength, which never go through SelectTarget.
     ApplyStatusToSelf(Status),
     DrawCards(usize),
+    // Pushes a named card (e.g. "Slimed") into a target's discard pile — used
+    // by slime monster moves (Goop/StickyShot) to stick junk cards into the
+    // player's deck. Only `Actor::Player` has card piles, so this is a no-op
+    // for any other target in `targets`.
+    ApplyCardToTarget(String),
 }
 
 /// Deals damage from `attacker` to `target`, running it through both
@@ -267,6 +280,13 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 state.fighter_mut(actor).statuses.push(status.clone())
             }
             EffectOp::DrawCards(n) => draw_cards(state, *n),
+            EffectOp::ApplyCardToTarget(card_name) => {
+                for &target in targets {
+                    if target == Actor::Player {
+                        state.discard_pile.push(card_name.clone());
+                    }
+                }
+            }
         }
     }
 }

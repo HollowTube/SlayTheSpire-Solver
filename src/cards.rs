@@ -5,6 +5,10 @@ pub(crate) enum CardType {
     Attack,
     Skill,
     Power,
+    // Non-interactive "junk" cards monsters stick into the player's deck
+    // (e.g. Slimed) — like Powers, they exhaust on play rather than
+    // returning to discard.
+    Status,
 }
 
 /// A card's energy cost and declarative effect pipeline (run once any
@@ -95,6 +99,15 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             targeted: true,
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(9), EffectOp::DrawCards(1)],
+        }),
+        // The slime monsters' Goop/StickyShot moves stick this into the
+        // player's discard pile. Per the wiki: 1 energy, draws 1 card,
+        // exhausts on play.
+        "Slimed" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Status,
+            effects: vec![EffectOp::DrawCards(1)],
         }),
         _ => None,
     }
