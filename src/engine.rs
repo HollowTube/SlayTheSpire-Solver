@@ -43,6 +43,25 @@ impl Status {
         }
     }
 
+    /// The reverse of `as_str`, for reconstructing a combatant's status list
+    /// from a (name, amount) snapshot — e.g. from an external analysis
+    /// server's JSON. For binary statuses (Vulnerable, Weak, Rage) `amount`
+    /// is the stack count, expanded into that many repeated entries; for
+    /// `Strength`/`Enrage`, `amount` is the carried value of the single
+    /// variant. Unknown names are ignored (returns an empty vec) so a
+    /// snapshot from a future, richer game state degrades gracefully rather
+    /// than failing to construct.
+    pub(crate) fn from_name_and_amount(name: &str, amount: i32) -> Vec<Status> {
+        match name {
+            "Vulnerable" => vec![Status::Vulnerable; amount.max(0) as usize],
+            "Weak" => vec![Status::Weak; amount.max(0) as usize],
+            "Rage" => vec![Status::Rage; amount.max(0) as usize],
+            "Strength" => vec![Status::Strength(amount)],
+            "Enrage" => vec![Status::Enrage(amount)],
+            _ => Vec::new(),
+        }
+    }
+
     /// What this status contributes when `event` fires while sitting on
     /// `side`, if anything — the "listener registration" half of the
     /// damage-modifier pipeline. Declaring the side here (not just the status
