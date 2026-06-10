@@ -100,7 +100,9 @@ def ironclad_starter_deck_vs_twig_slime_s(seed, deck=None):
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
-        monsters=[Monster(hp=TWIG_SLIME_S_STARTING_HP, attack=0, name="Twig Slime (S)")],
+        monsters=[
+            Monster(hp=TWIG_SLIME_S_STARTING_HP, attack=0, name="Twig Slime (S)")
+        ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
     )
@@ -128,7 +130,9 @@ def ironclad_starter_deck_vs_leaf_slime_s(seed, deck=None):
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
-        monsters=[Monster(hp=LEAF_SLIME_S_STARTING_HP, attack=0, name="Leaf Slime (S)")],
+        monsters=[
+            Monster(hp=LEAF_SLIME_S_STARTING_HP, attack=0, name="Leaf Slime (S)")
+        ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
     )
@@ -141,7 +145,9 @@ def ironclad_starter_deck_vs_leaf_slime_m(seed, deck=None):
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
-        monsters=[Monster(hp=LEAF_SLIME_M_STARTING_HP, attack=0, name="Leaf Slime (M)")],
+        monsters=[
+            Monster(hp=LEAF_SLIME_M_STARTING_HP, attack=0, name="Leaf Slime (M)")
+        ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
     )
@@ -154,7 +160,9 @@ def ironclad_starter_deck_vs_twig_slime_m(seed, deck=None):
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
-        monsters=[Monster(hp=TWIG_SLIME_M_STARTING_HP, attack=0, name="Twig Slime (M)")],
+        monsters=[
+            Monster(hp=TWIG_SLIME_M_STARTING_HP, attack=0, name="Twig Slime (M)")
+        ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
     )
