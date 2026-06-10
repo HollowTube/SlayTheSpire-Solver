@@ -33,6 +33,32 @@ maturin develop      # faster than a full re-install
 pytest tests/
 ```
 
+## Run the CI checks locally
+
+CI (`.github/workflows/ci.yml`) runs the following checks against every push and
+pull request. Run them yourself before pushing to catch issues early:
+
+```bash
+# Rust: must build with no warnings
+cargo check
+
+# Python lint and formatting
+ruff check python/ tests/
+ruff format --check python/ tests/    # use `ruff format` (no --check) to auto-fix
+
+# Python type-checking
+mypy python/ tests/ --ignore-missing-imports
+
+# Test suite
+pytest tests/ -q
+```
+
+`ruff` and `mypy` are part of the `dev` extras — install them with:
+
+```bash
+uv pip install -e ".[dev]"
+```
+
 ## Play a fight — interactive mode
 
 Launch a human-playable REPL against the canonical scenario (Ironclad starter deck vs. Jaw Worm):
