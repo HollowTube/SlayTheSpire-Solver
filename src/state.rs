@@ -106,21 +106,38 @@ pub struct Monster {
 #[pymethods]
 impl Monster {
     #[new]
-    #[pyo3(signature = (hp, attack=0, max_hp=None, name=None))]
-    fn new(hp: i32, attack: i32, max_hp: Option<i32>, name: Option<String>) -> Self {
-        let intent = name.as_deref().and_then(opening_intent);
+    #[pyo3(signature = (hp, attack=0, max_hp=None, name=None, block=0, statuses=Vec::new(), intent=None, last_move=None, move_streak=0))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        hp: i32,
+        attack: i32,
+        max_hp: Option<i32>,
+        name: Option<String>,
+        block: i32,
+        statuses: Vec<(String, i32)>,
+        intent: Option<String>,
+        last_move: Option<String>,
+        move_streak: u32,
+    ) -> Self {
+        // `intent` lets a reconstructed monster show its *actual* current
+        // telegraph rather than the species' opener — defaults to the opener
+        // (today's behavior) when not given.
+        let intent = intent.or_else(|| name.as_deref().and_then(opening_intent));
         Monster {
             fighter: Fighter {
                 hp,
                 max_hp: max_hp.unwrap_or(hp),
-                block: 0,
-                statuses: Vec::new(),
+                block,
+                statuses: statuses
+                    .into_iter()
+                    .flat_map(|(name, amount)| Status::from_name_and_amount(&name, amount))
+                    .collect(),
             },
             attack,
             name,
             intent,
-            last_move: None,
-            move_streak: 0,
+            last_move,
+            move_streak,
         }
     }
 
@@ -196,7 +213,7 @@ pub struct CombatState {
 #[pymethods]
 impl CombatState {
     #[new]
-    #[pyo3(signature = (player_hp, player_energy, monsters, seed, hand=Vec::new(), deck=None, player_max_hp=None, player_max_energy=None))]
+    #[pyo3(signature = (player_hp, player_energy, monsters, seed, hand=Vec::new(), deck=None, player_max_hp=None, player_max_energy=None, player_block=0, player_statuses=Vec::new(), turn=0, draw_pile=Vec::new(), discard_pile=Vec::new(), exhaust_pile=Vec::new()))]
     fn new(
         player_hp: i32,
         player_energy: i32,
@@ -206,6 +223,12 @@ impl CombatState {
         deck: Option<Vec<String>>,
         player_max_hp: Option<i32>,
         player_max_energy: Option<i32>,
+        player_block: i32,
+        player_statuses: Vec<(String, i32)>,
+        turn: u32,
+        draw_pile: Vec<String>,
+        discard_pile: Vec<String>,
+        exhaust_pile: Vec<String>,
     ) -> Self {
         let mut rng = Pcg32::seed_from_u64(seed);
         // A `deck` shuffles into the draw pile and deals an opening hand —
@@ -217,23 +240,26 @@ impl CombatState {
                 deck.shuffle(&mut rng);
                 (Vec::new(), deck, true)
             }
-            None => (hand, Vec::new(), false),
+            None => (hand, draw_pile, false),
         };
         let mut state = CombatState {
             player: Fighter {
                 hp: player_hp,
                 max_hp: player_max_hp.unwrap_or(player_hp),
-                block: 0,
-                statuses: Vec::new(),
+                block: player_block,
+                statuses: player_statuses
+                    .into_iter()
+                    .flat_map(|(name, amount)| Status::from_name_and_amount(&name, amount))
+                    .collect(),
             },
             player_energy,
             player_max_energy: player_max_energy.unwrap_or(player_energy),
             monsters,
-            turn: 0,
+            turn,
             hand,
             draw_pile,
-            discard_pile: Vec::new(),
-            exhaust_pile: Vec::new(),
+            discard_pile,
+            exhaust_pile,
             pending: None,
             rng,
         };

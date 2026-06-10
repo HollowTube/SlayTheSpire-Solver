@@ -14,6 +14,7 @@ dev = ["pytest", "ruff", "mypy"]
 
 [project.scripts]
 sts-sim = "sts_sim.cli:main"
+sts-sim-server = "sts_sim.server:main"
 
 [tool.maturin]
 python-source = "python"
