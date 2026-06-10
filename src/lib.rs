@@ -124,7 +124,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                 match data.card_type {
                     CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
                     CardType::Attack => fire_event(&mut next, GameEvent::AttackPlayed),
-                    CardType::Power => {}
+                    CardType::Power | CardType::Status => {}
                 }
                 next.pending = None;
                 Ok(next)
@@ -148,7 +148,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     )));
                 }
                 let played = next.hand.remove(position);
-                if data.card_type == CardType::Power {
+                if matches!(data.card_type, CardType::Power | CardType::Status) {
                     next.exhaust_pile.push(played);
                 } else {
                     next.discard_pile.push(played);
@@ -172,7 +172,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     match data.card_type {
                         CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
                         CardType::Attack => fire_event(&mut next, GameEvent::AttackPlayed),
-                        CardType::Power => {}
+                        CardType::Power | CardType::Status => {}
                     }
                 }
                 Ok(next)

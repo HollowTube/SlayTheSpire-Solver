@@ -30,6 +30,21 @@ NIBBIT_STARTING_HP = 44
 # Fuzzy Wurm Crawler HP: 55-57 normal. 56 used as canonical value.
 FUZZY_WURM_CRAWLER_STARTING_HP = 56
 
+# Twig Slime (S) HP: 7-11 normal. 11 used as canonical value.
+TWIG_SLIME_S_STARTING_HP = 11
+
+# Shrinker Beetle HP: 38-40 normal. 38 used as canonical value.
+SHRINKER_BEETLE_STARTING_HP = 38
+
+# Leaf Slime (S) HP: 11-15 normal. 13 used as canonical value.
+LEAF_SLIME_S_STARTING_HP = 13
+
+# Leaf Slime (M) HP: 32-35 normal. 33 used as canonical value.
+LEAF_SLIME_M_STARTING_HP = 33
+
+# Twig Slime (M) HP: 26-28 normal. 27 used as canonical value.
+TWIG_SLIME_M_STARTING_HP = 27
+
 
 def ironclad_starter_deck_vs_gremlin_nob(seed, deck=None):
     """Harder canonical scenario: Ironclad's starting loadout against Gremlin
@@ -73,6 +88,92 @@ def ironclad_starter_deck_vs_fuzzy_wurm_crawler(seed, deck=None):
             Monster(
                 hp=FUZZY_WURM_CRAWLER_STARTING_HP, attack=0, name="Fuzzy Wurm Crawler"
             )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_twig_slime_s(seed, deck=None):
+    """Ironclad's starting loadout against a Twig Slime (S) — the simplest of
+    the Act 1 "easy pool" slimes: a single repeating Tackle for 4 damage."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[Monster(hp=TWIG_SLIME_S_STARTING_HP, attack=0, name="Twig Slime (S)")],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_shrinker_beetle(seed, deck=None):
+    """Ironclad's starting loadout against a Shrinker Beetle. Its opening
+    Shrink permanently reduces the player's outgoing damage by 30%, then it
+    alternates Chomp (7 damage) / Stomp (13 damage) forever."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(hp=SHRINKER_BEETLE_STARTING_HP, attack=0, name="Shrinker Beetle")
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_leaf_slime_s(seed, deck=None):
+    """Ironclad's starting loadout against a Leaf Slime (S), which alternates
+    Tackle (3 damage) / Goop (sticks a "Slimed" card into the player's deck)
+    forever."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[Monster(hp=LEAF_SLIME_S_STARTING_HP, attack=0, name="Leaf Slime (S)")],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_leaf_slime_m(seed, deck=None):
+    """Ironclad's starting loadout against a Leaf Slime (M), which strictly
+    alternates StickyShot (two "Slimed" cards) / ClumpShot (8 damage)
+    forever."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[Monster(hp=LEAF_SLIME_M_STARTING_HP, attack=0, name="Leaf Slime (M)")],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_twig_slime_m(seed, deck=None):
+    """Ironclad's starting loadout against a Twig Slime (M). Opens with
+    StickyShot (one "Slimed" card), then rolls ClumpShot (11 damage, 67%) /
+    StickyShot (33%) forever, never repeating StickyShot consecutively."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[Monster(hp=TWIG_SLIME_M_STARTING_HP, attack=0, name="Twig Slime (M)")],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_slimes_weak(seed, deck=None):
+    """Ironclad's starting loadout against the Act 1 "SlimesWeak" easy-pool
+    encounter: three slimes, one medium and two small. The real encounter
+    randomly picks the medium slime from {Leaf Slime (M), Twig Slime (M)} and
+    the two smalls from {Leaf Slime (S), Twig Slime (S)} (one of each); this
+    fixes one representative composition (Leaf Slime (M) + Leaf Slime (S) +
+    Twig Slime (S)) as the canonical multi-enemy scenario."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(hp=LEAF_SLIME_M_STARTING_HP, attack=0, name="Leaf Slime (M)"),
+            Monster(hp=LEAF_SLIME_S_STARTING_HP, attack=0, name="Leaf Slime (S)"),
+            Monster(hp=TWIG_SLIME_S_STARTING_HP, attack=0, name="Twig Slime (S)"),
         ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),

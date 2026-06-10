@@ -5,8 +5,19 @@ from sts_sim import apply, is_terminal, legal_actions, reward
 from sts_sim.scenarios import (
     IRONCLAD_STARTING_DECK,
     JAW_WORM_STARTING_HP,
+    LEAF_SLIME_M_STARTING_HP,
+    LEAF_SLIME_S_STARTING_HP,
     PLAYER_STARTING_HP,
+    SHRINKER_BEETLE_STARTING_HP,
+    TWIG_SLIME_M_STARTING_HP,
+    TWIG_SLIME_S_STARTING_HP,
     ironclad_starter_deck_vs_jaw_worm,
+    ironclad_starter_deck_vs_leaf_slime_m,
+    ironclad_starter_deck_vs_leaf_slime_s,
+    ironclad_starter_deck_vs_shrinker_beetle,
+    ironclad_starter_deck_vs_slimes_weak,
+    ironclad_starter_deck_vs_twig_slime_m,
+    ironclad_starter_deck_vs_twig_slime_s,
 )
 
 
@@ -116,6 +127,105 @@ def test_complete_random_fights_against_the_jaw_worm_reach_correctly_shaped_term
         else:
             assert final.monsters[0].hp <= 0
             assert r > 0
+
+
+# ── Act 1 "easy pool" scenarios ──────────────────────────────────────────────
+
+
+def test_vs_twig_slime_s_loads_with_the_documented_starting_loadout():
+    state = ironclad_starter_deck_vs_twig_slime_s(seed=42)
+
+    assert state.player_hp == PLAYER_STARTING_HP
+    assert len(state.hand) == 5
+    assert state.monsters[0].name == "Twig Slime (S)"
+    assert state.monsters[0].hp == TWIG_SLIME_S_STARTING_HP
+    assert state.monsters[0].intent == "Tackle"
+
+
+def test_vs_shrinker_beetle_loads_with_the_documented_starting_loadout():
+    state = ironclad_starter_deck_vs_shrinker_beetle(seed=42)
+
+    assert state.player_hp == PLAYER_STARTING_HP
+    assert len(state.hand) == 5
+    assert state.monsters[0].name == "Shrinker Beetle"
+    assert state.monsters[0].hp == SHRINKER_BEETLE_STARTING_HP
+    assert state.monsters[0].intent == "Shrink"
+
+
+def test_vs_leaf_slime_s_loads_with_the_documented_starting_loadout():
+    state = ironclad_starter_deck_vs_leaf_slime_s(seed=42)
+
+    assert state.player_hp == PLAYER_STARTING_HP
+    assert len(state.hand) == 5
+    assert state.monsters[0].name == "Leaf Slime (S)"
+    assert state.monsters[0].hp == LEAF_SLIME_S_STARTING_HP
+    assert state.monsters[0].intent == "Tackle"
+
+
+def test_vs_leaf_slime_m_loads_with_the_documented_starting_loadout():
+    state = ironclad_starter_deck_vs_leaf_slime_m(seed=42)
+
+    assert state.player_hp == PLAYER_STARTING_HP
+    assert len(state.hand) == 5
+    assert state.monsters[0].name == "Leaf Slime (M)"
+    assert state.monsters[0].hp == LEAF_SLIME_M_STARTING_HP
+    assert state.monsters[0].intent == "StickyShot"
+
+
+def test_vs_twig_slime_m_loads_with_the_documented_starting_loadout():
+    state = ironclad_starter_deck_vs_twig_slime_m(seed=42)
+
+    assert state.player_hp == PLAYER_STARTING_HP
+    assert len(state.hand) == 5
+    assert state.monsters[0].name == "Twig Slime (M)"
+    assert state.monsters[0].hp == TWIG_SLIME_M_STARTING_HP
+    assert state.monsters[0].intent == "StickyShot"
+
+
+def test_vs_slimes_weak_loads_with_three_slime_monsters():
+    state = ironclad_starter_deck_vs_slimes_weak(seed=42)
+
+    assert state.player_hp == PLAYER_STARTING_HP
+    assert len(state.hand) == 5
+    assert [m.name for m in state.monsters] == [
+        "Leaf Slime (M)",
+        "Leaf Slime (S)",
+        "Twig Slime (S)",
+    ]
+    assert [m.hp for m in state.monsters] == [
+        LEAF_SLIME_M_STARTING_HP,
+        LEAF_SLIME_S_STARTING_HP,
+        TWIG_SLIME_S_STARTING_HP,
+    ]
+
+
+def test_complete_random_fights_against_each_easy_pool_monster_reach_correctly_shaped_terminal_states():
+    # Mirrors test_complete_random_fights_against_the_jaw_worm_reach_correctly_shaped_terminal_states
+    # for the new Act 1 "easy pool" scenarios — every one must terminate with
+    # a correctly-signed reward regardless of who wins.
+    scenario_fns = [
+        ironclad_starter_deck_vs_twig_slime_s,
+        ironclad_starter_deck_vs_shrinker_beetle,
+        ironclad_starter_deck_vs_leaf_slime_s,
+        ironclad_starter_deck_vs_leaf_slime_m,
+        ironclad_starter_deck_vs_twig_slime_m,
+        ironclad_starter_deck_vs_slimes_weak,
+    ]
+
+    for scenario_fn in scenario_fns:
+        for seed in (0, 1, 2):
+            state = scenario_fn(seed=seed)
+
+            final = play_randomly_to_terminal(state, seed=seed)
+
+            assert is_terminal(final)
+            r = reward(final)
+            assert -1.0 <= r <= 1.0
+            if final.player_hp <= 0:
+                assert r < 0
+            else:
+                assert all(m.hp <= 0 for m in final.monsters)
+                assert r > 0
 
 
 def test_random_play_can_both_win_and_lose_against_the_jaw_worm():

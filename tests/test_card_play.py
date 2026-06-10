@@ -225,3 +225,24 @@ def test_pommel_strike_deals_9_damage_and_draws_1_card():
 
     assert resolved.monsters[0].hp == state.monsters[0].hp - 9
     assert len(resolved.hand) == hand_size_before - 1 + 1  # spent Pommel Strike, drew 1
+
+
+def test_slimed_costs_1_draws_a_card_and_exhausts():
+    # Slimed is the Status card slime monsters stick the player with: 1
+    # energy, draws 1 card on play, and — like a Power — exhausts rather
+    # than going to discard, so it can't clog the deck a second time.
+    state = CombatState(
+        player_hp=80,
+        player_energy=3,
+        monsters=[Monster(hp=44, attack=6)],
+        seed=42,
+        hand=["Slimed", "Defend"],
+    )
+
+    resolved = apply(state, "PlayCard:Slimed")
+
+    assert resolved.player_energy == 2
+    assert "Defend" in resolved.hand
+    assert "Slimed" not in resolved.hand
+    assert "Slimed" in resolved.exhaust_pile
+    assert "Slimed" not in resolved.discard_pile
