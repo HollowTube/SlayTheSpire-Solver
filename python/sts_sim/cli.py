@@ -73,11 +73,11 @@ def intent_description(monster_name, intent):
 def effective_intent_description(state):
     """Like intent_description but adjusts attack damage by the monster's
     current Strength so the displayed number matches what will actually land."""
-    name = state.monster_name
-    intent = state.monster_intent
+    name = state.monsters[0].name
+    intent = state.monsters[0].intent
     if not name or not intent:
         return intent or ""
-    strength = state.monster_strength
+    strength = state.monsters[0].strength
     base = _INTENT_BASE_DAMAGE.get((name, intent), 0)
     desc = _INTENT_DESCRIPTIONS.get((name, intent), intent)
     if base > 0 and strength > 0:
@@ -119,14 +119,14 @@ def render_state(state):
         f"Energy: {state.player_energy}",
         f"  Statuses: {_format_statuses(state.player_statuses)}",
         f"  Hand: {', '.join(state.hand) if state.hand else 'empty'}",
-        f"{state.monster_name}: {state.monster_hp} HP | Block: {state.monster_block} | "
-        f"Intent: {state.monster_intent}"
+        f"{state.monsters[0].name}: {state.monsters[0].hp} HP | Block: {state.monsters[0].block} | "
+        f"Intent: {state.monsters[0].intent}"
         + (
             f" ({effective_intent_description(state)})"
-            if state.monster_intent and state.monster_name
+            if state.monsters[0].intent and state.monsters[0].name
             else ""
         ),
-        f"  Statuses: {_format_statuses(state.monster_statuses)}",
+        f"  Statuses: {_format_statuses(state.monsters[0].statuses)}",
     ]
     return "\n".join(lines)
 
@@ -175,8 +175,8 @@ def describe_turn_outcome(before, after):
     net incoming damage and how much block absorbed, without needing a
     separate engine event stream.
     """
-    name = before.monster_name or "Monster"
-    intent = before.monster_intent or "?"
+    name = before.monsters[0].name or "Monster"
+    intent = before.monsters[0].intent or "?"
     desc = effective_intent_description(before)
 
     hp_lost = before.player_hp - after.player_hp
@@ -200,7 +200,7 @@ def describe_turn_outcome(before, after):
 
 
 def _report_outcome(state, output_fn):
-    outcome = "won" if state.monster_hp <= 0 else "lost"
+    outcome = "won" if state.monsters[0].hp <= 0 else "lost"
     output_fn(f"You {outcome}! Final HP: {state.player_hp}")
     output_fn(f"Reward: {reward(state):.2f} (evaluate: {evaluate(state):.2f})")
 
@@ -299,7 +299,7 @@ def render_step_result(result):
     lines += ["", _menu_text(result.legal_actions)]
     if is_terminal(result.state):
         lines.append("")
-        outcome = "won" if result.state.monster_hp <= 0 else "lost"
+        outcome = "won" if result.state.monsters[0].hp <= 0 else "lost"
         lines.append(f"Fight over — you {outcome}! Reward: {reward(result.state):.2f}")
     lines.append("")
     lines.append(f"updated_history: {','.join(result.updated_history)}")

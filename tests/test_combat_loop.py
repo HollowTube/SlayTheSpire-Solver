@@ -1,6 +1,14 @@
 import copy
 
-from sts_sim import CombatState, apply, evaluate, is_terminal, legal_actions, reward
+from sts_sim import (
+    CombatState,
+    Monster,
+    apply,
+    evaluate,
+    is_terminal,
+    legal_actions,
+    reward,
+)
 
 
 # The toy monster's HP, as configured by `make_state` and reused directly by
@@ -12,8 +20,7 @@ def make_state():
     return CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=MONSTER_STARTING_HP,
-        monster_attack=6,
+        monsters=[Monster(hp=MONSTER_STARTING_HP, attack=6)],
         seed=42,
     )
 
@@ -28,8 +35,7 @@ def test_constructing_with_a_deck_shuffles_it_into_the_draw_pile_and_deals_an_op
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=MONSTER_STARTING_HP,
-        monster_attack=6,
+        monsters=[Monster(hp=MONSTER_STARTING_HP, attack=6)],
         seed=42,
         deck=list(deck),
     )
@@ -62,8 +68,7 @@ def test_end_turn_discards_the_remaining_hand_then_draws_a_fresh_one_from_the_dr
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=6,
+        monsters=[Monster(hp=44, attack=6)],
         seed=42,
         deck=list(deck),
     )
@@ -89,8 +94,7 @@ def test_drawing_reshuffles_the_discard_pile_into_the_draw_pile_once_it_empties(
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=6,
+        monsters=[Monster(hp=44, attack=6)],
         seed=42,
         deck=list(deck),
     )
@@ -117,7 +121,7 @@ def test_end_turn_applies_the_monsters_fixed_attack_to_the_player():
 
     next_state = apply(state, "EndTurn")
 
-    assert next_state.player_hp == state.player_hp - state.monster_attack
+    assert next_state.player_hp == state.player_hp - state.monsters[0].attack
 
 
 # Per HOL-10: a real fight spans multiple turns, and the original
@@ -130,12 +134,11 @@ def test_end_turn_refreshes_player_energy_to_its_starting_amount():
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=6,
+        monsters=[Monster(hp=44, attack=6)],
         seed=42,
         hand=["Strike"],
     )
-    spent = apply(apply(state, "PlayCard:Strike"), "SelectTarget:Monster")
+    spent = apply(apply(state, "PlayCard:Strike"), "SelectTarget:Monster:0")
     assert spent.player_energy < state.player_energy
 
     next_state = apply(spent, "EndTurn")
@@ -151,7 +154,10 @@ def test_fresh_state_is_not_terminal():
 
 def test_state_is_terminal_once_player_hp_reaches_zero():
     state = CombatState(
-        player_hp=5, player_energy=3, monster_hp=44, monster_attack=6, seed=42
+        player_hp=5,
+        player_energy=3,
+        monsters=[Monster(hp=44, attack=6)],
+        seed=42,
     )
 
     next_state = apply(state, "EndTurn")
@@ -162,7 +168,10 @@ def test_state_is_terminal_once_player_hp_reaches_zero():
 
 def test_state_is_terminal_once_monster_hp_reaches_zero():
     state = CombatState(
-        player_hp=80, player_energy=3, monster_hp=0, monster_attack=6, seed=42
+        player_hp=80,
+        player_energy=3,
+        monsters=[Monster(hp=0, attack=6)],
+        seed=42,
     )
 
     assert is_terminal(state) is True
@@ -172,10 +181,8 @@ def test_reward_is_positive_when_the_player_wins():
     won = CombatState(
         player_hp=80,
         player_max_hp=80,
-        monster_hp=0,
-        monster_max_hp=44,
+        monsters=[Monster(hp=0, attack=6, max_hp=44)],
         player_energy=3,
-        monster_attack=6,
         seed=42,
     )
 
@@ -186,10 +193,8 @@ def test_reward_is_negative_when_the_player_loses():
     lost = CombatState(
         player_hp=0,
         player_max_hp=80,
-        monster_hp=44,
-        monster_max_hp=44,
+        monsters=[Monster(hp=44, attack=6, max_hp=44)],
         player_energy=3,
-        monster_attack=6,
         seed=42,
     )
 
@@ -200,19 +205,15 @@ def test_reward_rewards_decisive_wins_more_than_narrow_wins():
     decisive_win = CombatState(
         player_hp=80,
         player_max_hp=80,
-        monster_hp=0,
-        monster_max_hp=44,
+        monsters=[Monster(hp=0, attack=6, max_hp=44)],
         player_energy=3,
-        monster_attack=6,
         seed=42,
     )
     narrow_win = CombatState(
         player_hp=1,
         player_max_hp=80,
-        monster_hp=0,
-        monster_max_hp=44,
+        monsters=[Monster(hp=0, attack=6, max_hp=44)],
         player_energy=3,
-        monster_attack=6,
         seed=42,
     )
 
@@ -233,10 +234,8 @@ def test_reward_matches_the_shaped_formula_for_a_win_at_partial_hp():
     won_at_half_hp = CombatState(
         player_hp=40,
         player_max_hp=80,
-        monster_hp=0,
-        monster_max_hp=44,
+        monsters=[Monster(hp=0, attack=6, max_hp=44)],
         player_energy=3,
-        monster_attack=6,
         seed=42,
     )
 
@@ -252,31 +251,29 @@ def test_reward_matches_the_shaped_formula_for_a_loss_with_the_monster_at_partia
     weak_player = CombatState(
         player_hp=5,
         player_energy=3,
-        monster_hp=MONSTER_STARTING_HP,
-        monster_attack=6,
+        monsters=[Monster(hp=MONSTER_STARTING_HP, attack=6)],
         seed=42,
         hand=["Strike"],
     )
-    chipped = apply(apply(weak_player, "PlayCard:Strike"), "SelectTarget:Monster")
+    chipped = apply(apply(weak_player, "PlayCard:Strike"), "SelectTarget:Monster:0")
     lost = apply(chipped, "EndTurn")
 
-    assert is_terminal(lost) and lost.player_hp <= 0 and lost.monster_hp > 0
-    assert reward(lost) == -1 * (lost.monster_hp / MONSTER_STARTING_HP)
+    assert is_terminal(lost) and lost.player_hp <= 0 and lost.monsters[0].hp > 0
+    assert reward(lost) == -1 * (lost.monsters[0].hp / MONSTER_STARTING_HP)
 
 
 def test_evaluate_favours_the_side_with_relatively_more_remaining_hp():
     armed = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=MONSTER_STARTING_HP,
-        monster_attack=6,
+        monsters=[Monster(hp=MONSTER_STARTING_HP, attack=6)],
         seed=42,
         hand=["Strike"],
     )
 
     # Deal Strike damage to the monster within a single turn, taking no return
     # damage — the monster ends up relatively worse off than the player.
-    monster_hurt = apply(apply(armed, "PlayCard:Strike"), "SelectTarget:Monster")
+    monster_hurt = apply(apply(armed, "PlayCard:Strike"), "SelectTarget:Monster:0")
 
     # Take repeated attacks without retaliating — the player ends up relatively
     # worse off than the monster.
@@ -307,8 +304,7 @@ def test_apply_is_pure_with_draw_and_reshuffle_in_play():
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=6,
+        monsters=[Monster(hp=44, attack=6)],
         seed=42,
         deck=list(deck),
     )
@@ -340,7 +336,7 @@ def test_a_full_toy_fight_of_nothing_but_end_turn_reaches_a_terminal_state():
         state = apply(state, "EndTurn")
 
     assert is_terminal(state)
-    assert state.player_hp <= 0 or state.monster_hp <= 0
+    assert state.player_hp <= 0 or state.monsters[0].hp <= 0
     assert reward(state) != 0
 
 
@@ -356,14 +352,13 @@ def test_a_scripted_fight_with_strike_and_defend_runs_the_whole_stack_to_a_termi
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=MONSTER_STARTING_HP,
-        monster_attack=6,
+        monsters=[Monster(hp=MONSTER_STARTING_HP, attack=6)],
         seed=42,
         hand=["Strike", "Defend"],
     )
 
     awaiting_target = apply(state, "PlayCard:Strike")
-    struck = apply(awaiting_target, "SelectTarget:Monster")
+    struck = apply(awaiting_target, "SelectTarget:Monster:0")
     opening = apply(struck, "PlayCard:Defend")
 
     final_state = opening
@@ -371,8 +366,10 @@ def test_a_scripted_fight_with_strike_and_defend_runs_the_whole_stack_to_a_termi
         final_state = apply(final_state, "EndTurn")
 
     assert final_state.player_hp <= 0
-    assert final_state.monster_hp == struck.monster_hp
-    assert reward(final_state) == -1 * (final_state.monster_hp / MONSTER_STARTING_HP)
+    assert final_state.monsters[0].hp == struck.monsters[0].hp
+    assert reward(final_state) == -1 * (
+        final_state.monsters[0].hp / MONSTER_STARTING_HP
+    )
 
 
 def test_with_rng_seed_produces_different_draws_for_different_seeds():
@@ -384,8 +381,7 @@ def test_with_rng_seed_produces_different_draws_for_different_seeds():
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=6,
+        monsters=[Monster(hp=44, attack=6)],
         seed=42,
         deck=list(deck),
     )
@@ -400,3 +396,24 @@ def test_with_rng_seed_produces_different_draws_for_different_seeds():
         hands.add(tuple(after.hand))
 
     assert len(hands) > 1
+
+
+def test_strike_targeting_one_of_two_monsters_only_damages_that_monster():
+    state = CombatState(
+        player_hp=80,
+        player_energy=3,
+        monsters=[Monster(hp=20, attack=5), Monster(hp=30, attack=5)],
+        seed=42,
+        hand=["Strike"],
+    )
+
+    awaiting_target = apply(state, "PlayCard:Strike")
+    assert legal_actions(awaiting_target) == [
+        "SelectTarget:Monster:0",
+        "SelectTarget:Monster:1",
+    ]
+
+    struck = apply(awaiting_target, "SelectTarget:Monster:1")
+
+    assert struck.monsters[0].hp == 20
+    assert struck.monsters[1].hp == 24

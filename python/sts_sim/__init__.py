@@ -1,5 +1,6 @@
 from ._sts_sim import (
     CombatState,
+    Monster,
     apply,
     evaluate,
     is_terminal,
@@ -10,6 +11,7 @@ from ._sts_sim import (
 
 __all__ = [
     "CombatState",
+    "Monster",
     "apply",
     "evaluate",
     "is_terminal",

@@ -55,17 +55,112 @@ pub(crate) struct Fighter {
     pub(crate) hp: i32,
     // The HP fraction `evaluate`/`reward` shape against. Defaults to the
     // starting `hp` (combat begins at full) via `CombatState::new`'s
-    // `player_max_hp`/`monster_max_hp` overrides — needed both because player
-    // HP carries between fights (what an actual STS run optimizes for, the
-    // common case once multi-fight runs exist) and because tests sometimes
-    // construct already-terminal or partial-HP states directly, where
-    // max == current == 0 would collapse the fraction to NaN.
+    // `player_max_hp`/`Monster::new`'s `max_hp` overrides — needed both
+    // because player HP carries between fights (what an actual STS run
+    // optimizes for, the common case once multi-fight runs exist) and
+    // because tests sometimes construct already-terminal or partial-HP
+    // states directly, where max == current == 0 would collapse the
+    // fraction to NaN.
     pub(crate) max_hp: i32,
     // Absorbs incoming damage before HP, reset at the start of each
     // combatant's own turn (e.g. Jaw Worm's Thrash/Bellow grant it block that
     // lasts through the player's turn; mirrors `EndTurn`'s player_block reset).
     pub(crate) block: i32,
     pub(crate) statuses: Vec<Status>,
+}
+
+/// One enemy combatant. `CombatState` holds a `Vec<Monster>` so a fight can
+/// have any number of enemies; `Actor::Monster(i)` indexes into it. Bundles
+/// the symmetric `Fighter` data with the monster-only singletons that used to
+/// live directly on `CombatState` as `monster_attack`/`monster_name`/
+/// `monster_intent`/`monster_last_move`/`monster_move_streak` — each monster
+/// now carries its own copy of these, since each enemy in a fight telegraphs
+/// and tracks its own intent independently.
+#[pyclass(eq)]
+#[derive(Clone, PartialEq)]
+pub struct Monster {
+    pub(crate) fighter: Fighter,
+    // The trivial flat-attacker's fixed swing damage — meaningless (left at
+    // 0) for intent-driven monsters (e.g. Jaw Worm), whose move pool decides
+    // what they do each turn.
+    #[pyo3(get)]
+    pub(crate) attack: i32,
+    // The monster's species — looked up against move-pool data to drive
+    // intent-based AI (e.g. "Jaw Worm"). `None` (the default) keeps the
+    // original trivial fixed-`attack` behavior used by the placeholder
+    // monster and every pre-HOL-11 test.
+    #[pyo3(get)]
+    pub(crate) name: Option<String>,
+    // The move this monster has telegraphed for its next turn (e.g. "Chomp")
+    // — mirrors how Slay the Spire shows enemy intent before the player acts.
+    // `None` for monsters with no move pool (the trivial flat-attacker).
+    pub(crate) intent: Option<String>,
+    // The name of the most recently *executed* move, and how many turns in a
+    // row it's now run — the minimal state `select_next_intent` needs to
+    // enforce "cannot repeat X" / "cannot use Y N times in a row" constraints
+    // without replaying full move history.
+    pub(crate) last_move: Option<String>,
+    pub(crate) move_streak: u32,
+}
+
+#[pymethods]
+impl Monster {
+    #[new]
+    #[pyo3(signature = (hp, attack=0, max_hp=None, name=None))]
+    fn new(hp: i32, attack: i32, max_hp: Option<i32>, name: Option<String>) -> Self {
+        let intent = name.as_deref().and_then(opening_intent);
+        Monster {
+            fighter: Fighter {
+                hp,
+                max_hp: max_hp.unwrap_or(hp),
+                block: 0,
+                statuses: Vec::new(),
+            },
+            attack,
+            name,
+            intent,
+            last_move: None,
+            move_streak: 0,
+        }
+    }
+
+    #[getter]
+    fn hp(&self) -> i32 {
+        self.fighter.hp
+    }
+
+    #[getter]
+    fn max_hp(&self) -> i32 {
+        self.fighter.max_hp
+    }
+
+    #[getter]
+    fn block(&self) -> i32 {
+        self.fighter.block
+    }
+
+    #[getter]
+    fn statuses(&self) -> Vec<String> {
+        self.fighter.statuses.iter().map(|s| s.as_str().to_string()).collect()
+    }
+
+    #[getter]
+    fn strength(&self) -> i32 {
+        self.fighter.statuses.iter().filter_map(|s| match s {
+            Status::Strength(n) => Some(*n),
+            _ => None,
+        }).sum()
+    }
+
+    #[getter]
+    fn intent(&self) -> Option<String> {
+        self.intent.clone()
+    }
+
+    #[getter]
+    fn is_alive(&self) -> bool {
+        self.fighter.hp > 0
+    }
 }
 
 #[pyclass(eq)]
@@ -82,25 +177,8 @@ pub struct CombatState {
     // real mechanic, and tests may want to start mid-turn with partially-spent
     // energy without that looking like the per-turn maximum.
     pub(crate) player_max_energy: i32,
-    pub(crate) monster: Fighter,
     #[pyo3(get)]
-    pub(crate) monster_attack: i32,
-    // The monster's species — looked up against move-pool data to drive
-    // intent-based AI (e.g. "Jaw Worm"). `None` (the default) keeps the
-    // original trivial fixed-`monster_attack` behavior used by the
-    // placeholder monster and every pre-HOL-11 test.
-    #[pyo3(get)]
-    pub(crate) monster_name: Option<String>,
-    // The move the monster has telegraphed for its next turn (e.g. "Chomp")
-    // — mirrors how Slay the Spire shows enemy intent before the player acts.
-    // `None` for monsters with no move pool (the trivial flat-attacker).
-    pub(crate) monster_intent: Option<String>,
-    // The name of the most recently *executed* move, and how many turns in a
-    // row it's now run — the minimal state `select_next_intent` needs to
-    // enforce "cannot repeat X" / "cannot use Y N times in a row" constraints
-    // without replaying full move history.
-    pub(crate) monster_last_move: Option<String>,
-    pub(crate) monster_move_streak: u32,
+    pub(crate) monsters: Vec<Monster>,
     #[pyo3(get)]
     pub(crate) turn: u32,
     #[pyo3(get)]
@@ -118,21 +196,17 @@ pub struct CombatState {
 #[pymethods]
 impl CombatState {
     #[new]
-    #[pyo3(signature = (player_hp, player_energy, monster_hp, monster_attack, seed, hand=Vec::new(), deck=None, player_max_hp=None, monster_max_hp=None, player_max_energy=None, monster_name=None))]
+    #[pyo3(signature = (player_hp, player_energy, monsters, seed, hand=Vec::new(), deck=None, player_max_hp=None, player_max_energy=None))]
     fn new(
         player_hp: i32,
         player_energy: i32,
-        monster_hp: i32,
-        monster_attack: i32,
+        monsters: Vec<Monster>,
         seed: u64,
         hand: Vec<String>,
         deck: Option<Vec<String>>,
         player_max_hp: Option<i32>,
-        monster_max_hp: Option<i32>,
         player_max_energy: Option<i32>,
-        monster_name: Option<String>,
     ) -> Self {
-        let monster_intent = monster_name.as_deref().and_then(opening_intent);
         let mut rng = Pcg32::seed_from_u64(seed);
         // A `deck` shuffles into the draw pile and deals an opening hand —
         // the real-play path. Plain `hand` (no `deck`) is test scaffolding:
@@ -154,17 +228,7 @@ impl CombatState {
             },
             player_energy,
             player_max_energy: player_max_energy.unwrap_or(player_energy),
-            monster: Fighter {
-                hp: monster_hp,
-                max_hp: monster_max_hp.unwrap_or(monster_hp),
-                block: 0,
-                statuses: Vec::new(),
-            },
-            monster_attack,
-            monster_name,
-            monster_intent,
-            monster_last_move: None,
-            monster_move_streak: 0,
+            monsters,
             turn: 0,
             hand,
             draw_pile,
@@ -180,9 +244,9 @@ impl CombatState {
     }
 
     // `Fighter`'s fields aren't `#[pyo3(get)]` themselves (the struct isn't a
-    // pyclass), so each previously-direct `player_hp`/`monster_block`/etc.
-    // getter becomes an explicit `#[getter]` delegating to `self.player`/
-    // `self.monster` — preserving every Python-visible attribute name exactly.
+    // pyclass), so each previously-direct `player_hp`/etc. getter becomes an
+    // explicit `#[getter]` delegating to `self.player` — preserving every
+    // Python-visible attribute name exactly.
     #[getter]
     fn player_hp(&self) -> i32 {
         self.player.hp
@@ -194,41 +258,13 @@ impl CombatState {
     }
 
     #[getter]
-    fn monster_hp(&self) -> i32 {
-        self.monster.hp
-    }
-
-    #[getter]
-    fn monster_block(&self) -> i32 {
-        self.monster.block
-    }
-
-    #[getter]
     fn pending(&self) -> Option<String> {
         self.pending.as_ref().map(|p| p.as_str().to_string())
     }
 
     #[getter]
-    fn monster_intent(&self) -> Option<String> {
-        self.monster_intent.clone()
-    }
-
-    #[getter]
-    fn monster_statuses(&self) -> Vec<String> {
-        self.monster.statuses.iter().map(|s| s.as_str().to_string()).collect()
-    }
-
-    #[getter]
     fn player_statuses(&self) -> Vec<String> {
         self.player.statuses.iter().map(|s| s.as_str().to_string()).collect()
-    }
-
-    #[getter]
-    fn monster_strength(&self) -> i32 {
-        self.monster.statuses.iter().filter_map(|s| match s {
-            Status::Strength(n) => Some(*n),
-            _ => None,
-        }).sum()
     }
 
     #[getter]
@@ -270,14 +306,26 @@ impl CombatState {
     pub(crate) fn fighter(&self, who: Actor) -> &Fighter {
         match who {
             Actor::Player => &self.player,
-            Actor::Monster => &self.monster,
+            Actor::Monster(i) => &self.monsters[i].fighter,
         }
     }
 
     pub(crate) fn fighter_mut(&mut self, who: Actor) -> &mut Fighter {
         match who {
             Actor::Player => &mut self.player,
-            Actor::Monster => &mut self.monster,
+            Actor::Monster(i) => &mut self.monsters[i].fighter,
         }
+    }
+
+    /// Indices of monsters still alive (`hp > 0`) — the default target set
+    /// for non-targeted attacks (AOE) and the set of legal `SelectTarget`
+    /// indices.
+    pub(crate) fn living_monster_indices(&self) -> Vec<usize> {
+        self.monsters
+            .iter()
+            .enumerate()
+            .filter(|(_, m)| m.fighter.hp > 0)
+            .map(|(i, _)| i)
+            .collect()
     }
 }

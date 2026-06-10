@@ -169,24 +169,15 @@ fn apply_damage_modifiers(
 
 /// Which combatant an effect pipeline is acting on behalf of — lets the same
 /// `EffectOp` vocabulary and `run_effect_ops` engine drive both the player's
-/// cards and the monster's moves, with "self"/"target" resolved generically
-/// to the right side rather than hardcoded to the player.
+/// cards and a monster's moves. `Monster(i)` indexes `CombatState::monsters`,
+/// so a fight can have any number of enemies. Unlike the old `Player`/
+/// `Monster` pair, there's no generic "opponent" here — `run_effect_ops`
+/// takes an explicit target list, since a player action might target one
+/// monster (Strike), all of them (Thunderclap), or none (Defend).
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) enum Actor {
     Player,
-    Monster,
-}
-
-impl Actor {
-    /// The combatant on the other side of whatever `self` is doing — lets
-    /// damage/status resolution stay generic ("self" vs "target") without
-    /// the engine ever needing to special-case which enum variant that means.
-    fn opponent(self) -> Actor {
-        match self {
-            Actor::Player => Actor::Monster,
-            Actor::Monster => Actor::Player,
-        }
-    }
+    Monster(usize),
 }
 
 /// A single step in a card's declarative effect pipeline. A generic engine
@@ -196,7 +187,7 @@ impl Actor {
 pub(crate) enum EffectOp {
     DealDamage(i32),
     GainBlock(i32),
-    // Applies to whichever combatant the card resolved a target against
+    // Applies to whichever combatant(s) the action resolved as targets
     // (e.g. Bash's Vulnerable lands on the monster it struck).
     ApplyStatusToTarget(Status),
     // Applies to the player directly, regardless of targeting — for
@@ -205,38 +196,41 @@ pub(crate) enum EffectOp {
     DrawCards(usize),
 }
 
-/// Deals damage from `actor` to the opposing combatant, running it through
-/// that combatant's damage-modifier pipeline first and its block second —
+/// Deals damage from `attacker` to `target`, running it through both
+/// combatants' damage-modifier pipelines first and `target`'s block second —
 /// the same absorb-then-spill arithmetic regardless of which side is hitting
 /// which (mirrors Slay the Spire: block reduces incoming damage from anyone).
-fn deal_damage(state: &mut CombatState, actor: Actor, amount: i32) {
-    let opponent = actor.opponent();
+fn deal_damage(state: &mut CombatState, attacker: Actor, target: Actor, amount: i32) {
     let modified = apply_damage_modifiers(
         amount,
-        &state.fighter(actor).statuses,
-        &state.fighter(opponent).statuses,
+        &state.fighter(attacker).statuses,
+        &state.fighter(target).statuses,
         EventType::OnDamageDealt,
     );
 
-    let target = state.fighter_mut(opponent);
+    let target = state.fighter_mut(target);
     let absorbed = modified.min(target.block);
     target.block -= absorbed;
     target.hp -= modified - absorbed;
 }
 
-/// Fires `event` against every status on both combatants, collecting their
+/// Fires `event` against every status on every combatant, collecting their
 /// `reactions` and running the resulting `EffectOp`s on behalf of the holder.
 /// Adding a new reactive status only requires a `Status::reactions` arm — no
-/// changes here.
+/// changes here. None of today's reactions (Enrage, Rage) target another
+/// combatant, so an empty target list is passed.
 pub(crate) fn fire_event(state: &mut CombatState, event: GameEvent) {
-    for actor in [Actor::Monster, Actor::Player] {
+    let actors: Vec<Actor> = std::iter::once(Actor::Player)
+        .chain((0..state.monsters.len()).map(Actor::Monster))
+        .collect();
+    for actor in actors {
         let ops: Vec<EffectOp> = state
             .fighter(actor)
             .statuses
             .iter()
             .flat_map(|s| s.reactions(event))
             .collect();
-        run_effect_ops(state, &ops, actor);
+        run_effect_ops(state, &ops, actor, &[]);
     }
 }
 
@@ -250,13 +244,24 @@ pub(crate) fn tick_debuffs(statuses: &mut Vec<Status>) {
     }
 }
 
-pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor) {
+/// Interprets `ops` on behalf of `actor`. `DealDamage` and
+/// `ApplyStatusToTarget` fan out over every entry in `targets` (e.g.
+/// Thunderclap hits all enemies, Sword Boomerang hits its selected target
+/// three times); `GainBlock`, `ApplyStatusToSelf`, and `DrawCards` affect
+/// `actor` once regardless of `targets`.
+pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor, targets: &[Actor]) {
     for op in ops {
         match op {
-            EffectOp::DealDamage(amount) => deal_damage(state, actor, *amount),
+            EffectOp::DealDamage(amount) => {
+                for &target in targets {
+                    deal_damage(state, actor, target, *amount);
+                }
+            }
             EffectOp::GainBlock(amount) => state.fighter_mut(actor).block += amount,
             EffectOp::ApplyStatusToTarget(status) => {
-                state.fighter_mut(actor.opponent()).statuses.push(status.clone())
+                for &target in targets {
+                    state.fighter_mut(target).statuses.push(status.clone());
+                }
             }
             EffectOp::ApplyStatusToSelf(status) => {
                 state.fighter_mut(actor).statuses.push(status.clone())

@@ -1,4 +1,4 @@
-from . import CombatState
+from . import CombatState, Monster
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
 # 4 Defend, and 1 Bash — 10 cards total. `CombatState`'s `deck` constructor
@@ -43,11 +43,9 @@ def ironclad_starter_deck_vs_gremlin_nob(seed, deck=None):
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
-        monster_hp=GREMLIN_NOB_STARTING_HP,
-        monster_attack=0,
+        monsters=[Monster(hp=GREMLIN_NOB_STARTING_HP, attack=0, name="Gremlin Nob")],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
-        monster_name="Gremlin Nob",
     )
 
 
@@ -58,11 +56,9 @@ def ironclad_starter_deck_vs_nibbit(seed, deck=None):
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
-        monster_hp=NIBBIT_STARTING_HP,
-        monster_attack=0,
+        monsters=[Monster(hp=NIBBIT_STARTING_HP, attack=0, name="Nibbit")],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
-        monster_name="Nibbit",
     )
 
 
@@ -73,11 +69,13 @@ def ironclad_starter_deck_vs_fuzzy_wurm_crawler(seed, deck=None):
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
-        monster_hp=FUZZY_WURM_CRAWLER_STARTING_HP,
-        monster_attack=0,
+        monsters=[
+            Monster(
+                hp=FUZZY_WURM_CRAWLER_STARTING_HP, attack=0, name="Fuzzy Wurm Crawler"
+            )
+        ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
-        monster_name="Fuzzy Wurm Crawler",
     )
 
 
@@ -93,12 +91,10 @@ def ironclad_starter_deck_vs_jaw_worm(seed, deck=None):
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
-        monster_hp=JAW_WORM_STARTING_HP,
         # monster_attack is meaningless for an AI-driven monster — its move
-        # pool decides what it does each turn — but the constructor still
-        # requires a value, so this is just a placeholder.
-        monster_attack=0,
+        # pool decides what it does each turn — but Monster's `attack`
+        # defaults to 0, so it's simply omitted here.
+        monsters=[Monster(hp=JAW_WORM_STARTING_HP, name="Jaw Worm")],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
-        monster_name="Jaw Worm",
     )

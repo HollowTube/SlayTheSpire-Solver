@@ -1,4 +1,4 @@
-from sts_sim import CombatState, apply
+from sts_sim import CombatState, Monster, apply
 
 
 def make_state(monster_name):
@@ -8,11 +8,9 @@ def make_state(monster_name):
     return CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=0,
+        monsters=[Monster(hp=44, attack=0, name=monster_name)],
         seed=42,
         hand=[],
-        monster_name=monster_name,
     )
 
 
@@ -29,7 +27,7 @@ def test_a_jaw_worm_telegraphs_chomp_as_its_opening_move():
     # Per the Slay the Spire wiki, Jaw Worm always opens combat with Chomp.
     state = make_state("Jaw Worm")
 
-    assert state.monster_intent == "Chomp"
+    assert state.monsters[0].intent == "Chomp"
 
 
 # Per the Slay the Spire wiki, Chomp deals 11 damage.
@@ -47,17 +45,15 @@ def test_a_jaw_worms_intent_sequence_follows_its_documented_pattern_and_constrai
     state = CombatState(
         player_hp=100_000,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=0,
+        monsters=[Monster(hp=44, attack=0, name="Jaw Worm")],
         seed=1,
         hand=[],
-        monster_name="Jaw Worm",
     )
 
-    intents = [state.monster_intent]
+    intents = [state.monsters[0].intent]
     for _ in range(200):
         state = apply(state, "EndTurn")
-        intents.append(state.monster_intent)
+        intents.append(state.monsters[0].intent)
 
     assert intents[0] == "Chomp"
     assert all(intent in {"Chomp", "Thrash", "Bellow"} for intent in intents)
@@ -71,7 +67,7 @@ def test_a_jaw_worms_intent_sequence_follows_its_documented_pattern_and_constrai
 
 def test_ending_the_turn_resolves_the_telegraphed_chomp_against_the_player():
     state = make_state("Jaw Worm")
-    assert state.monster_intent == "Chomp"
+    assert state.monsters[0].intent == "Chomp"
 
     next_state = apply(state, "EndTurn")
 
@@ -85,19 +81,17 @@ def test_thrash_deals_damage_to_the_player_and_grants_the_jaw_worm_block():
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=0,
+        monsters=[Monster(hp=44, attack=0, name="Jaw Worm")],
         seed=6,
         hand=[],
-        monster_name="Jaw Worm",
     )
     after_chomp = apply(state, "EndTurn")
-    assert after_chomp.monster_intent == "Thrash"
+    assert after_chomp.monsters[0].intent == "Thrash"
 
     after_thrash = apply(after_chomp, "EndTurn")
 
     assert after_thrash.player_hp == after_chomp.player_hp - THRASH_DAMAGE
-    assert after_thrash.monster_block == THRASH_BLOCK
+    assert after_thrash.monsters[0].block == THRASH_BLOCK
 
 
 def test_bellow_grants_the_jaw_worm_strength_and_block_without_attacking():
@@ -105,20 +99,18 @@ def test_bellow_grants_the_jaw_worm_strength_and_block_without_attacking():
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=0,
+        monsters=[Monster(hp=44, attack=0, name="Jaw Worm")],
         seed=0,
         hand=[],
-        monster_name="Jaw Worm",
     )
     after_chomp = apply(state, "EndTurn")
-    assert after_chomp.monster_intent == "Bellow"
+    assert after_chomp.monsters[0].intent == "Bellow"
 
     after_bellow = apply(after_chomp, "EndTurn")
 
     assert after_bellow.player_hp == after_chomp.player_hp
-    assert "Strength" in after_bellow.monster_statuses
-    assert after_bellow.monster_block == BELLOW_BLOCK
+    assert "Strength" in after_bellow.monsters[0].statuses
+    assert after_bellow.monsters[0].block == BELLOW_BLOCK
 
 
 def test_the_jaw_worms_block_absorbs_the_players_subsequent_attack():
@@ -129,21 +121,19 @@ def test_the_jaw_worms_block_absorbs_the_players_subsequent_attack():
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=0,
+        monsters=[Monster(hp=44, attack=0, name="Jaw Worm")],
         seed=0,
         hand=["Strike"],
-        monster_name="Jaw Worm",
     )
     after_chomp = apply(state, "EndTurn")
     after_bellow = apply(after_chomp, "EndTurn")
-    assert after_bellow.monster_block == BELLOW_BLOCK
+    assert after_bellow.monsters[0].block == BELLOW_BLOCK
 
     awaiting_target = apply(after_bellow, "PlayCard:Strike")
-    resolved = apply(awaiting_target, "SelectTarget:Monster")
+    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    assert resolved.monster_hp == after_bellow.monster_hp
-    assert resolved.monster_block == BELLOW_BLOCK - 6
+    assert resolved.monsters[0].hp == after_bellow.monsters[0].hp
+    assert resolved.monsters[0].block == BELLOW_BLOCK - 6
 
 
 def test_the_jaw_worms_strength_amplifies_its_own_subsequent_attack():
@@ -155,15 +145,13 @@ def test_the_jaw_worms_strength_amplifies_its_own_subsequent_attack():
     state = CombatState(
         player_hp=10_000,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=0,
+        monsters=[Monster(hp=44, attack=0, name="Jaw Worm")],
         seed=2,
         hand=[],
-        monster_name="Jaw Worm",
     )
     after_chomp = apply(state, "EndTurn")
     after_bellow = apply(after_chomp, "EndTurn")
-    assert after_bellow.monster_intent == "Chomp"
+    assert after_bellow.monsters[0].intent == "Chomp"
     hp_before_strengthened_chomp = after_bellow.player_hp
 
     after_strengthened_chomp = apply(after_bellow, "EndTurn")

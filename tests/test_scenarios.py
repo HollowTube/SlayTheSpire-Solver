@@ -19,10 +19,10 @@ def test_the_canonical_scenario_loads_with_the_documented_starting_loadout():
     assert len(state.hand) == 5
     assert sorted(state.hand + state.draw_pile) == sorted(IRONCLAD_STARTING_DECK)
     assert state.discard_pile == []
-    assert state.monster_name == "Jaw Worm"
-    assert state.monster_hp == JAW_WORM_STARTING_HP
+    assert state.monsters[0].name == "Jaw Worm"
+    assert state.monsters[0].hp == JAW_WORM_STARTING_HP
     # Per the Slay the Spire wiki, Jaw Worm always opens combat with Chomp.
-    assert state.monster_intent == "Chomp"
+    assert state.monsters[0].intent == "Chomp"
 
 
 def test_the_canonical_scenario_is_playable_through_the_existing_interface():
@@ -32,9 +32,9 @@ def test_the_canonical_scenario_is_playable_through_the_existing_interface():
     assert "EndTurn" in legal_actions(state)
 
     awaiting_target = apply(state, "PlayCard:Strike")
-    resolved = apply(awaiting_target, "SelectTarget:Monster")
+    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    assert resolved.monster_hp == state.monster_hp - 6
+    assert resolved.monsters[0].hp == state.monsters[0].hp - 6
 
 
 def test_a_full_playthrough_plays_every_starting_card_in_some_sequence():
@@ -74,7 +74,7 @@ def test_a_full_playthrough_plays_every_starting_card_in_some_sequence():
         played_counts[action.removeprefix("PlayCard:")] += 1
         state = apply(state, action)
         if state.pending == "SelectTarget":
-            state = apply(state, "SelectTarget:Monster")
+            state = apply(state, "SelectTarget:Monster:0")
 
     # Pinned to seed=42, where the greedy line doesn't end the fight early —
     # in principle an unlucky seed could roll enough Jaw Worm damage to kill
@@ -114,7 +114,7 @@ def test_complete_random_fights_against_the_jaw_worm_reach_correctly_shaped_term
         if final.player_hp <= 0:
             assert r < 0
         else:
-            assert final.monster_hp <= 0
+            assert final.monsters[0].hp <= 0
             assert r > 0
 
 
@@ -126,6 +126,6 @@ def test_random_play_can_both_win_and_lose_against_the_jaw_worm():
     for seed in (0, 1, 2, 3, 11):
         state = ironclad_starter_deck_vs_jaw_worm(seed=seed)
         final = play_randomly_to_terminal(state, seed=seed)
-        outcomes.add(final.monster_hp <= 0)
+        outcomes.add(final.monsters[0].hp <= 0)
 
     assert outcomes == {True, False}

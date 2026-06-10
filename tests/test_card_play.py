@@ -1,15 +1,14 @@
 import pytest
 import copy
 
-from sts_sim import CombatState, apply, legal_actions
+from sts_sim import CombatState, Monster, apply, legal_actions
 
 
 def make_state(hand=("Strike",)):
     return CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=6,
+        monsters=[Monster(hp=44, attack=6)],
         seed=42,
         hand=list(hand),
     )
@@ -34,16 +33,16 @@ def test_while_selecting_a_target_the_only_legal_actions_are_valid_targets():
 
     awaiting_target = apply(state, "PlayCard:Strike")
 
-    assert legal_actions(awaiting_target) == ["SelectTarget:Monster"]
+    assert legal_actions(awaiting_target) == ["SelectTarget:Monster:0"]
 
 
 def test_selecting_the_monster_resolves_strike_dealing_damage_and_clearing_the_pending_decision():
     state = make_state(hand=["Strike"])
     awaiting_target = apply(state, "PlayCard:Strike")
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster")
+    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    assert resolved.monster_hp == state.monster_hp - 6
+    assert resolved.monsters[0].hp == state.monsters[0].hp - 6
     assert resolved.pending is None
 
 
@@ -72,9 +71,9 @@ def test_playing_strike_against_the_monster_deals_the_wiki_documented_damage():
     state = make_state(hand=["Strike"])
 
     awaiting_target = apply(state, "PlayCard:Strike")
-    resolved = apply(awaiting_target, "SelectTarget:Monster")
+    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    assert resolved.monster_hp == state.monster_hp - STRIKE_DAMAGE
+    assert resolved.monsters[0].hp == state.monsters[0].hp - STRIKE_DAMAGE
 
 
 def test_playing_a_card_does_not_mutate_its_input():
@@ -103,8 +102,7 @@ def test_legal_actions_does_not_offer_cards_the_player_cannot_afford():
     state = CombatState(
         player_hp=80,
         player_energy=1,
-        monster_hp=44,
-        monster_attack=6,
+        monsters=[Monster(hp=44, attack=6)],
         seed=42,
         hand=["Bash"],
     )
@@ -117,8 +115,7 @@ def test_playing_a_card_the_player_cannot_afford_is_rejected():
     state = CombatState(
         player_hp=80,
         player_energy=1,
-        monster_hp=44,
-        monster_attack=6,
+        monsters=[Monster(hp=44, attack=6)],
         seed=42,
         hand=["Bash"],
     )
@@ -144,8 +141,7 @@ def test_exhausted_power_is_not_available_in_subsequent_turns():
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=6,
+        monsters=[Monster(hp=44, attack=6)],
         seed=42,
         deck=["Inflame"],
     )
@@ -168,8 +164,7 @@ def test_ascenders_bane_cannot_be_played():
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=6,
+        monsters=[Monster(hp=44, attack=6)],
         seed=42,
         hand=["Ascender's Bane"],
     )
@@ -181,8 +176,8 @@ def test_sword_boomerang_deals_three_hits_of_three_damage_each():
     # Sword Boomerang hits a random enemy 3 times for 3 each = 9 total.
     # Against a single monster the hits always land on the same target.
     state = make_state(hand=["Sword Boomerang"])
-    resolved = apply(apply(state, "PlayCard:Sword Boomerang"), "SelectTarget:Monster")
-    assert resolved.monster_hp == state.monster_hp - 9
+    resolved = apply(apply(state, "PlayCard:Sword Boomerang"), "SelectTarget:Monster:0")
+    assert resolved.monsters[0].hp == state.monsters[0].hp - 9
 
 
 def test_thunderclap_deals_damage_and_applies_vulnerable_without_selecting_a_target():
@@ -191,8 +186,8 @@ def test_thunderclap_deals_damage_and_applies_vulnerable_without_selecting_a_tar
     state = make_state(hand=["Thunderclap"])
     resolved = apply(state, "PlayCard:Thunderclap")
     assert resolved.pending is None
-    assert resolved.monster_hp == state.monster_hp - 4
-    assert "Vulnerable" in resolved.monster_statuses
+    assert resolved.monsters[0].hp == state.monsters[0].hp - 4
+    assert "Vulnerable" in resolved.monsters[0].statuses
 
 
 def test_rage_grants_block_when_an_attack_is_played_afterward():
@@ -202,7 +197,7 @@ def test_rage_grants_block_when_an_attack_is_played_afterward():
     after_rage = apply(state, "PlayCard:Rage")
     assert "Rage" in after_rage.player_statuses
 
-    after_strike = apply(apply(after_rage, "PlayCard:Strike"), "SelectTarget:Monster")
+    after_strike = apply(apply(after_rage, "PlayCard:Strike"), "SelectTarget:Monster:0")
     assert after_strike.player_block == 2
 
 
@@ -220,14 +215,13 @@ def test_pommel_strike_deals_9_damage_and_draws_1_card():
     state = CombatState(
         player_hp=80,
         player_energy=3,
-        monster_hp=44,
-        monster_attack=0,
+        monsters=[Monster(hp=44, attack=0)],
         seed=42,
         hand=["Pommel Strike", "Defend", "Defend", "Defend", "Defend"],
     )
     hand_size_before = len(state.hand)
     awaiting = apply(state, "PlayCard:Pommel Strike")
-    resolved = apply(awaiting, "SelectTarget:Monster")
+    resolved = apply(awaiting, "SelectTarget:Monster:0")
 
-    assert resolved.monster_hp == state.monster_hp - 9
+    assert resolved.monsters[0].hp == state.monsters[0].hp - 9
     assert len(resolved.hand) == hand_size_before - 1 + 1  # spent Pommel Strike, drew 1
