@@ -320,6 +320,202 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             ])],
             exhausts: true,
         }),
+        // Per the wiki, Bludgeon costs 3 and deals 32 damage.
+        "Bludgeon" => Some(CardData {
+            cost: 3,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamage(32)],
+            exhausts: false,
+        }),
+        // Per the wiki, TwinStrike costs 1 and deals 5 damage twice (10
+        // total).
+        "TwinStrike" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamage(5), EffectOp::DealDamage(5)],
+            exhausts: false,
+        }),
+        // Per the wiki, Break costs 1, deals 20 damage, and applies 5
+        // Vulnerable to the chosen enemy.
+        "Break" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![
+                EffectOp::DealDamage(20),
+                EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+                EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+                EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+                EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+                EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+            ],
+            exhausts: false,
+        }),
+        // Per the wiki, ShrugItOff costs 1, gains 8 block, and draws 1 card.
+        "ShrugItOff" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![EffectOp::GainBlock(8), EffectOp::DrawCards(1)],
+            exhausts: false,
+        }),
+        // Per the wiki, Taunt costs 1, gains 7 block, and applies Vulnerable
+        // to the chosen enemy.
+        "Taunt" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Skill,
+            effects: vec![
+                EffectOp::GainBlock(7),
+                EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+            ],
+            exhausts: false,
+        }),
+        // Per the wiki, Uppercut costs 2, deals 13 damage, and applies 1 Weak
+        // and 1 Vulnerable to the chosen enemy.
+        "Uppercut" => Some(CardData {
+            cost: 2,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![
+                EffectOp::DealDamage(13),
+                EffectOp::ApplyStatusToTarget(Status::Weak),
+                EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+            ],
+            exhausts: false,
+        }),
+        // Per the wiki, BodySlam costs 1 and deals damage equal to the
+        // player's current Block.
+        "BodySlam" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamageScaled {
+                base: 0,
+                per_unit: 1,
+                source: ScaleSource::CurrentBlock,
+            }],
+            exhausts: false,
+        }),
+        // Per the wiki, PerfectedStrike costs 2 and deals 6 damage plus 2 for
+        // every card named "Strike" in the player's deck (counted across all
+        // piles, including itself if it were named "Strike" — it isn't).
+        "PerfectedStrike" => Some(CardData {
+            cost: 2,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamageScaled {
+                base: 6,
+                per_unit: 2,
+                source: ScaleSource::StrikeCardsInDeck,
+            }],
+            exhausts: false,
+        }),
+        // Per the wiki, AshenStrike costs 1 and deals 6 damage plus 3 for
+        // every card in the player's exhaust pile.
+        "AshenStrike" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamageScaled {
+                base: 6,
+                per_unit: 3,
+                source: ScaleSource::ExhaustPileSize,
+            }],
+            exhausts: false,
+        }),
+        // Per the wiki, Bully costs 0 and deals 4 damage plus 2 for every
+        // stack of Vulnerable on the target.
+        "Bully" => Some(CardData {
+            cost: 0,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamageScaled {
+                base: 4,
+                per_unit: 2,
+                source: ScaleSource::VulnerableStacksOnTarget,
+            }],
+            exhausts: false,
+        }),
+        // Per the wiki, Conflagration costs 1 and deals 8 damage to ALL
+        // enemies, plus 2 for each Attack played earlier this turn.
+        "Conflagration" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamageScaled {
+                base: 8,
+                per_unit: 2,
+                source: ScaleSource::AttacksPlayedThisTurn,
+            }],
+            exhausts: false,
+        }),
+        // Per HOL-16, TearAsunder costs 2 and deals 6 damage, hitting one
+        // extra time for every time the player has been damaged this combat.
+        "TearAsunder" => Some(CardData {
+            cost: 2,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamageRepeated {
+                amount: 6,
+                hits_base: 1,
+                hits_per_unit: 1,
+                hits_source: ScaleSource::DamageTakenThisCombat,
+            }],
+            exhausts: false,
+        }),
+        // Per HOL-16, Spite costs 0 and deals 3 damage, hitting twice if the
+        // player has lost HP this turn.
+        "Spite" => Some(CardData {
+            cost: 0,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamageRepeated {
+                amount: 3,
+                hits_base: 1,
+                hits_per_unit: 1,
+                hits_source: ScaleSource::HpLostThisTurn,
+            }],
+            exhausts: false,
+        }),
+        // Per HOL-16, Dismantle costs 1 and deals 8 damage, hitting twice if
+        // the target has Vulnerable.
+        "Dismantle" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamageRepeated {
+                amount: 8,
+                hits_base: 1,
+                hits_per_unit: 1,
+                hits_source: ScaleSource::TargetHasVulnerable,
+            }],
+            exhausts: false,
+        }),
+        // Per HOL-16, MoltenFist costs 1, doubles the target's existing
+        // Vulnerable stacks, then deals 10 damage.
+        "MoltenFist" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DoubleVulnerableOnTarget, EffectOp::DealDamage(10)],
+            exhausts: false,
+        }),
+        // Per HOL-16, Dominate costs 1, applies Vulnerable to the target,
+        // then gains Strength equal to the target's resulting Vulnerable
+        // stack count, and exhausts.
+        "Dominate" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![
+                EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+                EffectOp::GainStrengthEqualToTargetVulnerable,
+            ],
+            exhausts: true,
+        }),
         _ => None,
     }
 }

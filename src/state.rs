@@ -206,6 +206,15 @@ pub struct CombatState {
     pub(crate) discard_pile: Vec<String>,
     #[pyo3(get)]
     pub(crate) exhaust_pile: Vec<String>,
+    // Number of Attack cards the player has played since their turn began —
+    // resets to 0 at the start of each player turn (e.g. Conflagration).
+    pub(crate) attacks_played_this_turn: i32,
+    // Number of times the player has lost HP from an attack this combat —
+    // never resets (e.g. TearAsunder).
+    pub(crate) player_times_damaged_this_combat: i32,
+    // Whether the player has lost HP this turn — resets to false at the
+    // start of each player turn (e.g. Spite).
+    pub(crate) player_hp_lost_this_turn: bool,
     pub(crate) pending: Option<PendingDecision>,
     pub(crate) rng: Pcg32,
 }
@@ -260,6 +269,9 @@ impl CombatState {
             draw_pile,
             discard_pile,
             exhaust_pile,
+            attacks_played_this_turn: 0,
+            player_times_damaged_this_combat: 0,
+            player_hp_lost_this_turn: false,
             pending: None,
             rng,
         };
