@@ -22,6 +22,9 @@ public static class NameMap
         ["THUNDERCLAP"] = "Thunderclap",
         ["RAGE"] = "Rage",
         ["POMMEL_STRIKE"] = "Pommel Strike",
+        // Status card the slime monsters' Goop/StickyShot moves stick into
+        // the player's discard pile; sts_sim's card_data models it.
+        ["SLIMED"] = "Slimed",
         // ASCENDERS_BANE (Curse) has no sts_sim equivalent; left unmapped so
         // it gets dropped from translated piles.
     };
