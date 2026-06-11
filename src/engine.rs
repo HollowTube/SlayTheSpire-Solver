@@ -221,6 +221,16 @@ pub(crate) enum EffectOp {
     // self-buffs like Inflame's Strength, which never go through SelectTarget.
     ApplyStatusToSelf(Status),
     DrawCards(usize),
+    // Unblockable, unpowered self-damage to `actor` — bypasses block and the
+    // damage-modifier pipeline entirely (e.g. Bloodletting's HP cost is not
+    // reduced by the player's own Block or amplified by their own Vulnerable).
+    LoseHp(i32),
+    // Grants `actor` (always the player in practice — monsters have no
+    // energy pool) extra Energy this turn, on top of whatever's left after
+    // paying the card's cost.
+    GainEnergy(i32),
+    // Heals `actor` for `amount`, capped at their `max_hp`.
+    Heal(i32),
     // Pushes a named card (e.g. "Slimed") into a target's discard pile — used
     // by slime monster moves (Goop/StickyShot) to stick junk cards into the
     // player's deck. Only `Actor::Player` has card piles, so this is a no-op
@@ -299,6 +309,16 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 state.fighter_mut(actor).statuses.push(status.clone())
             }
             EffectOp::DrawCards(n) => draw_cards(state, *n),
+            EffectOp::LoseHp(amount) => state.fighter_mut(actor).hp -= amount,
+            EffectOp::GainEnergy(amount) => {
+                if actor == Actor::Player {
+                    state.player_energy += amount;
+                }
+            }
+            EffectOp::Heal(amount) => {
+                let fighter = state.fighter_mut(actor);
+                fighter.hp = (fighter.hp + amount).min(fighter.max_hp);
+            }
             EffectOp::ApplyCardToTarget(card_name) => {
                 for &target in targets {
                     if target == Actor::Player {

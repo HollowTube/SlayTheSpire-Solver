@@ -148,7 +148,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     )));
                 }
                 let played = next.hand.remove(position);
-                if matches!(data.card_type, CardType::Power | CardType::Status) {
+                if matches!(data.card_type, CardType::Power | CardType::Status) || data.exhausts {
                     next.exhaust_pile.push(played);
                 } else {
                     next.discard_pile.push(played);
