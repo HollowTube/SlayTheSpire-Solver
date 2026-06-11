@@ -47,6 +47,11 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             let mut next = state.clone();
             next.turn += 1;
 
+            // "HP lost this turn" tracks damage taken since the last
+            // EndTurn — reset here so the monsters' attacks below populate
+            // it fresh for the upcoming player turn (e.g. Spite).
+            next.player_hp_lost_this_turn = false;
+
             // The remaining hand is discarded before the monsters' turn
             // resolves — mirrors Slay the Spire's end-of-turn cleanup.
             next.discard_pile.append(&mut next.hand);
@@ -87,7 +92,13 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     None => {
                         let attack = next.monsters[i].attack;
                         let absorbed = attack.min(next.player.block);
-                        next.player.hp -= attack - absorbed;
+                        next.player.block -= absorbed;
+                        let hp_loss = attack - absorbed;
+                        next.player.hp -= hp_loss;
+                        if hp_loss > 0 {
+                            next.player_times_damaged_this_combat += 1;
+                            next.player_hp_lost_this_turn = true;
+                        }
                     }
                 }
                 // This monster's debuffs (e.g. Vulnerable) tick down at the
@@ -100,6 +111,9 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             // Energy refreshes to its per-turn maximum each turn — it does
             // not carry over either.
             next.player_energy = next.player_max_energy;
+            // Attack-played count resets at the start of each player turn
+            // (e.g. Conflagration).
+            next.attacks_played_this_turn = 0;
             // Draw the next turn's opening hand (reshuffling the discard
             // pile back in if the draw pile runs dry mid-draw).
             draw_cards(&mut next, HAND_SIZE);
@@ -124,7 +138,10 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                 run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)]);
                 match data.card_type {
                     CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
-                    CardType::Attack => fire_event(&mut next, GameEvent::AttackPlayed),
+                    CardType::Attack => {
+                        next.attacks_played_this_turn += 1;
+                        fire_event(&mut next, GameEvent::AttackPlayed);
+                    }
                     CardType::Power | CardType::Status => {}
                 }
                 next.pending = None;
@@ -172,7 +189,10 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     run_effect_ops(&mut next, &data.effects, Actor::Player, &targets);
                     match data.card_type {
                         CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
-                        CardType::Attack => fire_event(&mut next, GameEvent::AttackPlayed),
+                        CardType::Attack => {
+                            next.attacks_played_this_turn += 1;
+                            fire_event(&mut next, GameEvent::AttackPlayed);
+                        }
                         CardType::Power | CardType::Status => {}
                     }
                 }
@@ -271,6 +291,7 @@ struct StateKey {
     draw_pile: Vec<String>,
     discard_pile: Vec<String>,
     exhaust_pile: Vec<String>,
+    attacks_played_this_turn: i32,
     pending: Option<PendingDecision>,
     rng_fingerprint: [u32; 4],
 }
@@ -286,6 +307,7 @@ fn state_key(state: &CombatState) -> StateKey {
         draw_pile: state.draw_pile.clone(),
         discard_pile: state.discard_pile.clone(),
         exhaust_pile: state.exhaust_pile.clone(),
+        attacks_played_this_turn: state.attacks_played_this_turn,
         pending: state.pending.clone(),
         rng_fingerprint: [
             rng_clone.next_u32(),

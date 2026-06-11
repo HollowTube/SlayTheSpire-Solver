@@ -263,10 +263,30 @@ pub(crate) enum EffectOp {
         per_unit: i32,
         source: ScaleSource,
     },
+    // Deals `amount` damage to each target, repeated `hits_base +
+    // hits_per_unit * hits_source` times — each repetition is a separate hit
+    // for damage-modifier/block purposes (e.g. TearAsunder, Spite,
+    // Dismantle).
+    DealDamageRepeated {
+        amount: i32,
+        hits_base: i32,
+        hits_per_unit: i32,
+        hits_source: ScaleSource,
+    },
     // Adds a random card from `pool` to `actor`'s hand (e.g. InfernalBlade
     // generating a random Attack). Only meaningful for `Actor::Player` —
     // monsters have no hand. No-op if `pool` is empty.
     AddRandomCardToHand(Vec<String>),
+    // Doubles the number of Vulnerable stacks currently on each target —
+    // a special-cased push applied *before* normal damage application (and
+    // its Vulnerable-stack consumption) in the same effects list (e.g.
+    // MoltenFist).
+    DoubleVulnerableOnTarget,
+    // Grants `actor` Strength equal to each target's *current* number of
+    // Vulnerable stacks — meant to run after an `ApplyStatusToTarget(
+    // Vulnerable)` earlier in the same effects list, so it reads the
+    // resulting stack count (e.g. Dominate).
+    GainStrengthEqualToTargetVulnerable,
 }
 
 /// What a `DealDamageScaled` op reads its multiplier from. New scaling
@@ -275,12 +295,56 @@ pub(crate) enum EffectOp {
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) enum ScaleSource {
     HandSize,
+    // `actor`'s current Block (e.g. BodySlam: damage = current block).
+    CurrentBlock,
+    // Number of cards named "Strike" anywhere in `actor`'s deck — i.e. across
+    // hand, draw pile, discard pile, and exhaust pile, which together always
+    // total the full deck for the duration of a fight (e.g. PerfectedStrike).
+    StrikeCardsInDeck,
+    // Number of cards currently in `actor`'s exhaust pile (e.g. AshenStrike).
+    ExhaustPileSize,
+    // Number of Vulnerable stacks currently on `target` (e.g. Bully).
+    VulnerableStacksOnTarget,
+    // Number of Attack cards `actor` has played so far this turn, not
+    // counting the card currently resolving (e.g. Conflagration).
+    AttacksPlayedThisTurn,
+    // Number of times the player has lost HP from an attack so far this
+    // combat (e.g. TearAsunder).
+    DamageTakenThisCombat,
+    // 1 if the player has lost HP this turn, else 0 (e.g. Spite).
+    HpLostThisTurn,
+    // 1 if `target` currently has any Vulnerable stacks, else 0 (e.g.
+    // Dismantle).
+    TargetHasVulnerable,
 }
 
 impl ScaleSource {
-    fn read(&self, state: &CombatState) -> i32 {
+    fn read(&self, state: &CombatState, actor: Actor, target: Actor) -> i32 {
         match self {
             ScaleSource::HandSize => state.hand.len() as i32,
+            ScaleSource::CurrentBlock => state.fighter(actor).block,
+            ScaleSource::StrikeCardsInDeck => {
+                let count_strikes = |pile: &[String]| pile.iter().filter(|c| *c == "Strike").count();
+                (count_strikes(&state.hand)
+                    + count_strikes(&state.draw_pile)
+                    + count_strikes(&state.discard_pile)
+                    + count_strikes(&state.exhaust_pile)) as i32
+            }
+            ScaleSource::ExhaustPileSize => state.exhaust_pile.len() as i32,
+            ScaleSource::VulnerableStacksOnTarget => state
+                .fighter(target)
+                .statuses
+                .iter()
+                .filter(|s| **s == Status::Vulnerable)
+                .count() as i32,
+            ScaleSource::AttacksPlayedThisTurn => state.attacks_played_this_turn,
+            ScaleSource::DamageTakenThisCombat => state.player_times_damaged_this_combat,
+            ScaleSource::HpLostThisTurn => state.player_hp_lost_this_turn as i32,
+            ScaleSource::TargetHasVulnerable => state
+                .fighter(target)
+                .statuses
+                .iter()
+                .any(|s| *s == Status::Vulnerable) as i32,
         }
     }
 }
@@ -326,10 +390,21 @@ fn deal_damage(state: &mut CombatState, attacker: Actor, target: Actor, amount: 
         EventType::OnDamageDealt,
     );
 
-    let target = state.fighter_mut(target);
-    let absorbed = modified.min(target.block);
-    target.block -= absorbed;
-    target.hp -= modified - absorbed;
+    let hp_loss;
+    {
+        let target_fighter = state.fighter_mut(target);
+        let absorbed = modified.min(target_fighter.block);
+        target_fighter.block -= absorbed;
+        hp_loss = modified - absorbed;
+        target_fighter.hp -= hp_loss;
+    }
+
+    // Track how often/how much the player has been hit, for cards that scale
+    // off it (e.g. TearAsunder, Spite).
+    if target == Actor::Player && hp_loss > 0 {
+        state.player_times_damaged_this_combat += 1;
+        state.player_hp_lost_this_turn = true;
+    }
 }
 
 /// Fires `event` against every status on every combatant, collecting their
@@ -440,15 +515,52 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 per_unit,
                 source,
             } => {
-                let amount = base + per_unit * source.read(state);
                 for &target in targets {
+                    let amount = base + per_unit * source.read(state, actor, target);
                     deal_damage(state, actor, target, amount);
+                }
+            }
+            EffectOp::DealDamageRepeated {
+                amount,
+                hits_base,
+                hits_per_unit,
+                hits_source,
+            } => {
+                for &target in targets {
+                    let hits = hits_base + hits_per_unit * hits_source.read(state, actor, target);
+                    for _ in 0..hits {
+                        deal_damage(state, actor, target, *amount);
+                    }
                 }
             }
             EffectOp::AddRandomCardToHand(pool) => {
                 if !pool.is_empty() {
                     let pick = state.rng.gen_range(0..pool.len());
                     state.hand.push(pool[pick].clone());
+                }
+            }
+            EffectOp::DoubleVulnerableOnTarget => {
+                for &target in targets {
+                    let count = state
+                        .fighter(target)
+                        .statuses
+                        .iter()
+                        .filter(|s| **s == Status::Vulnerable)
+                        .count();
+                    for _ in 0..count {
+                        state.fighter_mut(target).statuses.push(Status::Vulnerable);
+                    }
+                }
+            }
+            EffectOp::GainStrengthEqualToTargetVulnerable => {
+                for &target in targets {
+                    let count = state
+                        .fighter(target)
+                        .statuses
+                        .iter()
+                        .filter(|s| **s == Status::Vulnerable)
+                        .count() as i32;
+                    state.fighter_mut(actor).statuses.push(Status::Strength(count));
                 }
             }
         }
