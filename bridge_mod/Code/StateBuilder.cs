@@ -17,7 +17,11 @@ namespace sts_sim_bridge_mod;
 /// </summary>
 public static class StateBuilder
 {
-    private const int DefaultIterations = 200;
+    // 200 iterations of pure-random-rollout MCTS makes state_value swing by
+    // ~0.06 between calls on an otherwise-unchanged state - distractingly
+    // "noisy" in the overlay. 1000 cuts that spread to ~0.02 for ~20ms per
+    // request, still negligible for an async background push.
+    private const int DefaultIterations = 1000;
 
     /// Names of cards/monsters dropped because NameMap doesn't recognize
     /// them, so each is logged at most once per combat.
