@@ -22,6 +22,8 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         "Leaf Slime (M)" => Some("StickyShot".to_string()),
         // Twig Slime (M) always opens with StickyShot.
         "Twig Slime (M)" => Some("StickyShot".to_string()),
+        // Byrdonis always opens with Swoop.
+        "Byrdonis" => Some("Swoop".to_string()),
         _ => None,
     }
 }
@@ -87,6 +89,23 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
             Some(vec![EffectOp::ApplyCardToTarget("Slimed".to_string())])
         }
         ("Twig Slime (M)", "ClumpShot") => Some(vec![EffectOp::DealDamage(11)]),
+        // Byrdonis: alternates Swoop (17) <-> Peck (3 hits of 3), and has
+        // Territorial 1 - +1 Strength to itself at the end of every one of
+        // its turns, regardless of which move it used. Baking the Strength
+        // gain into the tail of each move's effects (after the damage ops)
+        // means this turn's damage uses last turn's Strength, and the gain
+        // is in place for next turn - matching TerritorialPower's AfterTurnEnd
+        // hook.
+        ("Byrdonis", "Swoop") => Some(vec![
+            EffectOp::DealDamage(17),
+            EffectOp::ApplyStatusToSelf(Status::Strength(1)),
+        ]),
+        ("Byrdonis", "Peck") => Some(vec![
+            EffectOp::DealDamage(3),
+            EffectOp::DealDamage(3),
+            EffectOp::DealDamage(3),
+            EffectOp::ApplyStatusToSelf(Status::Strength(1)),
+        ]),
         _ => None,
     }
 }
@@ -196,6 +215,11 @@ pub(crate) fn select_next_intent(
             if resulting_streak <= max_streak(monster_name, candidate) {
                 return Some(candidate.to_string());
             }
+        },
+        // Byrdonis strictly alternates Swoop <-> Peck forever.
+        "Byrdonis" => match last_move.as_deref() {
+            Some("Swoop") => Some("Peck".to_string()),
+            _ => Some("Swoop".to_string()),
         },
         _ => None,
     }

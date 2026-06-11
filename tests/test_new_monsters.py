@@ -25,6 +25,17 @@ def _fwc(seed=0, hand=None, deck=None):
     )
 
 
+def _byrdonis(seed=0, hand=None, deck=None):
+    return CombatState(
+        player_hp=80,
+        player_energy=3,
+        monsters=[Monster(hp=84, attack=0, name="Byrdonis")],
+        seed=seed,
+        hand=hand or [],
+        deck=deck,
+    )
+
+
 # ── Nibbit ────────────────────────────────────────────────────────────────────
 
 
@@ -142,3 +153,53 @@ def test_fwc_acid_goop_scales_with_accumulated_strength():
     hp_before = after_inhale.player_hp
     after_goop2 = apply(after_inhale, "EndTurn")
     assert hp_before - after_goop2.player_hp == 11
+
+
+# ── Byrdonis ──────────────────────────────────────────────────────────────────
+
+
+def test_byrdonis_opens_with_swoop():
+    state = _byrdonis()
+    assert state.monsters[0].intent == "Swoop"
+
+
+def test_byrdonis_swoop_deals_17_damage():
+    state = _byrdonis()
+    after = apply(state, "EndTurn")
+    assert state.player_hp - after.player_hp == 17
+
+
+def test_byrdonis_alternates_swoop_and_peck():
+    state = _byrdonis()
+    assert state.monsters[0].intent == "Swoop"
+
+    after_swoop = apply(state, "EndTurn")
+    assert after_swoop.monsters[0].intent == "Peck"
+
+    after_peck = apply(after_swoop, "EndTurn")
+    assert after_peck.monsters[0].intent == "Swoop"
+
+
+def test_byrdonis_gains_one_strength_every_turn():
+    # Territorial 1: +1 Strength at the end of every Byrdonis turn,
+    # regardless of which move it used.
+    state = _byrdonis()
+    assert state.monsters[0].strength == 0
+
+    after_swoop = apply(state, "EndTurn")
+    assert after_swoop.monsters[0].strength == 1
+
+    after_peck = apply(after_swoop, "EndTurn")
+    assert after_peck.monsters[0].strength == 2
+
+
+def test_byrdonis_strength_amplifies_subsequent_moves():
+    # After one Swoop (+1 Str), the next Peck deals (3+1)*3=12.
+    state = _byrdonis()
+    after_swoop = apply(state, "EndTurn")  # Swoop (17 dmg, +1 Str)
+    assert after_swoop.monsters[0].intent == "Peck"
+    assert after_swoop.monsters[0].strength == 1
+
+    hp_before = after_swoop.player_hp
+    after_peck = apply(after_swoop, "EndTurn")
+    assert hp_before - after_peck.player_hp == 12

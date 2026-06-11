@@ -16,13 +16,13 @@ Examples:
 
 import click
 
-from . import PRESETS, compare, run_deck
+from . import _SCENARIOS, PRESETS, compare, run_deck
 
 
 @click.command()
 @click.option(
     "--monster",
-    type=click.Choice(["jaw-worm", "gremlin-nob"]),
+    type=click.Choice(list(_SCENARIOS)),
     default="jaw-worm",
     show_default=True,
     help="Enemy to fight.",
