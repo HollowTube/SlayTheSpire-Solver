@@ -63,7 +63,10 @@ public static class HookPatches
             {
                 var response = await AnalysisClient.SendAnalyzeRequestAsync(requestJson);
                 if (response != null)
+                {
                     Log.Warn($"[sts_sim_bridge_mod] analyze response: {response}");
+                    Overlay.UpdateValues(response);
+                }
             }
             finally
             {
