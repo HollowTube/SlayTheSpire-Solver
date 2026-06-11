@@ -1,4 +1,6 @@
+use crate::cards::{card_data, CardType};
 use crate::state::{draw_cards, CombatState};
+use rand::Rng;
 
 /// Game events that statuses can react to via `Status::reactions`. These are
 /// coarser-grained than `EventType` (which drives the damage-modifier pipeline)
@@ -236,6 +238,80 @@ pub(crate) enum EffectOp {
     // player's deck. Only `Actor::Player` has card piles, so this is a no-op
     // for any other target in `targets`.
     ApplyCardToTarget(String),
+    // Removes one random card matching `filter` from `actor`'s hand and moves
+    // it to the exhaust pile (e.g. Cinder, TrueGrit). No-op if no card in hand
+    // matches `filter`. Only meaningful for `Actor::Player` — monsters have no
+    // hand.
+    ExhaustRandomFromHand(HandFilter),
+    // Exhausts every card in `actor`'s hand matching `filter`, granting
+    // `gain_block_per_card` block to `actor` for each one exhausted (e.g.
+    // SecondWind: all non-Attacks, 5 block each).
+    ExhaustAllFromHand {
+        filter: HandFilter,
+        gain_block_per_card: i32,
+    },
+    // Removes a random card from `actor`'s discard pile and places it on top
+    // of their draw pile (e.g. Headbutt). No-op if the discard pile is empty.
+    // Only meaningful for `Actor::Player` — monsters have no card piles.
+    PutRandomDiscardOnTopOfDraw,
+    // Deals `base + per_unit * source` damage to each target, where `source`
+    // is read from `state` at the moment this op runs (e.g. FiendFire: 0 base
+    // + 7 per card in hand, evaluated before the hand is exhausted by a later
+    // op in the same pipeline).
+    DealDamageScaled {
+        base: i32,
+        per_unit: i32,
+        source: ScaleSource,
+    },
+    // Adds a random card from `pool` to `actor`'s hand (e.g. InfernalBlade
+    // generating a random Attack). Only meaningful for `Actor::Player` —
+    // monsters have no hand. No-op if `pool` is empty.
+    AddRandomCardToHand(Vec<String>),
+}
+
+/// What a `DealDamageScaled` op reads its multiplier from. New scaling
+/// sources (e.g. exhaust pile size, current Block) extend this enum without
+/// touching the `DealDamageScaled` arm itself.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum ScaleSource {
+    HandSize,
+}
+
+impl ScaleSource {
+    fn read(&self, state: &CombatState) -> i32 {
+        match self {
+            ScaleSource::HandSize => state.hand.len() as i32,
+        }
+    }
+}
+
+/// A predicate over hand-card names, used by `EffectOp::ExhaustRandomFromHand`
+/// (and future hand-manipulation ops) to restrict which cards in hand are
+/// eligible — e.g. Thrash only exhausts Attacks, SecondWind only exhausts
+/// non-Attacks.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum HandFilter {
+    Any,
+    Attack,
+    NonAttack,
+}
+
+impl HandFilter {
+    fn matches(&self, card_name: &str) -> bool {
+        match self {
+            HandFilter::Any => true,
+            HandFilter::Attack | HandFilter::NonAttack => {
+                let is_attack = card_data(card_name)
+                    .map(|data| matches!(data.card_type, CardType::Attack))
+                    .unwrap_or(false);
+                if matches!(self, HandFilter::Attack) {
+                    is_attack
+                } else {
+                    !is_attack
+                }
+            }
+        }
+    }
 }
 
 /// Deals damage from `attacker` to `target`, running it through both
@@ -324,6 +400,55 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                     if target == Actor::Player {
                         state.discard_pile.push(card_name.clone());
                     }
+                }
+            }
+            EffectOp::ExhaustRandomFromHand(filter) => {
+                let candidates: Vec<usize> = state
+                    .hand
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, name)| filter.matches(name))
+                    .map(|(i, _)| i)
+                    .collect();
+                if !candidates.is_empty() {
+                    let pick = candidates[state.rng.gen_range(0..candidates.len())];
+                    let card = state.hand.remove(pick);
+                    state.exhaust_pile.push(card);
+                }
+            }
+            EffectOp::ExhaustAllFromHand {
+                filter,
+                gain_block_per_card,
+            } => {
+                let (matching, remaining): (Vec<String>, Vec<String>) =
+                    state.hand.drain(..).partition(|name| filter.matches(name));
+                let count = matching.len() as i32;
+                state.hand = remaining;
+                state.exhaust_pile.extend(matching);
+                state.fighter_mut(actor).block += gain_block_per_card * count;
+            }
+            EffectOp::PutRandomDiscardOnTopOfDraw => {
+                if !state.discard_pile.is_empty() {
+                    let pick = state.rng.gen_range(0..state.discard_pile.len());
+                    let card = state.discard_pile.remove(pick);
+                    // `draw_cards` pops from the end, so the end is the top.
+                    state.draw_pile.push(card);
+                }
+            }
+            EffectOp::DealDamageScaled {
+                base,
+                per_unit,
+                source,
+            } => {
+                let amount = base + per_unit * source.read(state);
+                for &target in targets {
+                    deal_damage(state, actor, target, amount);
+                }
+            }
+            EffectOp::AddRandomCardToHand(pool) => {
+                if !pool.is_empty() {
+                    let pick = state.rng.gen_range(0..pool.len());
+                    state.hand.push(pool[pick].clone());
                 }
             }
         }

@@ -1,4 +1,4 @@
-use crate::engine::{EffectOp, Status};
+use crate::engine::{EffectOp, HandFilter, ScaleSource, Status};
 
 #[derive(Clone, PartialEq)]
 pub(crate) enum CardType {
@@ -194,6 +194,131 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Status,
             effects: vec![EffectOp::DrawCards(1)],
             exhausts: false,
+        }),
+        // Per the decompiled source, Cinder costs 2, deals 18 damage to a
+        // chosen enemy, then exhausts a random card from hand.
+        "Cinder" => Some(CardData {
+            cost: 2,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![
+                EffectOp::DealDamage(18),
+                EffectOp::ExhaustRandomFromHand(HandFilter::Any),
+            ],
+            exhausts: false,
+        }),
+        // Per the decompiled source, base (non-upgraded) TrueGrit costs 1,
+        // gains 7 block, and exhausts a random card from hand (upgraded lets
+        // the player choose; we model only the base random behavior).
+        "TrueGrit" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![
+                EffectOp::GainBlock(7),
+                EffectOp::ExhaustRandomFromHand(HandFilter::Any),
+            ],
+            exhausts: false,
+        }),
+        // Per the decompiled source, BurningPact costs 1; the player chooses
+        // 1 card from hand to exhaust (modeled as random — see TrueGrit) and
+        // draws 2 cards.
+        "BurningPact" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![
+                EffectOp::ExhaustRandomFromHand(HandFilter::Any),
+                EffectOp::DrawCards(2),
+            ],
+            exhausts: false,
+        }),
+        // Per the decompiled source, Thrash costs 1, deals 4 damage twice (8
+        // total) to a chosen enemy, then exhausts a random Attack card from
+        // hand. The decompiled source also has Thrash permanently absorb the
+        // exhausted card's damage into its own — per-card-instance mutable
+        // state that our string-based hand representation can't model, so
+        // that part is skipped.
+        "Thrash" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![
+                EffectOp::DealDamage(4),
+                EffectOp::DealDamage(4),
+                EffectOp::ExhaustRandomFromHand(HandFilter::Attack),
+            ],
+            exhausts: false,
+        }),
+        // Per the decompiled source, SecondWind costs 1; for each non-Attack
+        // card in hand, exhaust it and gain 5 block (total = 5 * count).
+        "SecondWind" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![EffectOp::ExhaustAllFromHand {
+                filter: HandFilter::NonAttack,
+                gain_block_per_card: 5,
+            }],
+            exhausts: false,
+        }),
+        // Per the decompiled source, Headbutt costs 1, deals 9 damage to a
+        // chosen enemy, then the player picks a card from the discard pile to
+        // put on top of the draw pile (modeled as random — see
+        // TrueGrit/BurningPact). Headbutt itself is already in the discard
+        // pile by the time this resolves (cards move there immediately on
+        // play), so it's a valid candidate and can retrieve itself — matching
+        // real Slay the Spire.
+        "Headbutt" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamage(9), EffectOp::PutRandomDiscardOnTopOfDraw],
+            exhausts: false,
+        }),
+        // Per the decompiled source, FiendFire costs 2 and Exhausts. It deals
+        // 7 damage to a chosen enemy once per card remaining in hand
+        // (counted before the rest of the hand is exhausted — hence the
+        // damage op runs first), then exhausts every other card in hand.
+        "FiendFire" => Some(CardData {
+            cost: 2,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![
+                EffectOp::DealDamageScaled {
+                    base: 0,
+                    per_unit: 7,
+                    source: ScaleSource::HandSize,
+                },
+                EffectOp::ExhaustAllFromHand {
+                    filter: HandFilter::Any,
+                    gain_block_per_card: 0,
+                },
+            ],
+            exhausts: true,
+        }),
+        // Per the decompiled source, InfernalBlade costs 1 and Exhausts. It
+        // adds a random Attack card to hand from the Ironclad's full
+        // unlocked card pool, "free this turn" (cost override). We model the
+        // pool as a hardcoded list of currently-implemented Attack cards and
+        // don't model the cost override — both documented simplifications.
+        "InfernalBlade" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![EffectOp::AddRandomCardToHand(vec![
+                "Strike".to_string(),
+                "Iron Wave".to_string(),
+                "Sword Boomerang".to_string(),
+                "Thunderclap".to_string(),
+                "Pommel Strike".to_string(),
+                "Hemokinesis".to_string(),
+                "Cinder".to_string(),
+                "Thrash".to_string(),
+                "Headbutt".to_string(),
+                "FiendFire".to_string(),
+            ])],
+            exhausts: true,
         }),
         _ => None,
     }
