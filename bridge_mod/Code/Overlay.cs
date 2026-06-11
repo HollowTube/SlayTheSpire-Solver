@@ -45,9 +45,14 @@ public static class Overlay
 
         var stateValue = obj["state_value"]?.GetValue<double>() ?? 0.0;
         var values = obj["values"] as JsonObject;
-        var rows = (values ?? new JsonObject())
-            .Select(kv => (action: kv.Key, value: kv.Value!.GetValue<double>()))
-            .OrderByDescending(r => r.value)
+        var legalActions = obj["legal_actions"] as JsonArray;
+        // One row per legal_actions entry (in hand order, duplicates and
+        // all) rather than per unique key in `values` - sts_sim collapses
+        // duplicate card names (e.g. two Strikes) into a single values
+        // entry, but the player has a distinct card in hand for each.
+        var rows = (legalActions ?? new JsonArray())
+            .Select(a => a!.GetValue<string>())
+            .Select(action => (action, value: values?[action]?.GetValue<double>() ?? 0.0))
             .ToList();
 
         // Callable.CallDeferred is Godot's thread-safe way to run code on the
@@ -71,7 +76,8 @@ public static class Overlay
         AddLabel($"sts_sim  state value: {stateValue:F2}", ExplorerHeaderColor);
         foreach (var (action, value) in rows)
         {
-            AddLabel($"{action}: {value:F2}", ExplorerRowColor);
+            var label = action.StartsWith("PlayCard:") ? action["PlayCard:".Length..] : action;
+            AddLabel($"{label}: {value:F2}", ExplorerRowColor);
         }
 
         Log.Warn($"[sts_sim_bridge_mod] Overlay: rendered {rows.Count} rows, panel rect {_panel?.GetGlobalRect()}");
@@ -110,10 +116,11 @@ public static class Overlay
         _canvasLayer.AddChild(_root);
 
         // Anchor all four corners to the parent's bottom-right (1,1) and use
-        // negative offsets to size the box - this gives a fixed 320x190 rect
+        // negative offsets to size the box - this gives a fixed 320x220 rect
         // independent of content minimum size. Bottom offset is raised to
-        // -150 (rather than flush with the corner) to clear the End Turn
-        // button and hand of cards docked along the bottom edge.
+        // -120 (rather than flush with the corner) to clear the End Turn
+        // button and hand of cards docked along the bottom edge. 220px tall
+        // comfortably fits a header + one row per hand card (up to 10).
         _panel = new PanelContainer { Name = "StsSimOverlayPanel" };
         _panel.SetAnchor(Side.Left, 1);
         _panel.SetAnchor(Side.Top, 1);
@@ -122,7 +129,7 @@ public static class Overlay
         _panel.OffsetLeft = -340;
         _panel.OffsetTop = -340;
         _panel.OffsetRight = -20;
-        _panel.OffsetBottom = -150;
+        _panel.OffsetBottom = -120;
         _panel.MouseFilter = Control.MouseFilterEnum.Ignore;
         var style = new StyleBoxFlat
         {
