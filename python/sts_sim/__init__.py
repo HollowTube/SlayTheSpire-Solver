@@ -5,6 +5,7 @@ from ._sts_sim import (
     evaluate,
     is_terminal,
     legal_actions,
+    optimal_value,
     random_rollout,
     reward,
 )
@@ -16,6 +17,7 @@ __all__ = [
     "evaluate",
     "is_terminal",
     "legal_actions",
+    "optimal_value",
     "random_rollout",
     "reward",
 ]

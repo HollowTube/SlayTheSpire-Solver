@@ -8,8 +8,9 @@ use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent};
 use monsters::{monster_move, select_next_intent};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use rand::Rng;
-use state::{draw_cards, CombatState, Monster, PendingDecision, HAND_SIZE};
+use rand::{Rng, RngCore};
+use std::collections::HashMap;
+use state::{draw_cards, CombatState, Fighter, Monster, PendingDecision, HAND_SIZE};
 
 #[pyfunction]
 fn legal_actions(state: &CombatState) -> Vec<String> {
@@ -241,6 +242,130 @@ fn random_rollout(state: &CombatState, seed: u64) -> f64 {
     reward(&s)
 }
 
+/// Upper bound on the reward achievable from `state` onward, assuming no
+/// further player healing: the monsters' pooled fraction can only fall to 0,
+/// so `evaluate(state) + monsters_fraction(state)` (= the player's current HP
+/// fraction) is the best `reward` any future path from here could reach.
+fn player_fraction(state: &CombatState) -> f64 {
+    let monsters_hp: i32 = state.monsters.iter().map(|m| m.fighter.hp.max(0)).sum();
+    let monsters_max_hp: i32 = state.monsters.iter().map(|m| m.fighter.max_hp).sum();
+    evaluate(state) + monsters_hp as f64 / monsters_max_hp as f64
+}
+
+/// Transposition key: every part of `CombatState` that affects its future
+/// (everything `optimal_value_rec` recurses on), used to detect when
+/// different action sequences reach an equivalent state — e.g. the several
+/// orderings of playing the same hand of non-interacting cards in one turn.
+/// `Pcg32` (the `rng` field) isn't `Hash`, so it's represented by a
+/// fingerprint: a few `next_u32()` draws from a *clone* of the RNG (which
+/// doesn't disturb the real one) — two RNGs in the same internal state
+/// produce the same draws, and different states differ with overwhelming
+/// probability.
+#[derive(PartialEq, Eq, Hash)]
+struct StateKey {
+    player: Fighter,
+    player_energy: i32,
+    monsters: Vec<Monster>,
+    turn: u32,
+    hand: Vec<String>,
+    draw_pile: Vec<String>,
+    discard_pile: Vec<String>,
+    exhaust_pile: Vec<String>,
+    pending: Option<PendingDecision>,
+    rng_fingerprint: [u32; 4],
+}
+
+fn state_key(state: &CombatState) -> StateKey {
+    let mut rng_clone = state.rng.clone();
+    StateKey {
+        player: state.player.clone(),
+        player_energy: state.player_energy,
+        monsters: state.monsters.clone(),
+        turn: state.turn,
+        hand: state.hand.clone(),
+        draw_pile: state.draw_pile.clone(),
+        discard_pile: state.discard_pile.clone(),
+        exhaust_pile: state.exhaust_pile.clone(),
+        pending: state.pending.clone(),
+        rng_fingerprint: [
+            rng_clone.next_u32(),
+            rng_clone.next_u32(),
+            rng_clone.next_u32(),
+            rng_clone.next_u32(),
+        ],
+    }
+}
+
+/// Branch-and-bound search for the true optimal `reward` reachable from
+/// `state` under perfect foresight of the (deterministic, seed-driven) RNG —
+/// i.e. the best any sequence of legal actions from here can do. `best` is
+/// the best terminal reward found anywhere in the search so far; a node is
+/// pruned once `player_fraction(state) <= *best`, since no descendant can
+/// then beat `best` (see `player_fraction`'s doc comment for why that bound
+/// is valid). Exploring children in descending `evaluate` order finds strong
+/// solutions early, so this pruning kicks in as soon as possible.
+///
+/// `memo` caches the return value for every non-pruned, non-terminal state by
+/// `StateKey` (transposition table) — for any such state, the value computed
+/// here is its *exact* value regardless of `*best`'s value at the time (a
+/// pruned child's true value is always `<= *best`, which is itself always
+/// `<= best_val` once an unpruned ancestor's loop completes, so pruning a
+/// child never changes its parent's max). That makes the cached value valid
+/// to reuse — and to fold into `*best` — from any later context, which is
+/// what collapses transpositions like the several orderings of playing the
+/// same non-interacting cards in one turn.
+///
+/// This is an analysis/benchmarking tool (used to measure how far MCTS falls
+/// short of optimal play on a given seed), not part of the play loop — it has
+/// no caller within `apply`/`legal_actions` and can be exponential without
+/// the no-healing assumption that makes the `player_fraction` bound tight.
+fn optimal_value_rec(state: &CombatState, best: &mut f64, memo: &mut HashMap<StateKey, f64>) -> f64 {
+    if is_terminal(state) {
+        let r = reward(state);
+        if r > *best {
+            *best = r;
+        }
+        return r;
+    }
+    if player_fraction(state) <= *best {
+        return f64::NEG_INFINITY;
+    }
+    let key = state_key(state);
+    if let Some(&cached) = memo.get(&key) {
+        if cached > *best {
+            *best = cached;
+        }
+        return cached;
+    }
+    let mut children: Vec<(f64, CombatState)> = legal_actions(state)
+        .into_iter()
+        .map(|action| {
+            let next = apply(state, &action).expect("legal action is always valid");
+            (evaluate(&next), next)
+        })
+        .collect();
+    children.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+
+    let mut best_val = f64::NEG_INFINITY;
+    for (_, next) in children {
+        let val = optimal_value_rec(&next, best, memo);
+        if val > best_val {
+            best_val = val;
+        }
+    }
+    memo.insert(key, best_val);
+    best_val
+}
+
+/// Python entry point for `optimal_value_rec`: the true optimal `reward`
+/// reachable from `state` (see that function's doc comment).
+#[pyfunction]
+fn optimal_value(state: &CombatState) -> f64 {
+    let mut best = f64::NEG_INFINITY;
+    let mut memo = HashMap::new();
+    optimal_value_rec(state, &mut best, &mut memo)
+}
+
 #[pymodule]
 fn _sts_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<CombatState>()?;
@@ -251,5 +376,6 @@ fn _sts_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(reward, m)?)?;
     m.add_function(wrap_pyfunction!(random_rollout, m)?)?;
+    m.add_function(wrap_pyfunction!(optimal_value, m)?)?;
     Ok(())
 }

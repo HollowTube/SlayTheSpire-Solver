@@ -16,7 +16,7 @@ pub(crate) enum GameEvent {
 /// two pipelines: `modifier_for` (damage calculation, numeric contributions)
 /// and `reactions` (game events, producing `EffectOp`s). Adding a new reactive
 /// status means adding arms to both methods — no new engine logic.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub(crate) enum Status {
     Vulnerable,
     Weak,
