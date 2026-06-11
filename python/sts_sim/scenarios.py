@@ -45,6 +45,10 @@ LEAF_SLIME_M_STARTING_HP = 33
 # Twig Slime (M) HP: 26-28 normal. 27 used as canonical value.
 TWIG_SLIME_M_STARTING_HP = 27
 
+# Byrdonis (Act 1 elite) HP: 81-84 normal. 84 pins the canonical scenario to
+# its documented maximum, matching the Gremlin Nob convention.
+BYRDONIS_STARTING_HP = 84
+
 
 def ironclad_starter_deck_vs_gremlin_nob(seed, deck=None):
     """Harder canonical scenario: Ironclad's starting loadout against Gremlin
@@ -204,6 +208,20 @@ def ironclad_starter_deck_vs_jaw_worm(seed, deck=None):
         # pool decides what it does each turn — but Monster's `attack`
         # defaults to 0, so it's simply omitted here.
         monsters=[Monster(hp=JAW_WORM_STARTING_HP, name="Jaw Worm")],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_byrdonis(seed, deck=None):
+    """Ironclad's starting loadout against Byrdonis (Act 1 elite). Opens
+    with Swoop (17 damage) and alternates with Peck (3 hits of 3 damage)
+    forever; Territorial 1 grants it +1 Strength at the end of every one of
+    its turns, so both moves get steadily harder the longer the fight runs."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[Monster(hp=BYRDONIS_STARTING_HP, attack=0, name="Byrdonis")],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
     )
