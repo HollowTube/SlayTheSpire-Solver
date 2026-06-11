@@ -30,7 +30,7 @@ pub(crate) fn draw_cards(state: &mut CombatState, count: usize) {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub(crate) enum PendingDecision {
     SelectTarget { card: String },
 }
@@ -50,7 +50,7 @@ impl PendingDecision {
 /// `Side`), so this struct removes the duplication at its root rather than
 /// just hiding it behind accessors. `CombatState::fighter`/`fighter_mut`
 /// resolve an `Actor` to the right one.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub(crate) struct Fighter {
     pub(crate) hp: i32,
     // The HP fraction `evaluate`/`reward` shape against. Defaults to the
@@ -77,7 +77,7 @@ pub(crate) struct Fighter {
 /// now carries its own copy of these, since each enemy in a fight telegraphs
 /// and tracks its own intent independently.
 #[pyclass(eq)]
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Monster {
     pub(crate) fighter: Fighter,
     // The trivial flat-attacker's fixed swing damage — meaningless (left at
