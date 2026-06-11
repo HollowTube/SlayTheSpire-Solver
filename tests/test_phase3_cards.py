@@ -103,7 +103,9 @@ def test_conflagration_deals_8_plus_2_per_attack_played_this_turn_to_all_enemies
 
     # Two Strikes played first -> Conflagration sees attacks_played_this_turn == 2.
     after_strike_1 = apply(apply(state, "PlayCard:Strike"), "SelectTarget:Monster:0")
-    after_strike_2 = apply(apply(after_strike_1, "PlayCard:Strike"), "SelectTarget:Monster:0")
+    after_strike_2 = apply(
+        apply(after_strike_1, "PlayCard:Strike"), "SelectTarget:Monster:0"
+    )
 
     resolved = apply(after_strike_2, "PlayCard:Conflagration")
 
