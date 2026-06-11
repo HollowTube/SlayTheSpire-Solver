@@ -1,0 +1,10 @@
+{
+  "id": "stssimbridgemod",
+  "name": "sts_sim_bridge_mod",
+  "author": "Tritin Truong",
+  "description": "Pushes live STS2 combat state to the sts_sim analysis server (TCP/JSON) and logs back MCTS move values.",
+  "version": "1.0.0",
+  "has_pck": false,
+  "has_dll": true,
+  "affects_gameplay": true
+}
