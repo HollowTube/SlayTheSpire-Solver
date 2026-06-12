@@ -20,6 +20,14 @@ pub(crate) enum GameEvent {
     // Power/Status cards leaving play — those aren't "Exhausted" in the
     // keyword sense, just removed from the game.
     CardExhausted,
+    // Fires whenever `EffectOp::GainBlock` increases the player's Block
+    // (e.g. Juggernaut's retaliation).
+    BlockGained,
+    // Fires whenever the player loses HP from an attack (hp_loss > 0 in
+    // `deal_damage`), after `player_times_damaged_this_combat`/
+    // `player_hp_lost_this_turn` are updated (e.g. FlameBarrier's
+    // retaliation).
+    DamageReceived,
 }
 
 /// A status that can be attached to a combatant. Each status participates in
@@ -60,6 +68,15 @@ pub(crate) enum Status {
     FeelNoPain,
     // Barricade: Block is no longer removed at the start of your turn.
     Barricade,
+    // Juggernaut: whenever the holder gains Block, deal `n` damage to a
+    // random enemy.
+    Juggernaut(i32),
+    // Flame Barrier: lasts until the end of the holder's next turn. Whenever
+    // the holder takes attack damage, deal 4 damage back to the attacker.
+    FlameBarrier,
+    // Colossus: incoming damage from an attacker that has Vulnerable is
+    // halved per stack of this power.
+    Colossus(i32),
 }
 
 impl Status {
@@ -78,6 +95,9 @@ impl Status {
             Status::DarkEmbrace => "DarkEmbrace",
             Status::FeelNoPain => "FeelNoPain",
             Status::Barricade => "Barricade",
+            Status::Juggernaut(_) => "Juggernaut",
+            Status::FlameBarrier => "FlameBarrier",
+            Status::Colossus(_) => "Colossus",
         }
     }
 
@@ -101,6 +121,9 @@ impl Status {
             "DarkEmbrace" => vec![Status::DarkEmbrace; amount.max(0) as usize],
             "FeelNoPain" => vec![Status::FeelNoPain; amount.max(0) as usize],
             "Barricade" => vec![Status::Barricade; amount.max(0) as usize],
+            "Juggernaut" => vec![Status::Juggernaut(amount)],
+            "FlameBarrier" => vec![Status::FlameBarrier; amount.max(0) as usize],
+            "Colossus" => vec![Status::Colossus(amount)],
             "Strength" => vec![Status::Strength(amount)],
             "Enrage" => vec![Status::Enrage(amount)],
             _ => Vec::new(),
@@ -112,7 +135,12 @@ impl Status {
     /// damage-modifier pipeline. Declaring the side here (not just the status
     /// type) is what lets the same `Strength` show up on either combatant and
     /// only ever amplify *that combatant's own* outgoing damage.
-    fn modifier_for(&self, side: Side, event: EventType) -> Option<Modifier> {
+    fn modifier_for(
+        &self,
+        side: Side,
+        event: EventType,
+        other_side_statuses: &[Status],
+    ) -> Option<Modifier> {
         match (self, side, event) {
             // Vulnerable: +50% damage taken, rounded down (target side only).
             (Status::Vulnerable, Side::Target, EventType::OnDamageDealt) => {
@@ -130,6 +158,13 @@ impl Status {
             (Status::Strength(amount), Side::Attacker, EventType::OnDamageDealt) => {
                 Some(Modifier::AddDamage(*amount))
             }
+            // Colossus: incoming damage is halved per stack, but only from an
+            // attacker who currently has Vulnerable (target side only).
+            (Status::Colossus(n), Side::Target, EventType::OnDamageDealt)
+                if other_side_statuses.contains(&Status::Vulnerable) =>
+            {
+                Some(Modifier::MultiplyDamage(0.5_f64.powi(*n)))
+            }
             _ => None,
         }
     }
@@ -139,7 +174,7 @@ impl Status {
     /// permanent buffs (Strength, Enrage) return false and are never removed
     /// by `tick_debuffs`.
     pub(crate) fn decays_per_turn(&self) -> bool {
-        matches!(self, Status::Vulnerable | Status::Weak)
+        matches!(self, Status::Vulnerable | Status::Weak | Status::FlameBarrier)
     }
 
     /// What `EffectOp`s this status fires when `event` occurs, from the
@@ -172,6 +207,12 @@ impl Status {
             }
             (Status::FeelNoPain, GameEvent::CardExhausted) => {
                 vec![EffectOp::GainBlock(3)]
+            }
+            (Status::Juggernaut(n), GameEvent::BlockGained) => {
+                vec![EffectOp::DealDamageToRandomEnemy(*n)]
+            }
+            (Status::FlameBarrier, GameEvent::DamageReceived) => {
+                vec![EffectOp::DealDamageToLastAttacker(4)]
             }
             _ => vec![],
         }
@@ -217,13 +258,18 @@ fn is_binary_debuff(s: &Status) -> bool {
 /// Collect modifier contributions from `statuses` acting on `side` for
 /// `event`, deduplicating binary debuffs so N stacks still yields one modifier
 /// (e.g. 2 Vulnerable stacks → one `MultiplyDamage(1.5)`, not two).
-fn collect_modifiers(statuses: &[Status], side: Side, event: EventType) -> Vec<Modifier> {
+fn collect_modifiers(
+    statuses: &[Status],
+    side: Side,
+    event: EventType,
+    other_side_statuses: &[Status],
+) -> Vec<Modifier> {
     let mut seen_binary: std::collections::HashSet<&'static str> =
         std::collections::HashSet::new();
     statuses
         .iter()
         .filter(|s| !is_binary_debuff(s) || seen_binary.insert(s.as_str()))
-        .filter_map(|s| s.modifier_for(side, event))
+        .filter_map(|s| s.modifier_for(side, event, other_side_statuses))
         .collect()
 }
 
@@ -240,9 +286,9 @@ fn apply_damage_modifiers(
     target_statuses: &[Status],
     event: EventType,
 ) -> i32 {
-    let modifiers: Vec<Modifier> = collect_modifiers(attacker_statuses, Side::Attacker, event)
+    let modifiers: Vec<Modifier> = collect_modifiers(attacker_statuses, Side::Attacker, event, target_statuses)
         .into_iter()
-        .chain(collect_modifiers(target_statuses, Side::Target, event))
+        .chain(collect_modifiers(target_statuses, Side::Target, event, attacker_statuses))
         .collect();
 
     let additive = modifiers.iter().fold(base, |amount, modifier| match modifier {
@@ -365,6 +411,14 @@ pub(crate) enum EffectOp {
     // (e.g. Inferno's HpLost-triggered retaliation, which fires from a status
     // reaction rather than a targeted card play).
     DealDamageToAllEnemies(i32),
+    // Deals `amount` damage to a randomly chosen living enemy, independent of
+    // `targets` (e.g. Juggernaut's BlockGained-triggered retaliation).
+    DealDamageToRandomEnemy(i32),
+    // Deals `amount` damage to the monster that most recently dealt damage to
+    // the player this combat (`CombatState::last_attacker`), independent of
+    // `targets` (e.g. FlameBarrier's DamageReceived-triggered retaliation).
+    // No-op if no monster has attacked yet.
+    DealDamageToLastAttacker(i32),
 }
 
 /// What a `DealDamageScaled` op reads its multiplier from. New scaling
@@ -482,6 +536,11 @@ fn deal_damage(state: &mut CombatState, attacker: Actor, target: Actor, amount: 
     if target == Actor::Player && hp_loss > 0 {
         state.player_times_damaged_this_combat += 1;
         state.player_hp_lost_this_turn = true;
+        state.last_attacker = match attacker {
+            Actor::Monster(i) => Some(i),
+            Actor::Player => None,
+        };
+        fire_event(state, GameEvent::DamageReceived);
     }
 }
 
@@ -528,7 +587,12 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                     deal_damage(state, actor, target, *amount);
                 }
             }
-            EffectOp::GainBlock(amount) => state.fighter_mut(actor).block += amount,
+            EffectOp::GainBlock(amount) => {
+                state.fighter_mut(actor).block += amount;
+                if actor == Actor::Player {
+                    fire_event(state, GameEvent::BlockGained);
+                }
+            }
             EffectOp::ApplyStatusToTarget(status) => {
                 for &target in targets {
                     state.fighter_mut(target).statuses.push(status.clone());
@@ -673,6 +737,18 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
             }
             EffectOp::DealDamageToAllEnemies(amount) => {
                 for i in state.living_monster_indices() {
+                    deal_damage(state, actor, Actor::Monster(i), *amount);
+                }
+            }
+            EffectOp::DealDamageToRandomEnemy(amount) => {
+                let living = state.living_monster_indices();
+                if !living.is_empty() {
+                    let pick = living[state.rng.gen_range(0..living.len())];
+                    deal_damage(state, actor, Actor::Monster(pick), *amount);
+                }
+            }
+            EffectOp::DealDamageToLastAttacker(amount) => {
+                if let Some(i) = state.last_attacker {
                     deal_damage(state, actor, Actor::Monster(i), *amount);
                 }
             }
