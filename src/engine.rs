@@ -77,6 +77,16 @@ pub(crate) enum Status {
     // Colossus: incoming damage from an attacker that has Vulnerable is
     // halved per stack of this power.
     Colossus(i32),
+    // Corruption: Skills cost 0, and whenever you play a Skill, it is
+    // Exhausted instead of discarded.
+    Corruption,
+    // Cruelty: damage dealt to a target with Vulnerable is amplified by
+    // 1.75x instead of the usual 1.5x.
+    Cruelty,
+    // One Two Punch: the next Attack card played this turn is played a
+    // second time. Consumed on use; if unused, decays at the start of the
+    // next turn (does not persist).
+    OneTwoPunch,
 }
 
 impl Status {
@@ -98,6 +108,9 @@ impl Status {
             Status::Juggernaut(_) => "Juggernaut",
             Status::FlameBarrier => "FlameBarrier",
             Status::Colossus(_) => "Colossus",
+            Status::Corruption => "Corruption",
+            Status::Cruelty => "Cruelty",
+            Status::OneTwoPunch => "OneTwoPunch",
         }
     }
 
@@ -124,6 +137,9 @@ impl Status {
             "Juggernaut" => vec![Status::Juggernaut(amount)],
             "FlameBarrier" => vec![Status::FlameBarrier; amount.max(0) as usize],
             "Colossus" => vec![Status::Colossus(amount)],
+            "Corruption" => vec![Status::Corruption; amount.max(0) as usize],
+            "Cruelty" => vec![Status::Cruelty; amount.max(0) as usize],
+            "OneTwoPunch" => vec![Status::OneTwoPunch; amount.max(0) as usize],
             "Strength" => vec![Status::Strength(amount)],
             "Enrage" => vec![Status::Enrage(amount)],
             _ => Vec::new(),
@@ -143,8 +159,14 @@ impl Status {
     ) -> Option<Modifier> {
         match (self, side, event) {
             // Vulnerable: +50% damage taken, rounded down (target side only).
+            // Cruelty on the attacker amplifies this to +75% instead.
             (Status::Vulnerable, Side::Target, EventType::OnDamageDealt) => {
-                Some(Modifier::MultiplyDamage(1.5))
+                let multiplier = if other_side_statuses.contains(&Status::Cruelty) {
+                    1.75
+                } else {
+                    1.5
+                };
+                Some(Modifier::MultiplyDamage(multiplier))
             }
             // Weak: −25% damage dealt, rounded down (attacker side only).
             (Status::Weak, Side::Attacker, EventType::OnDamageDealt) => {
@@ -174,7 +196,10 @@ impl Status {
     /// permanent buffs (Strength, Enrage) return false and are never removed
     /// by `tick_debuffs`.
     pub(crate) fn decays_per_turn(&self) -> bool {
-        matches!(self, Status::Vulnerable | Status::Weak | Status::FlameBarrier)
+        matches!(
+            self,
+            Status::Vulnerable | Status::Weak | Status::FlameBarrier | Status::OneTwoPunch
+        )
     }
 
     /// What `EffectOp`s this status fires when `event` occurs, from the

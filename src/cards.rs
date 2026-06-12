@@ -205,6 +205,45 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Colossus(1))],
             exhausts: false,
         }),
+        // Installs the Corruption status: Skills cost 0 and Exhaust when
+        // played.
+        "Corruption" => Some(CardData {
+            cost: 3,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Corruption)],
+            exhausts: false,
+        }),
+        // Installs the Cruelty status: damage dealt to Vulnerable targets is
+        // amplified by 1.75x instead of 1.5x.
+        "Cruelty" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Cruelty)],
+            exhausts: false,
+        }),
+        // Deal 15 damage. Apply -10 Strength to the target for the rest of
+        // combat.
+        "Mangle" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![
+                EffectOp::DealDamage(15),
+                EffectOp::ApplyStatusToTarget(Status::Strength(-10)),
+            ],
+            exhausts: false,
+        }),
+        // Installs the One Two Punch status: the next Attack played this
+        // turn is played a second time.
+        "OneTwoPunch" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::OneTwoPunch)],
+            exhausts: false,
+        }),
         "Pommel Strike" => Some(CardData {
             cost: 1,
             targeted: true,
