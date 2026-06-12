@@ -215,6 +215,10 @@ pub struct CombatState {
     // Whether the player has lost HP this turn — resets to false at the
     // start of each player turn (e.g. Spite).
     pub(crate) player_hp_lost_this_turn: bool,
+    // Index into `monsters` of whichever monster most recently dealt damage
+    // to the player this combat, if any (e.g. FlameBarrier's retaliation
+    // target).
+    pub(crate) last_attacker: Option<usize>,
     pub(crate) pending: Option<PendingDecision>,
     pub(crate) rng: Pcg32,
 }
@@ -272,6 +276,7 @@ impl CombatState {
             attacks_played_this_turn: 0,
             player_times_damaged_this_combat: 0,
             player_hp_lost_this_turn: false,
+            last_attacker: None,
             pending: None,
             rng,
         };

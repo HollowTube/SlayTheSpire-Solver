@@ -175,6 +175,36 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Barricade)],
             exhausts: false,
         }),
+        // Installs the Juggernaut status: whenever you gain Block, deal 5
+        // damage to a random enemy.
+        "Juggernaut" => Some(CardData {
+            cost: 2,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Juggernaut(5))],
+            exhausts: false,
+        }),
+        // Gain 12 Block. Whenever you are attacked this turn, deal 4 damage
+        // back to the attacker.
+        "FlameBarrier" => Some(CardData {
+            cost: 2,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![
+                EffectOp::GainBlock(12),
+                EffectOp::ApplyStatusToSelf(Status::FlameBarrier),
+            ],
+            exhausts: false,
+        }),
+        // Installs the Colossus status: incoming damage from attackers with
+        // Vulnerable is halved.
+        "Colossus" => Some(CardData {
+            cost: 3,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Colossus(1))],
+            exhausts: false,
+        }),
         "Pommel Strike" => Some(CardData {
             cost: 1,
             targeted: true,
