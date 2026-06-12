@@ -4,7 +4,7 @@ mod monsters;
 mod state;
 
 use cards::{card_data, CardType};
-use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent};
+use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
 use monsters::{monster_move, select_next_intent};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -106,8 +106,11 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                 tick_debuffs(&mut next.monsters[i].fighter.statuses);
             }
 
-            // Block does not carry over between turns.
-            next.player.block = 0;
+            // Block does not carry over between turns, unless Barricade is
+            // held.
+            if !next.player.statuses.contains(&Status::Barricade) {
+                next.player.block = 0;
+            }
             // Energy refreshes to its per-turn maximum each turn — it does
             // not carry over either.
             next.player_energy = next.player_max_energy;
@@ -171,6 +174,13 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                 let played = next.hand.remove(position);
                 if matches!(data.card_type, CardType::Power | CardType::Status) || data.exhausts {
                     next.exhaust_pile.push(played);
+                    // Power/Status cards leave play permanently but aren't
+                    // "Exhausted" in the keyword sense (e.g. playing
+                    // DarkEmbrace itself doesn't trigger DarkEmbrace) — only
+                    // cards with the Exhaust keyword fire CardExhausted.
+                    if data.exhausts {
+                        fire_event(&mut next, GameEvent::CardExhausted);
+                    }
                 } else {
                     next.discard_pile.push(played);
                 }

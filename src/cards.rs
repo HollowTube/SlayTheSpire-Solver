@@ -148,6 +148,33 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Aggression)],
             exhausts: false,
         }),
+        // Installs the Dark Embrace status: whenever a card is Exhausted,
+        // draw 1 card.
+        "DarkEmbrace" => Some(CardData {
+            cost: 2,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::DarkEmbrace)],
+            exhausts: false,
+        }),
+        // Installs the Feel No Pain status: whenever a card is Exhausted,
+        // gain 3 Block.
+        "FeelNoPain" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::FeelNoPain)],
+            exhausts: false,
+        }),
+        // Installs the Barricade status: Block is no longer removed at the
+        // start of your turn.
+        "Barricade" => Some(CardData {
+            cost: 3,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Barricade)],
+            exhausts: false,
+        }),
         "Pommel Strike" => Some(CardData {
             cost: 1,
             targeted: true,

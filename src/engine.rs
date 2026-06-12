@@ -14,6 +14,12 @@ pub(crate) enum GameEvent {
     // Fires whenever an `EffectOp::LoseHp` reduces a combatant's HP (e.g.
     // Inferno's own turn-start self-damage, or other self-damage cards).
     HpLost,
+    // Fires whenever a card with the Exhaust keyword (`exhausts: true`) is
+    // moved to the exhaust pile, or an `ExhaustRandomFromHand`/
+    // `ExhaustAllFromHand` op exhausts a card from hand. Does NOT fire for
+    // Power/Status cards leaving play — those aren't "Exhausted" in the
+    // keyword sense, just removed from the game.
+    CardExhausted,
 }
 
 /// A status that can be attached to a combatant. Each status participates in
@@ -48,6 +54,12 @@ pub(crate) enum Status {
     // Aggression: at the start of each turn, return a random Attack card
     // from the discard pile to hand.
     Aggression,
+    // Dark Embrace: whenever a card is Exhausted, draw 1 card.
+    DarkEmbrace,
+    // Feel No Pain: whenever a card is Exhausted, gain 3 Block.
+    FeelNoPain,
+    // Barricade: Block is no longer removed at the start of your turn.
+    Barricade,
 }
 
 impl Status {
@@ -63,6 +75,9 @@ impl Status {
             Status::CrimsonMantle(_) => "CrimsonMantle",
             Status::Inferno => "Inferno",
             Status::Aggression => "Aggression",
+            Status::DarkEmbrace => "DarkEmbrace",
+            Status::FeelNoPain => "FeelNoPain",
+            Status::Barricade => "Barricade",
         }
     }
 
@@ -83,6 +98,9 @@ impl Status {
             "CrimsonMantle" => vec![Status::CrimsonMantle(amount)],
             "Inferno" => vec![Status::Inferno; amount.max(0) as usize],
             "Aggression" => vec![Status::Aggression; amount.max(0) as usize],
+            "DarkEmbrace" => vec![Status::DarkEmbrace; amount.max(0) as usize],
+            "FeelNoPain" => vec![Status::FeelNoPain; amount.max(0) as usize],
+            "Barricade" => vec![Status::Barricade; amount.max(0) as usize],
             "Strength" => vec![Status::Strength(amount)],
             "Enrage" => vec![Status::Enrage(amount)],
             _ => Vec::new(),
@@ -148,6 +166,12 @@ impl Status {
             }
             (Status::Aggression, GameEvent::TurnStart) => {
                 vec![EffectOp::ReturnRandomDiscardToHand(HandFilter::Attack)]
+            }
+            (Status::DarkEmbrace, GameEvent::CardExhausted) => {
+                vec![EffectOp::DrawCards(1)]
+            }
+            (Status::FeelNoPain, GameEvent::CardExhausted) => {
+                vec![EffectOp::GainBlock(3)]
             }
             _ => vec![],
         }
@@ -555,6 +579,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                     let pick = candidates[state.rng.gen_range(0..candidates.len())];
                     let card = state.hand.remove(pick);
                     state.exhaust_pile.push(card);
+                    fire_event(state, GameEvent::CardExhausted);
                 }
             }
             EffectOp::ExhaustAllFromHand {
@@ -567,6 +592,9 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 state.hand = remaining;
                 state.exhaust_pile.extend(matching);
                 state.fighter_mut(actor).block += gain_block_per_card * count;
+                for _ in 0..count {
+                    fire_event(state, GameEvent::CardExhausted);
+                }
             }
             EffectOp::PutRandomDiscardOnTopOfDraw => {
                 if !state.discard_pile.is_empty() {
