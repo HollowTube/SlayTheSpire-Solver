@@ -3,7 +3,7 @@ mod engine;
 mod monsters;
 mod state;
 
-use cards::{card_data, CardType};
+use cards::{card_data, CardData, CardType};
 use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
 use monsters::{monster_move, select_next_intent};
 use pyo3::exceptions::PyValueError;
@@ -11,6 +11,16 @@ use pyo3::prelude::*;
 use rand::{Rng, RngCore};
 use std::collections::HashMap;
 use state::{draw_cards, CombatState, Fighter, Monster, PendingDecision, HAND_SIZE};
+
+/// The Energy cost to play `data`, accounting for Corruption (Skills cost 0
+/// while the player holds it).
+fn effective_cost(state: &CombatState, data: &CardData) -> i32 {
+    if matches!(data.card_type, CardType::Skill) && state.player.statuses.contains(&Status::Corruption) {
+        0
+    } else {
+        data.cost
+    }
+}
 
 #[pyfunction]
 fn legal_actions(state: &CombatState) -> Vec<String> {
@@ -29,7 +39,7 @@ fn legal_actions(state: &CombatState) -> Vec<String> {
                 // never has to model (or reject) going into negative energy.
                 .filter(|name| {
                     card_data(name)
-                        .map(|data| data.cost <= state.player_energy)
+                        .map(|data| effective_cost(state, &data) <= state.player_energy)
                         .unwrap_or(false)
                 })
                 .map(|name| format!("PlayCard:{name}"))
@@ -147,6 +157,14 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     CardType::Attack => {
                         next.attacks_played_this_turn += 1;
                         fire_event(&mut next, GameEvent::AttackPlayed);
+                        // One Two Punch: the next Attack played this turn
+                        // resolves a second time, then the power is consumed.
+                        if let Some(pos) = next.player.statuses.iter().position(|s| *s == Status::OneTwoPunch) {
+                            next.player.statuses.remove(pos);
+                            run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)]);
+                            next.attacks_played_this_turn += 1;
+                            fire_event(&mut next, GameEvent::AttackPlayed);
+                        }
                     }
                     CardType::Power | CardType::Status => {}
                 }
@@ -165,26 +183,32 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     .iter()
                     .position(|c| c == card_name)
                     .ok_or_else(|| PyValueError::new_err(format!("{card_name} is not in hand")))?;
-                if data.cost > next.player_energy {
+                let cost = effective_cost(&next, &data);
+                if cost > next.player_energy {
                     return Err(PyValueError::new_err(format!(
                         "cannot afford {card_name}: costs {} but only {} energy available",
-                        data.cost, next.player_energy
+                        cost, next.player_energy
                     )));
                 }
                 let played = next.hand.remove(position);
-                if matches!(data.card_type, CardType::Power | CardType::Status) || data.exhausts {
+                // Corruption sends played Skills to the exhaust pile instead
+                // of discard, just like the Exhaust keyword.
+                let corruption_exhausts_skill =
+                    matches!(data.card_type, CardType::Skill) && next.player.statuses.contains(&Status::Corruption);
+                if matches!(data.card_type, CardType::Power | CardType::Status) || data.exhausts || corruption_exhausts_skill {
                     next.exhaust_pile.push(played);
                     // Power/Status cards leave play permanently but aren't
                     // "Exhausted" in the keyword sense (e.g. playing
                     // DarkEmbrace itself doesn't trigger DarkEmbrace) — only
-                    // cards with the Exhaust keyword fire CardExhausted.
-                    if data.exhausts {
+                    // cards with the Exhaust keyword (or Corruption's
+                    // Skill-exhaust) fire CardExhausted.
+                    if data.exhausts || corruption_exhausts_skill {
                         fire_event(&mut next, GameEvent::CardExhausted);
                     }
                 } else {
                     next.discard_pile.push(played);
                 }
-                next.player_energy -= data.cost;
+                next.player_energy -= cost;
                 if data.targeted {
                     next.pending = Some(PendingDecision::SelectTarget {
                         card: card_name.to_string(),
@@ -205,6 +229,15 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                         CardType::Attack => {
                             next.attacks_played_this_turn += 1;
                             fire_event(&mut next, GameEvent::AttackPlayed);
+                            // One Two Punch: the next Attack played this turn
+                            // resolves a second time, then the power is
+                            // consumed.
+                            if let Some(pos) = next.player.statuses.iter().position(|s| *s == Status::OneTwoPunch) {
+                                next.player.statuses.remove(pos);
+                                run_effect_ops(&mut next, &data.effects, Actor::Player, &targets);
+                                next.attacks_played_this_turn += 1;
+                                fire_event(&mut next, GameEvent::AttackPlayed);
+                            }
                         }
                         CardType::Power | CardType::Status => {}
                     }
