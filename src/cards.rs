@@ -108,6 +108,46 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Rage)],
             exhausts: false,
         }),
+        // Installs the Demon Form status: gain 2 Strength at the start of
+        // each turn (including the turn it's played, per the wiki — but the
+        // first TurnStart fires on the *next* turn since this turn is
+        // already in progress).
+        "DemonForm" => Some(CardData {
+            cost: 3,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::DemonForm)],
+            exhausts: false,
+        }),
+        // Installs the Crimson Mantle status: at the start of each turn,
+        // gain 8 Block and lose HP equal to a counter that starts at 1 and
+        // increases by 1 each turn.
+        "CrimsonMantle" => Some(CardData {
+            cost: 2,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::CrimsonMantle(1))],
+            exhausts: false,
+        }),
+        // Installs the Inferno status: at the start of each turn, lose 1 HP
+        // (unblockable); whenever the holder loses HP on their turn, deal 6
+        // damage to all enemies.
+        "Inferno" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Inferno)],
+            exhausts: false,
+        }),
+        // Installs the Aggression status: at the start of each turn, return
+        // a random Attack from the discard pile to hand.
+        "Aggression" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Aggression)],
+            exhausts: false,
+        }),
         "Pommel Strike" => Some(CardData {
             cost: 1,
             targeted: true,

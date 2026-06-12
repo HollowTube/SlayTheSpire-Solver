@@ -121,6 +121,9 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             // of the player's turn — after the monster has already attacked,
             // matching Slay the Spire's documented turn structure.
             tick_debuffs(&mut next.player.statuses);
+            // Persistent powers that react to the new turn beginning (e.g.
+            // Demon Form's +2 Strength) fire after the above resets.
+            fire_event(&mut next, GameEvent::TurnStart);
             Ok(next)
         }
         other if other.starts_with("SelectTarget:Monster:") => match &state.pending {

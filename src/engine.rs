@@ -10,6 +10,10 @@ use rand::Rng;
 pub(crate) enum GameEvent {
     SkillPlayed,
     AttackPlayed,
+    TurnStart,
+    // Fires whenever an `EffectOp::LoseHp` reduces a combatant's HP (e.g.
+    // Inferno's own turn-start self-damage, or other self-damage cards).
+    HpLost,
 }
 
 /// A status that can be attached to a combatant. Each status participates in
@@ -31,6 +35,19 @@ pub(crate) enum Status {
     // The Shrinker Beetle's Shrink: −30% damage dealt by its holder, rounded
     // down (attacker side only) — like Weak but permanent (never decays).
     Shrink,
+    // Demon Form: at the start of each turn, the holder gains 2 Strength.
+    DemonForm,
+    // Crimson Mantle: at the start of each turn, gain 8 Block and lose HP
+    // equal to the carried amount (unblockable), which then increases by 1
+    // for next turn.
+    CrimsonMantle(i32),
+    // Inferno: at the start of each turn, lose 1 HP (unblockable). Whenever
+    // the holder loses HP on their turn (including from this trigger),
+    // deal 6 damage to all enemies.
+    Inferno,
+    // Aggression: at the start of each turn, return a random Attack card
+    // from the discard pile to hand.
+    Aggression,
 }
 
 impl Status {
@@ -42,6 +59,10 @@ impl Status {
             Status::Enrage(_) => "Enrage",
             Status::Rage => "Rage",
             Status::Shrink => "Shrink",
+            Status::DemonForm => "DemonForm",
+            Status::CrimsonMantle(_) => "CrimsonMantle",
+            Status::Inferno => "Inferno",
+            Status::Aggression => "Aggression",
         }
     }
 
@@ -58,6 +79,10 @@ impl Status {
             "Vulnerable" => vec![Status::Vulnerable; amount.max(0) as usize],
             "Weak" => vec![Status::Weak; amount.max(0) as usize],
             "Rage" => vec![Status::Rage; amount.max(0) as usize],
+            "DemonForm" => vec![Status::DemonForm; amount.max(0) as usize],
+            "CrimsonMantle" => vec![Status::CrimsonMantle(amount)],
+            "Inferno" => vec![Status::Inferno; amount.max(0) as usize],
+            "Aggression" => vec![Status::Aggression; amount.max(0) as usize],
             "Strength" => vec![Status::Strength(amount)],
             "Enrage" => vec![Status::Enrage(amount)],
             _ => Vec::new(),
@@ -108,6 +133,21 @@ impl Status {
             }
             (Status::Rage, GameEvent::AttackPlayed) => {
                 vec![EffectOp::GainBlock(2)]
+            }
+            (Status::DemonForm, GameEvent::TurnStart) => {
+                vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))]
+            }
+            (Status::CrimsonMantle(n), GameEvent::TurnStart) => vec![
+                EffectOp::GainBlock(8),
+                EffectOp::LoseHp(*n),
+                EffectOp::EscalateSelfStatus(Status::CrimsonMantle(n + 1)),
+            ],
+            (Status::Inferno, GameEvent::TurnStart) => vec![EffectOp::LoseHp(1)],
+            (Status::Inferno, GameEvent::HpLost) => {
+                vec![EffectOp::DealDamageToAllEnemies(6)]
+            }
+            (Status::Aggression, GameEvent::TurnStart) => {
+                vec![EffectOp::ReturnRandomDiscardToHand(HandFilter::Attack)]
             }
             _ => vec![],
         }
@@ -223,6 +263,11 @@ pub(crate) enum EffectOp {
     // self-buffs like Inflame's Strength, which never go through SelectTarget.
     ApplyStatusToSelf(Status),
     DrawCards(usize),
+    // Removes the first status on `actor` whose `as_str()` matches `new`'s,
+    // then pushes `new` — used by self-mutating turn counters (e.g.
+    // CrimsonMantle's increasing self-damage) to replace their carried
+    // amount each turn.
+    EscalateSelfStatus(Status),
     // Unblockable, unpowered self-damage to `actor` — bypasses block and the
     // damage-modifier pipeline entirely (e.g. Bloodletting's HP cost is not
     // reduced by the player's own Block or amplified by their own Vulnerable).
@@ -254,6 +299,11 @@ pub(crate) enum EffectOp {
     // of their draw pile (e.g. Headbutt). No-op if the discard pile is empty.
     // Only meaningful for `Actor::Player` — monsters have no card piles.
     PutRandomDiscardOnTopOfDraw,
+    // Removes a random card matching `filter` from `actor`'s discard pile
+    // and adds it directly to their hand (e.g. Aggression's turn-start
+    // "return a random discarded Attack to hand"). No-op if no card in the
+    // discard pile matches `filter`. Only meaningful for `Actor::Player`.
+    ReturnRandomDiscardToHand(HandFilter),
     // Deals `base + per_unit * source` damage to each target, where `source`
     // is read from `state` at the moment this op runs (e.g. FiendFire: 0 base
     // + 7 per card in hand, evaluated before the hand is exhausted by a later
@@ -287,6 +337,10 @@ pub(crate) enum EffectOp {
     // Vulnerable)` earlier in the same effects list, so it reads the
     // resulting stack count (e.g. Dominate).
     GainStrengthEqualToTargetVulnerable,
+    // Deals `amount` damage to every living enemy, independent of `targets`
+    // (e.g. Inferno's HpLost-triggered retaliation, which fires from a status
+    // reaction rather than a targeted card play).
+    DealDamageToAllEnemies(i32),
 }
 
 /// What a `DealDamageScaled` op reads its multiplier from. New scaling
@@ -460,7 +514,19 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 state.fighter_mut(actor).statuses.push(status.clone())
             }
             EffectOp::DrawCards(n) => draw_cards(state, *n),
-            EffectOp::LoseHp(amount) => state.fighter_mut(actor).hp -= amount,
+            EffectOp::EscalateSelfStatus(new_status) => {
+                let statuses = &mut state.fighter_mut(actor).statuses;
+                if let Some(pos) = statuses.iter().position(|s| s.as_str() == new_status.as_str()) {
+                    statuses.remove(pos);
+                }
+                statuses.push(new_status.clone());
+            }
+            EffectOp::LoseHp(amount) => {
+                state.fighter_mut(actor).hp -= amount;
+                if *amount > 0 {
+                    fire_event(state, GameEvent::HpLost);
+                }
+            }
             EffectOp::GainEnergy(amount) => {
                 if actor == Actor::Player {
                     state.player_energy += amount;
@@ -508,6 +574,20 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                     let card = state.discard_pile.remove(pick);
                     // `draw_cards` pops from the end, so the end is the top.
                     state.draw_pile.push(card);
+                }
+            }
+            EffectOp::ReturnRandomDiscardToHand(filter) => {
+                let candidates: Vec<usize> = state
+                    .discard_pile
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, name)| filter.matches(name))
+                    .map(|(i, _)| i)
+                    .collect();
+                if !candidates.is_empty() {
+                    let pick = candidates[state.rng.gen_range(0..candidates.len())];
+                    let card = state.discard_pile.remove(pick);
+                    state.hand.push(card);
                 }
             }
             EffectOp::DealDamageScaled {
@@ -561,6 +641,11 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                         .filter(|s| **s == Status::Vulnerable)
                         .count() as i32;
                     state.fighter_mut(actor).statuses.push(Status::Strength(count));
+                }
+            }
+            EffectOp::DealDamageToAllEnemies(amount) => {
+                for i in state.living_monster_indices() {
+                    deal_damage(state, actor, Actor::Monster(i), *amount);
                 }
             }
         }
