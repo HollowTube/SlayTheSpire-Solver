@@ -123,8 +123,7 @@ class BenchResult:
         )
         if self.optimal_hp_outcomes:
             line += (
-                f"  ceiling={self.mean_hp_lost_optimal:5.1f}"
-                f"  regret={self.regret:5.1f}"
+                f"  ceiling={self.mean_hp_lost_optimal:5.1f}  regret={self.regret:5.1f}"
             )
         return line
 
