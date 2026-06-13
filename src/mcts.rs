@@ -199,16 +199,18 @@ pub(crate) fn mcts_search(
 /// Not an issue for any deck currently reachable in this codebase, but a
 /// deck-comparison tool should treat a `max_actions` cutoff as "no result"
 /// rather than "0 HP lost" if non-terminating decks ever become possible.
-#[pyfunction]
-#[pyo3(signature = (state, iterations=200, seed=0, determinize=true, determinizations=DEFAULT_DETERMINIZATIONS, max_actions=1000))]
-pub(crate) fn simulate_hp_lost(
+/// Shared implementation behind `simulate_hp_lost` and
+/// `fight_outcomes_per_fight`: plays `state` to terminal via `search_impl`
+/// at every decision and returns `(hp lost, turns taken)`. See
+/// `simulate_hp_lost` for the `max_actions` stalemate caveat.
+fn simulate_fight_outcome(
     state: &CombatState,
     iterations: u32,
     seed: u64,
     determinize: bool,
     determinizations: u32,
     max_actions: u32,
-) -> i32 {
+) -> (i32, u32) {
     let mut s = state.clone();
     let mut rng = Pcg32::seed_from_u64(seed);
     let starting_hp = s.player.hp;
@@ -219,7 +221,20 @@ pub(crate) fn simulate_hp_lost(
         let action = search_impl(&s, iterations, &mut rng, determinize, determinizations);
         s = apply(&s, &action).expect("legal action is always valid");
     }
-    starting_hp - s.player.hp.max(0)
+    (starting_hp - s.player.hp.max(0), s.turn)
+}
+
+#[pyfunction]
+#[pyo3(signature = (state, iterations=200, seed=0, determinize=true, determinizations=DEFAULT_DETERMINIZATIONS, max_actions=1000))]
+pub(crate) fn simulate_hp_lost(
+    state: &CombatState,
+    iterations: u32,
+    seed: u64,
+    determinize: bool,
+    determinizations: u32,
+    max_actions: u32,
+) -> i32 {
+    simulate_fight_outcome(state, iterations, seed, determinize, determinizations, max_actions).0
 }
 
 /// Run `simulate_hp_lost` once per `states` entry (in parallel, off the GIL)
@@ -248,6 +263,32 @@ pub(crate) fn hp_lost_per_fight(
             .enumerate()
             .map(|(i, state)| {
                 simulate_hp_lost(state, iterations, i as u64, determinize, determinizations, max_actions)
+            })
+            .collect()
+    })
+}
+
+/// Like `hp_lost_per_fight`, but also returns each fight's turn count —
+/// `(hp lost, turns taken)` per `states` entry. This is the entry point
+/// `sts_sim.bench.run_deck`'s `policy="mcts"` path uses: it runs all `seeds`
+/// fights in one rayon-parallel, GIL-released call instead of spawning a
+/// worker process per fight.
+#[pyfunction]
+#[pyo3(signature = (states, iterations=100, determinize=true, determinizations=DEFAULT_DETERMINIZATIONS, max_actions=1000))]
+pub(crate) fn fight_outcomes_per_fight(
+    py: Python<'_>,
+    states: Vec<CombatState>,
+    iterations: u32,
+    determinize: bool,
+    determinizations: u32,
+    max_actions: u32,
+) -> Vec<(i32, u32)> {
+    py.allow_threads(|| {
+        states
+            .par_iter()
+            .enumerate()
+            .map(|(i, state)| {
+                simulate_fight_outcome(state, iterations, i as u64, determinize, determinizations, max_actions)
             })
             .collect()
     })
