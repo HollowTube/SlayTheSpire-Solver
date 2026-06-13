@@ -1,10 +1,12 @@
 mod cards;
 mod engine;
+mod mcts;
 mod monsters;
 mod state;
 
 use cards::{card_data, CardData, CardType};
 use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
+use mcts::{hp_lost_per_fight, mcts_action_values, mcts_search, simulate_hp_lost};
 use monsters::{monster_move, select_next_intent};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -292,6 +294,16 @@ fn reward(state: &CombatState) -> f64 {
     }
 }
 
+/// Return a copy of `state` with its draw pile shuffled into a fresh random
+/// order and its RNG reseeded from `seed` — see
+/// `CombatState::redeterminized`. Used by MCTS to sample possible futures a
+/// real player can't actually foresee, rather than solving the single
+/// perfect-information tree implied by `state`'s embedded shuffle/RNG.
+#[pyfunction]
+fn redeterminized(state: &CombatState, seed: u64) -> CombatState {
+    state.redeterminized(seed)
+}
+
 /// Run a complete random playout from `state` (re-seeded with `seed`) and
 /// return the terminal reward. Doing the hot loop in Rust eliminates the
 /// per-step Python/Rust FFI overhead that makes the Python rollout ~3x slower
@@ -444,6 +456,11 @@ fn _sts_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(reward, m)?)?;
     m.add_function(wrap_pyfunction!(random_rollout, m)?)?;
+    m.add_function(wrap_pyfunction!(redeterminized, m)?)?;
     m.add_function(wrap_pyfunction!(optimal_value, m)?)?;
+    m.add_function(wrap_pyfunction!(mcts_action_values, m)?)?;
+    m.add_function(wrap_pyfunction!(mcts_search, m)?)?;
+    m.add_function(wrap_pyfunction!(simulate_hp_lost, m)?)?;
+    m.add_function(wrap_pyfunction!(hp_lost_per_fight, m)?)?;
     Ok(())
 }

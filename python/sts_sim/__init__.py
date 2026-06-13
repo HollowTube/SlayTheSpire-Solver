@@ -3,11 +3,16 @@ from ._sts_sim import (
     Monster,
     apply,
     evaluate,
+    hp_lost_per_fight,
     is_terminal,
     legal_actions,
+    mcts_action_values,
+    mcts_search,
     optimal_value,
     random_rollout,
+    redeterminized,
     reward,
+    simulate_hp_lost,
 )
 
 __all__ = [
@@ -15,9 +20,14 @@ __all__ = [
     "Monster",
     "apply",
     "evaluate",
+    "hp_lost_per_fight",
     "is_terminal",
     "legal_actions",
+    "mcts_action_values",
+    "mcts_search",
     "optimal_value",
     "random_rollout",
+    "redeterminized",
     "reward",
+    "simulate_hp_lost",
 ]
