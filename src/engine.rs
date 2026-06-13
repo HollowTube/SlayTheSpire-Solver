@@ -87,6 +87,12 @@ pub(crate) enum Status {
     // second time. Consumed on use; if unused, decays at the start of the
     // next turn (does not persist).
     OneTwoPunch,
+    // Slippery: the next time the holder would lose HP, that loss is capped
+    // to 1 instead - consuming one stack. Carries its stack count; stacks
+    // persist across turns until consumed by a hit (handled directly in
+    // `deal_damage`, not via the Modifier pipeline, since it depends on the
+    // post-block HP loss and has a stateful side effect).
+    Slippery(i32),
 }
 
 impl Status {
@@ -111,6 +117,7 @@ impl Status {
             Status::Corruption => "Corruption",
             Status::Cruelty => "Cruelty",
             Status::OneTwoPunch => "OneTwoPunch",
+            Status::Slippery(_) => "Slippery",
         }
     }
 
@@ -140,6 +147,7 @@ impl Status {
             "Corruption" => vec![Status::Corruption; amount.max(0) as usize],
             "Cruelty" => vec![Status::Cruelty; amount.max(0) as usize],
             "OneTwoPunch" => vec![Status::OneTwoPunch; amount.max(0) as usize],
+            "Slippery" => vec![Status::Slippery(amount)],
             "Strength" => vec![Status::Strength(amount)],
             "Enrage" => vec![Status::Enrage(amount)],
             _ => Vec::new(),
@@ -557,7 +565,28 @@ fn deal_damage(state: &mut CombatState, attacker: Actor, target: Actor, amount: 
         let target_fighter = state.fighter_mut(target);
         let absorbed = modified.min(target_fighter.block);
         target_fighter.block -= absorbed;
-        hp_loss = modified - absorbed;
+        let mut loss = modified - absorbed;
+
+        // Slippery: the next time the holder would lose HP, cap that loss to
+        // 1 and consume one stack.
+        if loss > 1 {
+            if let Some(pos) = target_fighter
+                .statuses
+                .iter()
+                .position(|s| matches!(s, Status::Slippery(n) if *n > 0))
+            {
+                loss = 1;
+                match &mut target_fighter.statuses[pos] {
+                    Status::Slippery(n) => *n -= 1,
+                    _ => unreachable!(),
+                }
+                if matches!(target_fighter.statuses[pos], Status::Slippery(0)) {
+                    target_fighter.statuses.remove(pos);
+                }
+            }
+        }
+
+        hp_loss = loss;
         target_fighter.hp -= hp_loss;
     }
 
