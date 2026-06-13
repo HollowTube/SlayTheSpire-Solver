@@ -33,9 +33,11 @@ def test_body_slam_deals_damage_equal_to_current_block():
 # ── PerfectedStrike ──────────────────────────────────────────────────────────
 
 
-def test_perfected_strike_deals_6_plus_2_per_strike_in_deck():
-    # 1 Strike in hand (PerfectedStrike doesn't count itself) + 2 Strikes in
-    # the draw pile = 3 Strikes total -> 6 + 2*3 = 12 damage.
+def test_perfected_strike_deals_6_plus_2_per_card_containing_strike_in_deck():
+    # PerfectedStrike counts ALL cards containing "Strike" in the deck,
+    # including itself (now in the discard pile after being played): 1
+    # Strike in hand + 2 Strikes in the draw pile + PerfectedStrike itself
+    # = 4 total -> 6 + 2*4 = 14 damage.
     state = make_state(
         hand=["PerfectedStrike", "Strike"],
         draw_pile=["Strike", "Strike"],
@@ -46,7 +48,23 @@ def test_perfected_strike_deals_6_plus_2_per_strike_in_deck():
 
     resolved = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    assert state.monsters[0].hp - resolved.monsters[0].hp == 12
+    assert state.monsters[0].hp - resolved.monsters[0].hp == 14
+
+
+def test_perfected_strike_counts_cards_with_strike_as_a_substring():
+    # TwinStrike contains "Strike" even though its name isn't exactly
+    # "Strike" - it counts the same as a plain Strike: 1 TwinStrike in hand +
+    # 2 Strikes in the draw pile + PerfectedStrike itself = 4 total ->
+    # 6 + 2*4 = 14 damage.
+    state = make_state(
+        hand=["PerfectedStrike", "TwinStrike"],
+        draw_pile=["Strike", "Strike"],
+    )
+
+    awaiting_target = apply(state, "PlayCard:PerfectedStrike")
+    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+
+    assert state.monsters[0].hp - resolved.monsters[0].hp == 14
 
 
 # ── AshenStrike ──────────────────────────────────────────────────────────────
