@@ -196,13 +196,17 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             ],
             exhausts: false,
         }),
-        // Installs the Colossus status: incoming damage from attackers with
-        // Vulnerable is halved.
+        // Per the wiki, Colossus costs 3, gains 5 Block, and installs the
+        // Colossus status for this turn only: incoming damage from attackers
+        // with Vulnerable is halved.
         "Colossus" => Some(CardData {
             cost: 3,
             targeted: false,
-            card_type: CardType::Power,
-            effects: vec![EffectOp::ApplyStatusToSelf(Status::Colossus(1))],
+            card_type: CardType::Skill,
+            effects: vec![
+                EffectOp::GainBlock(5),
+                EffectOp::ApplyStatusToSelf(Status::Colossus(1)),
+            ],
             exhausts: false,
         }),
         // Installs the Corruption status: Skills cost 0 and Exhaust when

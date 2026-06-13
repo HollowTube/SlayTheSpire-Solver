@@ -198,7 +198,12 @@ impl Status {
     pub(crate) fn decays_per_turn(&self) -> bool {
         matches!(
             self,
-            Status::Vulnerable | Status::Weak | Status::FlameBarrier | Status::OneTwoPunch
+            Status::Vulnerable
+                | Status::Weak
+                | Status::FlameBarrier
+                | Status::OneTwoPunch
+                | Status::Rage
+                | Status::Colossus(_)
         )
     }
 
@@ -592,10 +597,18 @@ pub(crate) fn fire_event(state: &mut CombatState, event: GameEvent) {
 /// Removes one stack of each duration-based debuff from `statuses` — mirrors
 /// Slay the Spire's end-of-turn debuff countdown. Only statuses where
 /// `decays_per_turn()` is true are touched; permanent statuses (Strength,
-/// Enrage) are never affected.
+/// Enrage) are never affected. Each distinct decaying status (by `as_str()`)
+/// loses one stack per call, so e.g. Vulnerable and a one-turn power like
+/// Colossus can expire independently in the same turn.
 pub(crate) fn tick_debuffs(statuses: &mut Vec<Status>) {
-    if let Some(pos) = statuses.iter().position(|s| s.decays_per_turn()) {
-        statuses.remove(pos);
+    let mut decremented = std::collections::HashSet::new();
+    let mut i = 0;
+    while i < statuses.len() {
+        if statuses[i].decays_per_turn() && decremented.insert(statuses[i].as_str()) {
+            statuses.remove(i);
+        } else {
+            i += 1;
+        }
     }
 }
 
