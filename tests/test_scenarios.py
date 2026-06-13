@@ -3,6 +3,7 @@ from collections import Counter
 
 from sts_sim import apply, is_terminal, legal_actions, reward
 from sts_sim.scenarios import (
+    INKLET_STARTING_HP,
     IRONCLAD_STARTING_DECK,
     JAW_WORM_STARTING_HP,
     LEAF_SLIME_M_STARTING_HP,
@@ -11,6 +12,7 @@ from sts_sim.scenarios import (
     SHRINKER_BEETLE_STARTING_HP,
     TWIG_SLIME_M_STARTING_HP,
     TWIG_SLIME_S_STARTING_HP,
+    ironclad_starter_deck_vs_inklets,
     ironclad_starter_deck_vs_jaw_worm,
     ironclad_starter_deck_vs_leaf_slime_m,
     ironclad_starter_deck_vs_leaf_slime_s,
@@ -199,6 +201,19 @@ def test_vs_slimes_weak_loads_with_three_slime_monsters():
     ]
 
 
+def test_vs_inklets_loads_with_three_inklets_and_the_middle_ones_intent_override():
+    state = ironclad_starter_deck_vs_inklets(seed=42)
+
+    assert state.player_hp == PLAYER_STARTING_HP
+    assert len(state.hand) == 5
+    assert [m.name for m in state.monsters] == ["Inklet", "Inklet", "Inklet"]
+    assert [m.hp for m in state.monsters] == [INKLET_STARTING_HP] * 3
+    assert [m.statuses for m in state.monsters] == [["Slippery"]] * 3
+    # Outer Inklets open with their species default (Jab); the middle one is
+    # overridden to Windup Punch, per the wiki's documented opener.
+    assert [m.intent for m in state.monsters] == ["Jab", "Windup Punch", "Jab"]
+
+
 def test_complete_random_fights_against_each_easy_pool_monster_reach_correctly_shaped_terminal_states():
     # Mirrors test_complete_random_fights_against_the_jaw_worm_reach_correctly_shaped_terminal_states
     # for the new Act 1 "easy pool" scenarios — every one must terminate with
@@ -210,6 +225,7 @@ def test_complete_random_fights_against_each_easy_pool_monster_reach_correctly_s
         ironclad_starter_deck_vs_leaf_slime_m,
         ironclad_starter_deck_vs_twig_slime_m,
         ironclad_starter_deck_vs_slimes_weak,
+        ironclad_starter_deck_vs_inklets,
     ]
 
     for scenario_fn in scenario_fns:
