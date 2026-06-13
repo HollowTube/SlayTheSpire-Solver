@@ -49,6 +49,9 @@ TWIG_SLIME_M_STARTING_HP = 27
 # its documented maximum, matching the Gremlin Nob convention.
 BYRDONIS_STARTING_HP = 84
 
+# Inklet HP: 11-17 normal. 15 used as canonical value.
+INKLET_STARTING_HP = 15
+
 
 def ironclad_starter_deck_vs_gremlin_nob(seed, deck=None):
     """Harder canonical scenario: Ironclad's starting loadout against Gremlin
@@ -222,6 +225,32 @@ def ironclad_starter_deck_vs_byrdonis(seed, deck=None):
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
         monsters=[Monster(hp=BYRDONIS_STARTING_HP, attack=0, name="Byrdonis")],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_inklets(seed, deck=None):
+    """Ironclad's starting loadout against the Overgrowth "Inklet" encounter:
+    three Inklets, each starting with one stack of Slippery. Per the wiki,
+    the middle Inklet always opens with Windup Punch (2 damage x3); the two
+    outer Inklets open with Jab (3 damage, most likely) or Windup Punch -
+    `opening_intent` has no RNG access (matching every other monster's fixed
+    opener), so Jab is picked deterministically for the outer two, and the
+    middle one's opening intent is overridden explicitly."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(hp=INKLET_STARTING_HP, name="Inklet", statuses=[("Slippery", 1)]),
+            Monster(
+                hp=INKLET_STARTING_HP,
+                name="Inklet",
+                statuses=[("Slippery", 1)],
+                intent="Windup Punch",
+            ),
+            Monster(hp=INKLET_STARTING_HP, name="Inklet", statuses=[("Slippery", 1)]),
+        ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
     )
