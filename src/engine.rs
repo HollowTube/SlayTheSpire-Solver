@@ -486,7 +486,7 @@ impl ScaleSource {
             ScaleSource::HandSize => state.hand.len() as i32,
             ScaleSource::CurrentBlock => state.fighter(actor).block,
             ScaleSource::StrikeCardsInDeck => {
-                let count_strikes = |pile: &[String]| pile.iter().filter(|c| *c == "Strike").count();
+                let count_strikes = |pile: &[String]| pile.iter().filter(|c| c.contains("Strike")).count();
                 (count_strikes(&state.hand)
                     + count_strikes(&state.draw_pile)
                     + count_strikes(&state.discard_pile)
