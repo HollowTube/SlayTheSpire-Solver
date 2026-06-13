@@ -93,6 +93,14 @@ pub(crate) enum Status {
     // `deal_damage`, not via the Modifier pipeline, since it depends on the
     // post-block HP loss and has a stateful side effect).
     Slippery(i32),
+    // Setup Strike: like `Strength`, but expires at the end of the turn it
+    // was gained (decays_per_turn) rather than persisting permanently.
+    StrengthThisTurn(i32),
+    // Unrelenting: the next Attack card the holder plays costs 0 Energy.
+    // Consumed when that Attack is played (in `effective_cost`/`apply`'s
+    // PlayCard branch); if unused, decays at the start of the next turn —
+    // same one-shot lifecycle as `OneTwoPunch`.
+    FreeAttack,
 }
 
 impl Status {
@@ -118,6 +126,8 @@ impl Status {
             Status::Cruelty => "Cruelty",
             Status::OneTwoPunch => "OneTwoPunch",
             Status::Slippery(_) => "Slippery",
+            Status::StrengthThisTurn(_) => "StrengthThisTurn",
+            Status::FreeAttack => "FreeAttack",
         }
     }
 
@@ -150,6 +160,8 @@ impl Status {
             "Slippery" => vec![Status::Slippery(amount)],
             "Strength" => vec![Status::Strength(amount)],
             "Enrage" => vec![Status::Enrage(amount)],
+            "StrengthThisTurn" => vec![Status::StrengthThisTurn(amount)],
+            "FreeAttack" => vec![Status::FreeAttack; amount.max(0) as usize],
             _ => Vec::new(),
         }
     }
@@ -188,6 +200,11 @@ impl Status {
             (Status::Strength(amount), Side::Attacker, EventType::OnDamageDealt) => {
                 Some(Modifier::AddDamage(*amount))
             }
+            // Setup Strike's Strength-this-turn: same flat bonus as Strength,
+            // but expires at end of turn via `decays_per_turn`.
+            (Status::StrengthThisTurn(amount), Side::Attacker, EventType::OnDamageDealt) => {
+                Some(Modifier::AddDamage(*amount))
+            }
             // Colossus: incoming damage is halved per stack, but only from an
             // attacker who currently has Vulnerable (target side only).
             (Status::Colossus(n), Side::Target, EventType::OnDamageDealt)
@@ -212,6 +229,8 @@ impl Status {
                 | Status::OneTwoPunch
                 | Status::Rage
                 | Status::Colossus(_)
+                | Status::StrengthThisTurn(_)
+                | Status::FreeAttack
         )
     }
 
@@ -457,6 +476,20 @@ pub(crate) enum EffectOp {
     // `targets` (e.g. FlameBarrier's DamageReceived-triggered retaliation).
     // No-op if no monster has attacked yet.
     DealDamageToLastAttacker(i32),
+    // Grants `actor` `base + per_unit * source` Block (e.g. Evil Eye: 8 base
+    // + 8 more if a card was Exhausted this turn).
+    GainBlockScaled {
+        base: i32,
+        per_unit: i32,
+        source: ScaleSource,
+    },
+    // Grants `actor` `base + per_unit * source` Energy (e.g. Forgotten
+    // Ritual: 0 base + 3 if a card was Exhausted this turn).
+    GainEnergyScaled {
+        base: i32,
+        per_unit: i32,
+        source: ScaleSource,
+    },
 }
 
 /// What a `DealDamageScaled` op reads its multiplier from. New scaling
@@ -486,6 +519,9 @@ pub(crate) enum ScaleSource {
     // 1 if `target` currently has any Vulnerable stacks, else 0 (e.g.
     // Dismantle).
     TargetHasVulnerable,
+    // 1 if the player has Exhausted a card this turn, else 0 (e.g. Evil Eye,
+    // Forgotten Ritual).
+    ExhaustedCardThisTurn,
 }
 
 impl ScaleSource {
@@ -515,6 +551,7 @@ impl ScaleSource {
                 .statuses
                 .iter()
                 .any(|s| *s == Status::Vulnerable) as i32,
+            ScaleSource::ExhaustedCardThisTurn => state.player_exhausted_card_this_turn as i32,
         }
     }
 }
@@ -609,6 +646,12 @@ fn deal_damage(state: &mut CombatState, attacker: Actor, target: Actor, amount: 
 /// changes here. None of today's reactions (Enrage, Rage) target another
 /// combatant, so an empty target list is passed.
 pub(crate) fn fire_event(state: &mut CombatState, event: GameEvent) {
+    // Tracks "has the player Exhausted a card this turn" for Evil Eye /
+    // Forgotten Ritual — set here, the single chokepoint every
+    // CardExhausted-firing path runs through, rather than at each call site.
+    if event == GameEvent::CardExhausted {
+        state.player_exhausted_card_this_turn = true;
+    }
     let actors: Vec<Actor> = std::iter::once(Actor::Player)
         .chain((0..state.monsters.len()).map(Actor::Monster))
         .collect();
@@ -817,6 +860,19 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
             EffectOp::DealDamageToLastAttacker(amount) => {
                 if let Some(i) = state.last_attacker {
                     deal_damage(state, actor, Actor::Monster(i), *amount);
+                }
+            }
+            EffectOp::GainBlockScaled { base, per_unit, source } => {
+                let amount = base + per_unit * source.read(state, actor, actor);
+                state.fighter_mut(actor).block += amount;
+                if actor == Actor::Player {
+                    fire_event(state, GameEvent::BlockGained);
+                }
+            }
+            EffectOp::GainEnergyScaled { base, per_unit, source } => {
+                let amount = base + per_unit * source.read(state, actor, actor);
+                if actor == Actor::Player {
+                    state.player_energy += amount;
                 }
             }
         }

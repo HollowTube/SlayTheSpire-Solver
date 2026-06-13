@@ -22,6 +22,8 @@ use state::{draw_cards, CombatState, Fighter, Monster, PendingDecision, HAND_SIZ
 fn effective_cost(state: &CombatState, data: &CardData) -> i32 {
     if matches!(data.card_type, CardType::Skill) && state.player.statuses.contains(&Status::Corruption) {
         0
+    } else if matches!(data.card_type, CardType::Attack) && state.player.statuses.contains(&Status::FreeAttack) {
+        0
     } else {
         data.cost
     }
@@ -68,6 +70,10 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             // EndTurn — reset here so the monsters' attacks below populate
             // it fresh for the upcoming player turn (e.g. Spite).
             next.player_hp_lost_this_turn = false;
+            // "Exhausted a card this turn" tracks Exhausts since the last
+            // EndTurn — reset here for the upcoming player turn (e.g. Evil
+            // Eye, Forgotten Ritual).
+            next.player_exhausted_card_this_turn = false;
 
             // The remaining hand is discarded before the monsters' turn
             // resolves — mirrors Slay the Spire's end-of-turn cleanup.
@@ -222,6 +228,14 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     next.discard_pile.push(played);
                 }
                 next.player_energy -= cost;
+                // Unrelenting's FreeAttack: consumed by the next Attack
+                // played, regardless of whether it was actually free
+                // (mirrors OneTwoPunch's one-shot consumption).
+                if matches!(data.card_type, CardType::Attack) {
+                    if let Some(pos) = next.player.statuses.iter().position(|s| *s == Status::FreeAttack) {
+                        next.player.statuses.remove(pos);
+                    }
+                }
                 if data.targeted {
                     next.pending = Some(PendingDecision::SelectTarget {
                         card: card_name.to_string(),

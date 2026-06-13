@@ -784,6 +784,71 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             ethereal: false,
             unplayable: false,
         }),
+        // Per the wiki, Breakthrough costs 1, makes the player Lose 1 HP,
+        // and deals 9 damage to ALL enemies (non-targeted, like Thunderclap).
+        "Breakthrough" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::LoseHp(1), EffectOp::DealDamageToAllEnemies(9)],
+            exhausts: false,
+            ethereal: false,
+            unplayable: false,
+        }),
+        // Per the wiki, Setup Strike costs 1, deals 7 damage, and grants the
+        // player 2 Strength for this turn only.
+        "Setup Strike" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamage(7), EffectOp::ApplyStatusToSelf(Status::StrengthThisTurn(2))],
+            exhausts: false,
+            ethereal: false,
+            unplayable: false,
+        }),
+        // Per the wiki, Unrelenting costs 1, deals 12 damage, and makes the
+        // next Attack the player plays cost 0 Energy.
+        "Unrelenting" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamage(12), EffectOp::ApplyStatusToSelf(Status::FreeAttack)],
+            exhausts: false,
+            ethereal: false,
+            unplayable: false,
+        }),
+        // Per the wiki, Evil Eye costs 1, grants 8 Block, and grants another
+        // 8 Block (16 total) if the player has Exhausted a card this turn.
+        "Evil Eye" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![EffectOp::GainBlockScaled {
+                base: 8,
+                per_unit: 8,
+                source: ScaleSource::ExhaustedCardThisTurn,
+            }],
+            exhausts: false,
+            ethereal: false,
+            unplayable: false,
+        }),
+        // Per the wiki, Forgotten Ritual costs 0, Exhausts, and grants 3
+        // Energy if the player has Exhausted a card this turn — its own
+        // Exhaust (which resolves before its effects) satisfies that
+        // condition, so playing it always nets +3 Energy.
+        "Forgotten Ritual" => Some(CardData {
+            cost: 0,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![EffectOp::GainEnergyScaled {
+                base: 0,
+                per_unit: 3,
+                source: ScaleSource::ExhaustedCardThisTurn,
+            }],
+            exhausts: true,
+            ethereal: false,
+            unplayable: false,
+        }),
         _ => None,
     }
 }

@@ -215,6 +215,9 @@ pub struct CombatState {
     // Whether the player has lost HP this turn — resets to false at the
     // start of each player turn (e.g. Spite).
     pub(crate) player_hp_lost_this_turn: bool,
+    // Whether the player has Exhausted a card this turn — resets to false at
+    // the start of each player turn (e.g. Evil Eye, Forgotten Ritual).
+    pub(crate) player_exhausted_card_this_turn: bool,
     // Index into `monsters` of whichever monster most recently dealt damage
     // to the player this combat, if any (e.g. FlameBarrier's retaliation
     // target).
@@ -276,6 +279,7 @@ impl CombatState {
             attacks_played_this_turn: 0,
             player_times_damaged_this_combat: 0,
             player_hp_lost_this_turn: false,
+            player_exhausted_card_this_turn: false,
             last_attacker: None,
             pending: None,
             rng,
