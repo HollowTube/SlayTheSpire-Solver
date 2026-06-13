@@ -24,6 +24,8 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         "Twig Slime (M)" => Some("StickyShot".to_string()),
         // Byrdonis always opens with Swoop.
         "Byrdonis" => Some("Swoop".to_string()),
+        // Inklet always opens with Jab.
+        "Inklet" => Some("Jab".to_string()),
         _ => None,
     }
 }
@@ -106,6 +108,14 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
             EffectOp::DealDamage(3),
             EffectOp::ApplyStatusToSelf(Status::Strength(1)),
         ]),
+        // Inklet: Jab (3), Windup Punch (2 x3), Piercing Gaze (10).
+        ("Inklet", "Jab") => Some(vec![EffectOp::DealDamage(3)]),
+        ("Inklet", "Windup Punch") => Some(vec![
+            EffectOp::DealDamage(2),
+            EffectOp::DealDamage(2),
+            EffectOp::DealDamage(2),
+        ]),
+        ("Inklet", "Piercing Gaze") => Some(vec![EffectOp::DealDamage(10)]),
         _ => None,
     }
 }
@@ -220,6 +230,19 @@ pub(crate) fn select_next_intent(
         "Byrdonis" => match last_move.as_deref() {
             Some("Swoop") => Some("Peck".to_string()),
             _ => Some("Swoop".to_string()),
+        },
+        // Inklet: after Jab, randomly choose Piercing Gaze or Windup Punch
+        // (50/50); after either of those, always return to Jab.
+        "Inklet" => match last_move.as_deref() {
+            Some("Windup Punch") | Some("Piercing Gaze") => Some("Jab".to_string()),
+            _ => {
+                let roll = rng.gen_range(0..100);
+                if roll < 50 {
+                    Some("Piercing Gaze".to_string())
+                } else {
+                    Some("Windup Punch".to_string())
+                }
+            }
         },
         _ => None,
     }
