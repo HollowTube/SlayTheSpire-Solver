@@ -1,6 +1,6 @@
 import random
 
-from sts_sim import apply, is_terminal, legal_actions
+from sts_sim import apply, is_terminal, legal_actions, redeterminized
 from sts_sim.scenarios import ironclad_starter_deck_vs_jaw_worm
 from sts_sim import mcts
 
@@ -28,9 +28,9 @@ def test_search_returns_a_legal_action_mid_target_selection():
     assert legal_actions(awaiting_target) == ["SelectTarget:Monster:0"]
 
 
-def play_with_mcts_to_terminal(state, rng, iterations=50):
+def play_with_mcts_to_terminal(state, rng, iterations=50, **search_kwargs):
     while not is_terminal(state):
-        action = mcts.search(state, iterations=iterations, rng=rng)
+        action = mcts.search(state, iterations=iterations, rng=rng, **search_kwargs)
         state = apply(state, action)
     return state
 
@@ -44,24 +44,99 @@ def test_search_wins_the_fixed_scenario_at_a_reasonable_rate():
     # 50-iterations-per-decision search should crush that baseline by
     # actually evaluating sequencing rather than flailing randomly.
     #
-    # Note: this isn't gambling against variance — the monster's RNG lives
-    # inside the (cloned) CombatState, so from any given state the future is
-    # fully determined by the actions chosen. The search is therefore solving
-    # a deterministic, perfect-information tree per scenario seed, and wins
-    # all 15/15 sampled seeds with total consistency run-to-run. The 60%
-    # threshold over 10 scenario seeds isn't headroom against flakiness —
-    # there isn't any — it's a meaningful bar that a dumb/broken search
-    # (e.g. one that ignores Vulnerable sequencing, like random play's ~2.5%)
-    # would fail outright.
+    # Uses `determinize=False`: with the monster's RNG living inside the
+    # (cloned) CombatState and no redeterminization, the future is fully
+    # determined by the actions chosen from any given state. The search is
+    # therefore solving a deterministic, perfect-information tree per
+    # scenario seed, and wins all 15/15 sampled seeds with total consistency
+    # run-to-run. The 60% threshold over 10 scenario seeds isn't headroom
+    # against flakiness — there isn't any — it's a meaningful bar that a
+    # dumb/broken search (e.g. one that ignores Vulnerable sequencing, like
+    # random play's ~2.5%) would fail outright. The default `determinize=True`
+    # mode is intentionally *not* held to this bar — see
+    # `test_redeterminized_search_loses_more_hp_than_foresight_at_equal_tree_shape`.
     wins = 0
     runs = 10
     for seed in range(runs):
         state = ironclad_starter_deck_vs_jaw_worm(seed=seed)
-        final = play_with_mcts_to_terminal(state, rng=random.Random(seed))
+        final = play_with_mcts_to_terminal(
+            state, rng=random.Random(seed), determinize=False
+        )
         if final.monsters[0].hp <= 0:
             wins += 1
 
     assert wins / runs >= 0.6
+
+
+def _ensemble_best_action(state, iterations, determinizations, rng, foresight):
+    """Average `_single_tree_action_values` over `determinizations` trees of
+    identical shape, and return the argmax action.
+
+    `foresight=True` builds each tree against `state.with_rng_seed(seed)` —
+    same draw-pile order as `state`, just a fresh RNG for rollouts (the
+    perfect-information case). `foresight=False` builds each tree against
+    `redeterminized(state, seed)` — draw pile reshuffled too (the
+    `determinize=True` default). Holding the ensemble shape fixed isolates
+    the effect of foresight from tree-shape effects (e.g. one deep tree vs.
+    several shallow ones).
+    """
+    totals: dict[str, float] = {}
+    counts: dict[str, int] = {}
+    for _ in range(determinizations):
+        seed = rng.randint(0, 2**64 - 1)
+        sample = state.with_rng_seed(seed) if foresight else redeterminized(state, seed)
+        for action, value in mcts._single_tree_action_values(
+            sample, iterations, rng
+        ).items():
+            totals[action] = totals.get(action, 0.0) + value
+            counts[action] = counts.get(action, 0) + 1
+    values = {action: totals[action] / counts[action] for action in totals}
+    return max(values, key=values.__getitem__)
+
+
+def play_with_ensemble_to_terminal(state, rng, iterations, determinizations, foresight):
+    while not is_terminal(state):
+        action = _ensemble_best_action(
+            state, iterations, determinizations, rng, foresight
+        )
+        state = apply(state, action)
+    return state
+
+
+def test_redeterminized_search_loses_more_hp_than_foresight_at_equal_tree_shape():
+    # The whole point of redeterminization (`determinize=True`, the default)
+    # is to remove the foresight that a fixed draw-pile order gives: a real
+    # player doesn't know their draw order in advance. Removing information
+    # can only hurt an optimizer, so at an *identical* ensemble shape (4
+    # trees x 15 iterations on each side — only the reshuffle differs),
+    # foresight-free play should lose strictly more HP than perfect-
+    # information play. Both sides are fully seeded, so this is
+    # reproducible, not a statistical claim.
+    runs = 12
+    foresight_hp_lost = 0
+    no_foresight_hp_lost = 0
+    for seed in range(runs):
+        state = ironclad_starter_deck_vs_jaw_worm(seed=seed)
+        final = play_with_ensemble_to_terminal(
+            state,
+            rng=random.Random(seed),
+            iterations=15,
+            determinizations=4,
+            foresight=True,
+        )
+        foresight_hp_lost += state.player_hp - final.player_hp
+
+        state = ironclad_starter_deck_vs_jaw_worm(seed=seed)
+        final = play_with_ensemble_to_terminal(
+            state,
+            rng=random.Random(seed),
+            iterations=15,
+            determinizations=4,
+            foresight=False,
+        )
+        no_foresight_hp_lost += state.player_hp - final.player_hp
+
+    assert no_foresight_hp_lost > foresight_hp_lost
 
 
 def test_action_values_returns_a_value_for_every_legal_action():

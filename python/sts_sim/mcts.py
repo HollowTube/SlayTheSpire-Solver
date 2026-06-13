@@ -1,13 +1,17 @@
 import math
 import random
 
-from . import apply, is_terminal, legal_actions, random_rollout, reward
+from . import apply, is_terminal, legal_actions, random_rollout, redeterminized, reward
 
 # Standard UCB1 exploration constant (sqrt(2)) — balances exploiting the
 # best-known action against trying under-visited ones.
 EXPLORATION_CONSTANT = math.sqrt(2)
 
 DEFAULT_ITERATIONS = 200
+
+# Number of independent redeterminized trees averaged by `determinize=True`
+# (the default) — see `action_values`.
+DEFAULT_DETERMINIZATIONS = 8
 
 
 class _Node:
@@ -85,7 +89,18 @@ def _build_tree(state, iterations, rng):
     return root
 
 
-def search(state, iterations=DEFAULT_ITERATIONS, rng=None):
+def _single_tree_action_values(state, iterations, rng):
+    root = _build_tree(state, iterations, rng)
+    return {child.action: child.total_value / child.visits for child in root.children}
+
+
+def search(
+    state,
+    iterations=DEFAULT_ITERATIONS,
+    rng=None,
+    determinize=True,
+    determinizations=DEFAULT_DETERMINIZATIONS,
+):
     """Run MCTS from `state` and return the most-promising legal action.
 
     Each iteration is the textbook select → expand → simulate → backpropagate
@@ -98,20 +113,67 @@ def search(state, iterations=DEFAULT_ITERATIONS, rng=None):
     `legal_actions`/`apply`/`is_terminal`/`reward`, the same uniform
     interface every decision (playing a card, selecting a target, ending a
     turn) already flows through.
+
+    See `action_values` for what `determinize`/`determinizations` mean. When
+    `determinize=True` (the default), the returned action is the argmax of
+    the redeterminization-averaged `action_values`; when `False`, it's the
+    most-visited child of a single tree built directly against `state`.
     """
     rng = rng if rng is not None else random.Random()
-    return _build_tree(state, iterations, rng).most_visited_action()
+    if not determinize:
+        return _build_tree(state, iterations, rng).most_visited_action()
+    values = action_values(
+        state, iterations, rng, determinize=True, determinizations=determinizations
+    )
+    return max(values, key=values.__getitem__)
 
 
-def action_values(state, iterations=DEFAULT_ITERATIONS, rng=None):
+def action_values(
+    state,
+    iterations=DEFAULT_ITERATIONS,
+    rng=None,
+    determinize=True,
+    determinizations=DEFAULT_DETERMINIZATIONS,
+):
     """Run MCTS from `state` and return the estimated value for every legal
     action as a dict mapping action string → float in [-1, 1].
 
-    The value for each action is `total_value / visits` across all rollouts
-    that passed through that child — higher is better for the player. All
-    legal actions are guaranteed to appear (the tree always expands every
-    child at least once before revisiting).
+    By default (`determinize=True`), this runs Perfect Information Monte
+    Carlo: `determinizations` independent `iterations`-sized trees, each
+    built against a `redeterminized` copy of `state` — same hand, energy,
+    and HP, but with the draw pile reshuffled into a fresh random order and
+    the RNG reseeded. This models the actual situation during play: the
+    player doesn't know the order of their face-down draw pile or the
+    seed's future monster rolls, so the value of the next move must be
+    averaged over those possible futures rather than computed against one
+    fixed (and effectively clairvoyant) future. The returned value for each
+    action is the mean of `total_value / visits` across determinizations.
+
+    Pass `determinize=False` for the original single-tree behavior: one
+    `iterations`-sized tree built directly against `state` as given, with no
+    redeterminization. This solves the deterministic, perfect-information
+    tree implied by `state`'s embedded RNG/draw-pile order — useful for
+    comparing against `optimal_value`'s clairvoyant ceiling for the same
+    seed, but not representative of in-game decision-making.
+
+    In both modes, the value for each action is `total_value / visits`
+    across all rollouts that passed through that child — higher is better
+    for the player. All legal actions are guaranteed to appear (the tree
+    always expands every child at least once before revisiting, and every
+    determinization shares the same root `legal_actions` since only the draw
+    pile and RNG are redeterminized).
     """
     rng = rng if rng is not None else random.Random()
-    root = _build_tree(state, iterations, rng)
-    return {child.action: child.total_value / child.visits for child in root.children}
+    if not determinize:
+        return _single_tree_action_values(state, iterations, rng)
+
+    totals: dict[str, float] = {}
+    counts: dict[str, int] = {}
+    for _ in range(determinizations):
+        sample = redeterminized(state, rng.randint(0, 2**64 - 1))
+        for action, value in _single_tree_action_values(
+            sample, iterations, rng
+        ).items():
+            totals[action] = totals.get(action, 0.0) + value
+            counts[action] = counts.get(action, 0) + 1
+    return {action: totals[action] / counts[action] for action in totals}

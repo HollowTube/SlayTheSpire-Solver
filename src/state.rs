@@ -296,6 +296,11 @@ impl CombatState {
     }
 
     #[getter]
+    fn player_max_hp(&self) -> i32 {
+        self.player.max_hp
+    }
+
+    #[getter]
     fn player_block(&self) -> i32 {
         self.player.block
     }
@@ -339,6 +344,22 @@ impl CombatState {
     pub(crate) fn reseeded(&self, seed: u64) -> Self {
         let mut copy = self.clone();
         copy.rng = Pcg32::seed_from_u64(seed);
+        copy
+    }
+
+    /// Returns a copy with `draw_pile` shuffled into a fresh random order and
+    /// `rng` reseeded from `seed`. Unlike `reseeded`, this also erases the
+    /// hidden information a real player lacks: the face-down order of their
+    /// own draw pile. `hand`, `discard_pile`, and every other observable
+    /// field are left untouched — only what's actually unknown gets
+    /// randomized. Used by MCTS to sample possible "real" futures instead of
+    /// solving the one perfect-information tree implied by the seed's actual
+    /// shuffle.
+    pub(crate) fn redeterminized(&self, seed: u64) -> Self {
+        let mut copy = self.clone();
+        let mut rng = Pcg32::seed_from_u64(seed);
+        copy.draw_pile.shuffle(&mut rng);
+        copy.rng = rng;
         copy
     }
 

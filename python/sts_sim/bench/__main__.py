@@ -71,7 +71,17 @@ from . import _SCENARIOS, PRESETS, compare, run_deck
         "e.g. 'Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash'."
     ),
 )
-def main(monster, seeds, iterations, workers, policy, decks, custom):
+@click.option(
+    "--ceiling",
+    is_flag=True,
+    default=False,
+    help=(
+        "Also compute the per-seed optimal_value ceiling (exact "
+        "branch-and-bound, no rollouts) and report it plus regret "
+        "(avg_lost - ceiling)."
+    ),
+)
+def main(monster, seeds, iterations, workers, policy, decks, custom, ceiling):
     """Benchmark deck configurations against sts_sim monsters."""
     if custom:
         card_list = [c.strip() for c in custom.split(",") if c.strip()]
@@ -83,6 +93,7 @@ def main(monster, seeds, iterations, workers, policy, decks, custom):
             workers=workers,
             label="custom",
             policy=policy,
+            ceiling=ceiling,
         )
         print(result)
         return
@@ -106,6 +117,7 @@ def main(monster, seeds, iterations, workers, policy, decks, custom):
         iterations=iterations,
         workers=workers,
         policy=policy,
+        ceiling=ceiling,
     )
 
 
