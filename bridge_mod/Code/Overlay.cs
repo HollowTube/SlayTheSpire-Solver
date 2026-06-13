@@ -44,7 +44,9 @@ public static class Overlay
             return;
 
         var stateValue = obj["state_value"]?.GetValue<double>() ?? 0.0;
+        var stateHpLost = obj["expected_hp_lost"]?.GetValue<double>() ?? 0.0;
         var values = obj["values"] as JsonObject;
+        var hpLost = obj["action_hp_lost"] as JsonObject;
         var legalActions = obj["legal_actions"] as JsonArray;
         // One row per legal_actions entry (in hand order, duplicates and
         // all) rather than per unique key in `values` - sts_sim collapses
@@ -52,16 +54,19 @@ public static class Overlay
         // entry, but the player has a distinct card in hand for each.
         var rows = (legalActions ?? new JsonArray())
             .Select(a => a!.GetValue<string>())
-            .Select(action => (action, value: values?[action]?.GetValue<double>() ?? 0.0))
+            .Select(action => (
+                action,
+                value: values?[action]?.GetValue<double>() ?? 0.0,
+                hpLost: hpLost?[action]?.GetValue<double>() ?? 0.0))
             .ToList();
 
         // Callable.CallDeferred is Godot's thread-safe way to run code on the
         // main thread next idle frame, regardless of SynchronizationContext
         // setup (which GodotSharp doesn't configure for Task callbacks).
-        Callable.From(() => Render(stateValue, rows)).CallDeferred();
+        Callable.From(() => Render(stateValue, stateHpLost, rows)).CallDeferred();
     }
 
-    private static void Render(double stateValue, System.Collections.Generic.List<(string action, double value)> rows)
+    private static void Render(double stateValue, double stateHpLost, System.Collections.Generic.List<(string action, double value, double hpLost)> rows)
     {
         EnsureCreated();
         if (_list == null)
@@ -73,11 +78,11 @@ public static class Overlay
             child.QueueFree();
         }
 
-        AddLabel($"sts_sim  state value: {stateValue:F2}", ExplorerHeaderColor);
-        foreach (var (action, value) in rows)
+        AddLabel($"sts_sim  state value: {stateValue:F2}  (~{stateHpLost:F1} HP lost)", ExplorerHeaderColor);
+        foreach (var (action, value, hpLost) in rows)
         {
             var label = action.StartsWith("PlayCard:") ? action["PlayCard:".Length..] : action;
-            AddLabel($"{label}: {value:F2}", ExplorerRowColor);
+            AddLabel($"{label}: {value:F2}  (~{hpLost:F1} HP lost)", ExplorerRowColor);
         }
 
         Log.Warn($"[sts_sim_bridge_mod] Overlay: rendered {rows.Count} rows, panel rect {_panel?.GetGlobalRect()}");

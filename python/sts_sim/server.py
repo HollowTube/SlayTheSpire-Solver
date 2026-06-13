@@ -11,7 +11,16 @@ Request (`cmd: "analyze"`):
                "monsters": [{...}, ...]}}
 
 Response:
-    {"legal_actions": [...], "values": {action: float}, "state_value": float}
+    {"legal_actions": [...], "values": {action: float}, "state_value": float,
+     "expected_hp_lost": float, "action_hp_lost": {action: float}}
+
+`state_value`/`values` are `evaluate`'s `player_fraction - monsters_fraction`
+(see `src/lib.rs`), roughly -1..1. `expected_hp_lost`/`action_hp_lost` convert
+that into an absolute HP figure for display: the player's fraction-remaining
+is approximated as `clamp(value, 0, 1)` (a winning value ~= player_fraction
+since monsters_fraction ~= 0; a non-positive value is treated as "dead, 0 HP
+remaining"), then `expected_hp_lost = player_hp - remaining_fraction *
+player_max_hp`.
 
 `build_state` is a pure function from the JSON `state` dict to a
 `CombatState`, reusing the snapshot-reconstruction constructor parameters
@@ -71,6 +80,15 @@ def build_state(payload):
     )
 
 
+def _expected_hp_lost(value, state):
+    """Convert an `evaluate`-style value (`player_fraction -
+    monsters_fraction`, roughly -1..1) into an absolute expected-HP-lost
+    figure — see the module docstring for the approximation used."""
+    remaining_fraction = min(max(value, 0.0), 1.0)
+    expected_final_hp = remaining_fraction * state.player_max_hp
+    return max(state.player_hp - expected_final_hp, 0.0)
+
+
 def handle_request(payload):
     """Dispatch one decoded request to its handler and return a dict to be
     JSON-encoded as the response. `cmd` is dispatched explicitly so future
@@ -86,6 +104,11 @@ def handle_request(payload):
             "legal_actions": actions,
             "values": values,
             "state_value": state_value,
+            "expected_hp_lost": _expected_hp_lost(state_value, state),
+            "action_hp_lost": {
+                action: _expected_hp_lost(value, state)
+                for action, value in values.items()
+            },
         }
     raise ValueError(f"unknown cmd: {cmd!r}")
 

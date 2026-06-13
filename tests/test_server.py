@@ -55,6 +55,10 @@ def test_analyze_opening_state_returns_values_for_every_legal_action():
     assert sorted(response["legal_actions"]) == sorted(legal_actions(state))
     assert set(response["values"].keys()) == set(response["legal_actions"])
     assert -1.0 <= response["state_value"] <= 1.0
+    assert 0.0 <= response["expected_hp_lost"] <= state.player_hp
+    assert set(response["action_hp_lost"].keys()) == set(response["legal_actions"])
+    for hp_lost in response["action_hp_lost"].values():
+        assert 0.0 <= hp_lost <= state.player_hp
 
 
 def test_analyze_mid_fight_snapshot_reconstructs_block_statuses_and_piles():
@@ -100,3 +104,7 @@ def test_analyze_mid_fight_snapshot_reconstructs_block_statuses_and_piles():
     assert "EndTurn" in response["legal_actions"]
     assert set(response["values"].keys()) == set(response["legal_actions"])
     assert -1.0 <= response["state_value"] <= 1.0
+    assert 0.0 <= response["expected_hp_lost"] <= 62
+    assert set(response["action_hp_lost"].keys()) == set(response["legal_actions"])
+    for hp_lost in response["action_hp_lost"].values():
+        assert 0.0 <= hp_lost <= 62
