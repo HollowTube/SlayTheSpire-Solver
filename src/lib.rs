@@ -41,7 +41,9 @@ fn legal_actions(state: &CombatState) -> Vec<String> {
                 // never has to model (or reject) going into negative energy.
                 .filter(|name| {
                     card_data(name)
-                        .map(|data| effective_cost(state, &data) <= state.player_energy)
+                        .map(|data| {
+                            !data.unplayable && effective_cost(state, &data) <= state.player_energy
+                        })
                         .unwrap_or(false)
                 })
                 .map(|name| format!("PlayCard:{name}"))
@@ -66,7 +68,13 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
 
             // The remaining hand is discarded before the monsters' turn
             // resolves — mirrors Slay the Spire's end-of-turn cleanup.
-            next.discard_pile.append(&mut next.hand);
+            // Ethereal cards exhaust instead of being discarded.
+            let (ethereal, rest): (Vec<String>, Vec<String>) =
+                next.hand.drain(..).partition(|name| {
+                    card_data(name).map(|data| data.ethereal).unwrap_or(false)
+                });
+            next.exhaust_pile.extend(ethereal);
+            next.discard_pile.extend(rest);
 
             // Each living monster takes its turn in order: block resets,
             // then either its telegraphed move resolves through the same

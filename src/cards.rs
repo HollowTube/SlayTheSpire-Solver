@@ -29,6 +29,12 @@ pub(crate) struct CardData {
     // that the wiki explicitly marks with the Exhaust keyword (e.g. Offering,
     // Tremble, Impervious, NotYet).
     pub(crate) exhausts: bool,
+    // Ethereal: if this card is still in hand at the end of the turn, it
+    // exhausts instead of being discarded (handled in the `EndTurn` handler).
+    pub(crate) ethereal: bool,
+    // Unplayable: never appears as a legal `PlayCard:` action regardless of
+    // cost/energy (e.g. status cards like Dazed).
+    pub(crate) unplayable: bool,
 }
 
 pub(crate) fn card_data(name: &str) -> Option<CardData> {
@@ -39,6 +45,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(6)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         "Defend" => Some(CardData {
             cost: 1,
@@ -46,6 +54,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::GainBlock(5)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the Slay the Spire wiki, base Bash deals 8 damage and applies
         // 2 Vulnerable stacks (not 1).
@@ -59,6 +69,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         "Iron Wave" => Some(CardData {
             cost: 1,
@@ -66,6 +78,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(5), EffectOp::GainBlock(5)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         "Inflame" => Some(CardData {
             cost: 1,
@@ -73,6 +87,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // 3 hits of 3 damage each to a random enemy (always the same target
         // in single-enemy fights). Targeted so SelectTarget resolves first.
@@ -86,6 +102,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::DealDamage(3),
             ],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Hits all enemies for 4 and applies 1 Vulnerable to each.
         // Not targeted — resolves immediately against all enemies (single
@@ -99,6 +117,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Installs the Rage status: gain 2 Block each time you play an Attack.
         "Rage" => Some(CardData {
@@ -107,6 +127,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Rage)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Installs the Demon Form status: gain 2 Strength at the start of
         // each turn (including the turn it's played, per the wiki — but the
@@ -118,6 +140,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::DemonForm)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Installs the Crimson Mantle status: at the start of each turn,
         // gain 8 Block and lose HP equal to a counter that starts at 1 and
@@ -128,6 +152,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::CrimsonMantle(1))],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Installs the Inferno status: at the start of each turn, lose 1 HP
         // (unblockable); whenever the holder loses HP on their turn, deal 6
@@ -138,6 +164,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Inferno)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Installs the Aggression status: at the start of each turn, return
         // a random Attack from the discard pile to hand.
@@ -147,6 +175,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Aggression)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Installs the Dark Embrace status: whenever a card is Exhausted,
         // draw 1 card.
@@ -156,6 +186,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::DarkEmbrace)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Installs the Feel No Pain status: whenever a card is Exhausted,
         // gain 3 Block.
@@ -165,6 +197,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::FeelNoPain)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Installs the Barricade status: Block is no longer removed at the
         // start of your turn.
@@ -174,6 +208,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Barricade)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Installs the Juggernaut status: whenever you gain Block, deal 5
         // damage to a random enemy.
@@ -183,6 +219,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Juggernaut(5))],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Gain 12 Block. Whenever you are attacked this turn, deal 4 damage
         // back to the attacker.
@@ -195,6 +233,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToSelf(Status::FlameBarrier),
             ],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, Colossus costs 3, gains 5 Block, and installs the
         // Colossus status for this turn only: incoming damage from attackers
@@ -208,6 +248,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToSelf(Status::Colossus(1)),
             ],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Installs the Corruption status: Skills cost 0 and Exhaust when
         // played.
@@ -217,6 +259,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Corruption)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Installs the Cruelty status: damage dealt to Vulnerable targets is
         // amplified by 1.75x instead of 1.5x.
@@ -226,6 +270,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Cruelty)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Deal 15 damage. Apply -10 Strength to the target for the rest of
         // combat.
@@ -238,6 +284,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Strength(-10)),
             ],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Installs the One Two Punch status: the next Attack played this
         // turn is played a second time.
@@ -247,6 +295,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::OneTwoPunch)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         "Pommel Strike" => Some(CardData {
             cost: 1,
@@ -254,6 +304,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(9), EffectOp::DrawCards(1)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, Bloodletting costs 0, deals 3 unblockable damage to
         // the player, and grants 2 Energy.
@@ -263,6 +315,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::LoseHp(3), EffectOp::GainEnergy(2)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, BloodWall costs 2, deals 2 unblockable damage to the
         // player, and grants 16 Block.
@@ -272,6 +326,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::LoseHp(2), EffectOp::GainBlock(16)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, Hemokinesis costs 1, deals 2 unblockable damage to
         // the player, and deals 15 damage to a chosen enemy.
@@ -281,6 +337,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::LoseHp(2), EffectOp::DealDamage(15)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, Offering costs 0, deals 6 unblockable damage to the
         // player, grants 2 Energy, draws 3 cards, and Exhausts.
@@ -294,6 +352,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::DrawCards(3),
             ],
             exhausts: true,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, Tremble costs 1, applies 3 Vulnerable to a chosen
         // enemy, and Exhausts.
@@ -307,6 +367,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
             exhausts: true,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, Impervious costs 2, grants 30 Block, and Exhausts.
         "Impervious" => Some(CardData {
@@ -315,6 +377,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::GainBlock(30)],
             exhausts: true,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, NotYet costs 2, heals 10 HP (capped at max HP), and
         // Exhausts.
@@ -324,6 +388,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::Heal(10)],
             exhausts: true,
+            ethereal: false,
+            unplayable: false,
         }),
         // The slime monsters' Goop/StickyShot moves stick this into the
         // player's discard pile. Per the wiki: 1 energy, draws 1 card,
@@ -334,6 +400,20 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Status,
             effects: vec![EffectOp::DrawCards(1)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
+        }),
+        // Per the wiki: Dazed is Unplayable and Ethereal, and does nothing —
+        // a junk card the Defect's orbs and some monsters stick into the
+        // player's hand/draw pile to clog it up.
+        "Dazed" => Some(CardData {
+            cost: 0,
+            targeted: false,
+            card_type: CardType::Status,
+            effects: vec![],
+            exhausts: false,
+            ethereal: true,
+            unplayable: true,
         }),
         // Per the decompiled source, Cinder costs 2, deals 18 damage to a
         // chosen enemy, then exhausts a random card from hand.
@@ -346,6 +426,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::ExhaustRandomFromHand(HandFilter::Any),
             ],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the decompiled source, base (non-upgraded) TrueGrit costs 1,
         // gains 7 block, and exhausts a random card from hand (upgraded lets
@@ -359,6 +441,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::ExhaustRandomFromHand(HandFilter::Any),
             ],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the decompiled source, BurningPact costs 1; the player chooses
         // 1 card from hand to exhaust (modeled as random — see TrueGrit) and
@@ -372,6 +456,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::DrawCards(2),
             ],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the decompiled source, Thrash costs 1, deals 4 damage twice (8
         // total) to a chosen enemy, then exhausts a random Attack card from
@@ -389,6 +475,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::ExhaustRandomFromHand(HandFilter::Attack),
             ],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the decompiled source, SecondWind costs 1; for each non-Attack
         // card in hand, exhaust it and gain 5 block (total = 5 * count).
@@ -401,6 +489,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 gain_block_per_card: 5,
             }],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the decompiled source, Headbutt costs 1, deals 9 damage to a
         // chosen enemy, then the player picks a card from the discard pile to
@@ -415,6 +505,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(9), EffectOp::PutRandomDiscardOnTopOfDraw],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the decompiled source, FiendFire costs 2 and Exhausts. It deals
         // 7 damage to a chosen enemy once per card remaining in hand
@@ -436,6 +528,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 },
             ],
             exhausts: true,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the decompiled source, InfernalBlade costs 1 and Exhausts. It
         // adds a random Attack card to hand from the Ironclad's full
@@ -459,6 +553,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 "FiendFire".to_string(),
             ])],
             exhausts: true,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, Bludgeon costs 3 and deals 32 damage.
         "Bludgeon" => Some(CardData {
@@ -467,6 +563,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(32)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, TwinStrike costs 1 and deals 5 damage twice (10
         // total).
@@ -476,6 +574,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(5), EffectOp::DealDamage(5)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, Break costs 1, deals 20 damage, and applies 5
         // Vulnerable to the chosen enemy.
@@ -492,6 +592,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, ShrugItOff costs 1, gains 8 block, and draws 1 card.
         "ShrugItOff" => Some(CardData {
@@ -500,6 +602,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::GainBlock(8), EffectOp::DrawCards(1)],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, Taunt costs 1, gains 7 block, and applies Vulnerable
         // to the chosen enemy.
@@ -512,6 +616,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, Uppercut costs 2, deals 13 damage, and applies 1 Weak
         // and 1 Vulnerable to the chosen enemy.
@@ -525,6 +631,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, BodySlam costs 1 and deals damage equal to the
         // player's current Block.
@@ -538,6 +646,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 source: ScaleSource::CurrentBlock,
             }],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, PerfectedStrike costs 2 and deals 6 damage plus 2 for
         // every card named "Strike" in the player's deck (counted across all
@@ -552,6 +662,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 source: ScaleSource::StrikeCardsInDeck,
             }],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, AshenStrike costs 1 and deals 6 damage plus 3 for
         // every card in the player's exhaust pile.
@@ -565,6 +677,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 source: ScaleSource::ExhaustPileSize,
             }],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, Bully costs 0 and deals 4 damage plus 2 for every
         // stack of Vulnerable on the target.
@@ -578,6 +692,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 source: ScaleSource::VulnerableStacksOnTarget,
             }],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, Conflagration costs 1 and deals 8 damage to ALL
         // enemies, plus 2 for each Attack played earlier this turn.
@@ -591,6 +707,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 source: ScaleSource::AttacksPlayedThisTurn,
             }],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, TearAsunder costs 2 and deals 5 damage, hitting one
         // extra time for every time the player has been damaged this combat.
@@ -605,6 +723,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 hits_source: ScaleSource::DamageTakenThisCombat,
             }],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, Spite costs 0 and deals 5 damage, hitting twice if the
         // player has lost HP this turn.
@@ -619,6 +739,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 hits_source: ScaleSource::HpLostThisTurn,
             }],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per HOL-16, Dismantle costs 1 and deals 8 damage, hitting twice if
         // the target has Vulnerable.
@@ -633,6 +755,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 hits_source: ScaleSource::TargetHasVulnerable,
             }],
             exhausts: false,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per the wiki, MoltenFist costs 1, doubles the target's existing
         // Vulnerable stacks, deals 10 damage, and Exhausts.
@@ -642,6 +766,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DoubleVulnerableOnTarget, EffectOp::DealDamage(10)],
             exhausts: true,
+            ethereal: false,
+            unplayable: false,
         }),
         // Per HOL-16, Dominate costs 1, applies Vulnerable to the target,
         // then gains Strength equal to the target's resulting Vulnerable
@@ -655,6 +781,8 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
                 EffectOp::GainStrengthEqualToTargetVulnerable,
             ],
             exhausts: true,
+            ethereal: false,
+            unplayable: false,
         }),
         _ => None,
     }
