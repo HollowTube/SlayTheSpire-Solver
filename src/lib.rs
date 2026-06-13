@@ -6,7 +6,10 @@ mod state;
 
 use cards::{card_data, CardData, CardType};
 use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
-use mcts::{hp_lost_per_fight, mcts_action_values, mcts_search, simulate_hp_lost};
+use mcts::{
+    fight_outcomes_per_fight, hp_lost_per_fight, mcts_action_values, mcts_search,
+    simulate_hp_lost,
+};
 use monsters::{monster_move, select_next_intent};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -470,5 +473,6 @@ fn _sts_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(mcts_search, m)?)?;
     m.add_function(wrap_pyfunction!(simulate_hp_lost, m)?)?;
     m.add_function(wrap_pyfunction!(hp_lost_per_fight, m)?)?;
+    m.add_function(wrap_pyfunction!(fight_outcomes_per_fight, m)?)?;
     Ok(())
 }

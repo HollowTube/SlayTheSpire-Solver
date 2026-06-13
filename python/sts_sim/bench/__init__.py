@@ -13,37 +13,106 @@ import math
 import statistics
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field
+from enum import Enum
+from typing import cast
 
 from ..scenarios import (
     PLAYER_STARTING_HP,
+    CardName,
     ironclad_starter_deck_vs_byrdonis,
     ironclad_starter_deck_vs_fuzzy_wurm_crawler,
     ironclad_starter_deck_vs_gremlin_nob,
+    ironclad_starter_deck_vs_inklets,
     ironclad_starter_deck_vs_jaw_worm,
+    ironclad_starter_deck_vs_leaf_slime_m,
+    ironclad_starter_deck_vs_leaf_slime_s,
     ironclad_starter_deck_vs_nibbit,
+    ironclad_starter_deck_vs_shrinker_beetle,
+    ironclad_starter_deck_vs_slimes_weak,
+    ironclad_starter_deck_vs_slimes_weak_twig,
+    ironclad_starter_deck_vs_twig_slime_m,
+    ironclad_starter_deck_vs_twig_slime_s,
 )
 
+
+class Encounter(str, Enum):
+    """Canonical keys for `run_deck`/`compare`'s `monster=` argument — one
+    per scenario in `sts_sim.scenarios`. A `str` subclass, so existing code
+    passing plain strings (e.g. `monster="jaw-worm"`) keeps working —
+    `Encounter.JAW_WORM == "jaw-worm"` is true and hashes the same, so dict
+    lookups and equality checks behave identically either way. Exists so
+    notebook/bench callers get autocomplete/typo-checking instead of
+    repeating string literals."""
+
+    JAW_WORM = "jaw-worm"
+    GREMLIN_NOB = "gremlin-nob"
+    NIBBIT = "nibbit"
+    FUZZY_WURM_CRAWLER = "fuzzy-wurm-crawler"
+    TWIG_SLIME_S = "twig-slime-s"
+    SHRINKER_BEETLE = "shrinker-beetle"
+    LEAF_SLIME_S = "leaf-slime-s"
+    LEAF_SLIME_M = "leaf-slime-m"
+    TWIG_SLIME_M = "twig-slime-m"
+    SLIMES_WEAK = "slimes-weak"
+    SLIMES_WEAK_TWIG = "slimes-weak-twig"
+    BYRDONIS = "byrdonis"
+    INKLETS = "inklets"
+
+
 _SCENARIOS = {
-    "jaw-worm": ironclad_starter_deck_vs_jaw_worm,
-    "gremlin-nob": ironclad_starter_deck_vs_gremlin_nob,
-    "nibbit": ironclad_starter_deck_vs_nibbit,
-    "fuzzy-wurm-crawler": ironclad_starter_deck_vs_fuzzy_wurm_crawler,
-    "byrdonis": ironclad_starter_deck_vs_byrdonis,
+    Encounter.JAW_WORM: ironclad_starter_deck_vs_jaw_worm,
+    Encounter.GREMLIN_NOB: ironclad_starter_deck_vs_gremlin_nob,
+    Encounter.NIBBIT: ironclad_starter_deck_vs_nibbit,
+    Encounter.FUZZY_WURM_CRAWLER: ironclad_starter_deck_vs_fuzzy_wurm_crawler,
+    Encounter.TWIG_SLIME_S: ironclad_starter_deck_vs_twig_slime_s,
+    Encounter.SHRINKER_BEETLE: ironclad_starter_deck_vs_shrinker_beetle,
+    Encounter.LEAF_SLIME_S: ironclad_starter_deck_vs_leaf_slime_s,
+    Encounter.LEAF_SLIME_M: ironclad_starter_deck_vs_leaf_slime_m,
+    Encounter.TWIG_SLIME_M: ironclad_starter_deck_vs_twig_slime_m,
+    Encounter.SLIMES_WEAK: ironclad_starter_deck_vs_slimes_weak,
+    Encounter.SLIMES_WEAK_TWIG: ironclad_starter_deck_vs_slimes_weak_twig,
+    Encounter.BYRDONIS: ironclad_starter_deck_vs_byrdonis,
+    Encounter.INKLETS: ironclad_starter_deck_vs_inklets,
 }
+
+# Act 1 "easy pool" encounters — every non-elite scenario (i.e. everything
+# except the Gremlin Nob and Byrdonis elites).
+EASY_POOL = [
+    e for e in Encounter if e not in (Encounter.GREMLIN_NOB, Encounter.BYRDONIS)
+]
 
 # Named deck configurations. Each is a list of card names passed as `deck` to
 # the scenario constructor. None means "use the scenario's default deck."
 PRESETS: dict[str, list[str] | None] = {
     "starter": None,
-    "cut-defend": ["Strike"] * 5 + ["Defend"] * 3 + ["Bash"],
-    "cut-2-defends": ["Strike"] * 5 + ["Defend"] * 2 + ["Bash"],
-    "cut-bash": ["Strike"] * 5 + ["Defend"] * 4,
-    "add-strike": ["Strike"] * 6 + ["Defend"] * 4 + ["Bash"],
-    "add-iron-wave": ["Strike"] * 5 + ["Defend"] * 4 + ["Bash", "Iron Wave"],
-    "add-inflame": ["Strike"] * 5 + ["Defend"] * 4 + ["Bash", "Inflame"],
-    "swap-defend-for-iron-wave": ["Strike"] * 5
-    + ["Defend"] * 3
-    + ["Bash", "Iron Wave"],
+    "cut-defend": cast(
+        "list[str]", [CardName.STRIKE] * 5 + [CardName.DEFEND] * 3 + [CardName.BASH]
+    ),
+    "cut-2-defends": cast(
+        "list[str]", [CardName.STRIKE] * 5 + [CardName.DEFEND] * 2 + [CardName.BASH]
+    ),
+    "cut-bash": cast("list[str]", [CardName.STRIKE] * 5 + [CardName.DEFEND] * 4),
+    "add-strike": cast(
+        "list[str]", [CardName.STRIKE] * 6 + [CardName.DEFEND] * 4 + [CardName.BASH]
+    ),
+    "add-iron-wave": cast(
+        "list[str]",
+        [CardName.STRIKE] * 5
+        + [CardName.DEFEND] * 4
+        + [CardName.BASH, CardName.IRON_WAVE],
+    ),
+    "add-inflame": cast(
+        "list[str]",
+        [CardName.STRIKE] * 5
+        + [CardName.DEFEND] * 4
+        + [CardName.BASH, CardName.INFLAME],
+    ),
+    "swap-defend-for-iron-wave": cast(
+        "list[str]",
+        [CardName.STRIKE] * 5
+        + [CardName.DEFEND] * 3
+        + [CardName.BASH, CardName.IRON_WAVE],
+    ),
 }
 
 
@@ -52,6 +121,7 @@ class BenchResult:
     label: str
     hp_outcomes: list[int] = field(default_factory=list)
     optimal_hp_outcomes: list[int] = field(default_factory=list)
+    turn_outcomes: list[int] = field(default_factory=list)
 
     @property
     def hp_lost_outcomes(self) -> list[int]:
@@ -114,6 +184,22 @@ class BenchResult:
         ceiling for the same seeds."""
         return self.mean_hp_lost - self.mean_hp_lost_optimal
 
+    @property
+    def mean_turns(self) -> float:
+        return statistics.mean(self.turn_outcomes) if self.turn_outcomes else 0.0
+
+    @property
+    def mean_turns_won(self) -> float:
+        """Average fight length (in turns) among fights the player won."""
+        won = [t for t, hp in zip(self.turn_outcomes, self.hp_outcomes) if hp > 0]
+        return statistics.mean(won) if won else 0.0
+
+    @property
+    def mean_turns_lost(self) -> float:
+        """Average fight length (in turns) among fights the player lost."""
+        lost = [t for t, hp in zip(self.turn_outcomes, self.hp_outcomes) if hp <= 0]
+        return statistics.mean(lost) if lost else 0.0
+
     def __str__(self) -> str:
         line = (
             f"{self.label:<38}"
@@ -121,24 +207,17 @@ class BenchResult:
             f"  avg_lost={self.mean_hp_lost:5.1f} ±{self.stderr_hp_lost:.1f}"
             f"  p25/p50/p75={self.p25:.0f}/{self.p50:.0f}/{self.p75:.0f}"
         )
+        if self.turn_outcomes:
+            line += f"  avg_turns={self.mean_turns:4.1f}"
+            if self.wins < self.total:
+                line += (
+                    f" (won={self.mean_turns_won:.1f}/lost={self.mean_turns_lost:.1f})"
+                )
         if self.optimal_hp_outcomes:
             line += (
                 f"  ceiling={self.mean_hp_lost_optimal:5.1f}  regret={self.regret:5.1f}"
             )
         return line
-
-
-def _run_one_mcts(args: tuple) -> int:
-    """MCTS-guided fight worker — must be a top-level function for pickling."""
-    seed, deck, monster_name, iterations = args
-    from .. import apply, is_terminal
-    from ..mcts import search
-
-    state = _SCENARIOS[monster_name](seed=seed, deck=deck)
-    while not is_terminal(state):
-        action = search(state, iterations=iterations)
-        state = apply(state, action)
-    return state.player_hp
 
 
 def _run_one_optimal(args: tuple) -> int:
@@ -154,8 +233,10 @@ def _run_one_optimal(args: tuple) -> int:
     return round(max(value, 0.0) * PLAYER_STARTING_HP)
 
 
-def _run_one_random(args: tuple) -> int:
-    """Random-policy fight worker — fast baseline."""
+def _run_one_random(args: tuple) -> tuple[int, int]:
+    """Random-policy fight worker — fast baseline.
+
+    Returns (final player HP, turns taken)."""
     import random
 
     seed, deck, monster_name = args
@@ -165,12 +246,12 @@ def _run_one_random(args: tuple) -> int:
     state = _SCENARIOS[monster_name](seed=seed, deck=deck)
     while not is_terminal(state):
         state = apply(state, rng.choice(legal_actions(state)))
-    return state.player_hp
+    return state.player_hp, state.turn
 
 
 def run_deck(
     deck: list[str] | None,
-    monster: str = "jaw-worm",
+    monster: Encounter | str = Encounter.JAW_WORM,
     seeds: int = 50,
     iterations: int = 200,
     workers: int = 4,
@@ -182,10 +263,11 @@ def run_deck(
 
     Args:
         deck: Card list (or None for the scenario default).
-        monster: Monster key — one of 'jaw-worm', 'gremlin-nob'.
+        monster: Encounter key — see `Encounter` for the full list.
         seeds: Number of independent seeds (fights) to run.
         iterations: MCTS iterations per decision (ignored when policy='random').
-        workers: Parallel worker processes.
+        workers: Parallel worker processes (ignored when policy='mcts', which
+            runs all fights in one rayon-parallel, GIL-released Rust call).
         label: Human-readable name shown in reports.
         policy: 'mcts' (default) or 'random'.
         ceiling: Also compute the per-seed `optimal_value` ceiling (exact
@@ -193,47 +275,53 @@ def run_deck(
             the policy's average HP loss as `regret`. Off by default since
             it's a separate search per seed on top of the policy runs.
     """
-    if monster not in _SCENARIOS:
+    try:
+        encounter = Encounter(monster)
+    except ValueError:
         raise ValueError(
             f"unknown monster {monster!r}; choices: {', '.join(_SCENARIOS)}"
-        )
+        ) from None
 
     result = BenchResult(label=label or repr(deck))
 
-    arg_list: list[tuple]
     if policy == "mcts":
-        worker_fn = _run_one_mcts
-        arg_list = [(seed, deck, monster, iterations) for seed in range(seeds)]
-    else:
-        worker_fn = _run_one_random
-        arg_list = [(seed, deck, monster) for seed in range(seeds)]
+        from .. import fight_outcomes_per_fight
 
-    hp_by_seed: dict[int, int] = {}
-    optimal_hp_by_seed: dict[int, int] = {}
-    with ProcessPoolExecutor(max_workers=workers) as pool:
-        policy_futures = {pool.submit(worker_fn, args): args[0] for args in arg_list}
-        ceiling_futures = (
-            {
-                pool.submit(_run_one_optimal, (seed, deck, monster)): seed
+        states = [_SCENARIOS[encounter](seed=seed, deck=deck) for seed in range(seeds)]
+        outcomes = fight_outcomes_per_fight(states, iterations=iterations)
+        result.hp_outcomes = [PLAYER_STARTING_HP - hp_lost for hp_lost, _ in outcomes]
+        result.turn_outcomes = [turns for _, turns in outcomes]
+    else:
+        hp_by_seed: dict[int, int] = {}
+        turns_by_seed: dict[int, int] = {}
+        arg_list = [(seed, deck, encounter) for seed in range(seeds)]
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            policy_futures = {
+                pool.submit(_run_one_random, args): args[0] for args in arg_list
+            }
+            for policy_fut in as_completed(policy_futures):
+                seed = policy_futures[policy_fut]
+                hp_by_seed[seed], turns_by_seed[seed] = policy_fut.result()
+        result.hp_outcomes = [hp_by_seed[i] for i in range(seeds)]
+        result.turn_outcomes = [turns_by_seed[i] for i in range(seeds)]
+
+    if ceiling:
+        optimal_hp_by_seed: dict[int, int] = {}
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            ceiling_futures = {
+                pool.submit(_run_one_optimal, (seed, deck, encounter)): seed
                 for seed in range(seeds)
             }
-            if ceiling
-            else {}
-        )
-        for fut in as_completed(policy_futures):
-            hp_by_seed[policy_futures[fut]] = fut.result()
-        for fut in as_completed(ceiling_futures):
-            optimal_hp_by_seed[ceiling_futures[fut]] = fut.result()
-
-    result.hp_outcomes = [hp_by_seed[i] for i in range(seeds)]
-    if ceiling:
+            for ceiling_fut in as_completed(ceiling_futures):
+                optimal_hp_by_seed[ceiling_futures[ceiling_fut]] = ceiling_fut.result()
         result.optimal_hp_outcomes = [optimal_hp_by_seed[i] for i in range(seeds)]
+
     return result
 
 
 def compare(
     configs: dict[str, list[str] | None],
-    monster: str = "jaw-worm",
+    monster: Encounter | str = Encounter.JAW_WORM,
     seeds: int = 50,
     iterations: int = 200,
     workers: int = 4,
@@ -244,7 +332,7 @@ def compare(
 
     Args:
         configs: Dict mapping label → deck (card list or None for default).
-        monster: Monster key.
+        monster: Encounter key — see `Encounter` for the full list.
         seeds: Fights per deck configuration.
         iterations: MCTS iterations per decision.
         workers: Parallel workers.
@@ -269,4 +357,59 @@ def compare(
         )
         print(f"{i:2}. {result}")
         results.append(result)
+    return results
+
+
+def compare_decks(
+    decks: dict[str, list[str] | None],
+    encounters: list[Encounter | str],
+    seeds: int = 50,
+    iterations: int = 200,
+    policy: str = "mcts",
+) -> dict[Encounter, list[BenchResult]]:
+    """Compare named decks against each other across multiple encounters.
+
+    Each deck is run with the same `seeds` against each encounter, so
+    fights are paired (same monster RNG per seed across decks), keeping the
+    per-encounter differential low-variance. Prints one line per encounter:
+    each deck's avg HP lost, followed by its differential vs. the first deck
+    in `decks`.
+
+    Args:
+        decks: Dict mapping label → deck (card list or None for default).
+            The first entry is the baseline that differentials are computed
+            against.
+        encounters: Encounters to run each deck against, e.g. `EASY_POOL +
+            [Encounter.BYRDONIS]`.
+        seeds: Fights per deck per encounter.
+        iterations: MCTS iterations per decision.
+        policy: 'mcts' or 'random'.
+
+    Returns:
+        Dict mapping each encounter to the list of BenchResult (one per
+        deck, in `decks` order).
+    """
+    results: dict[Encounter, list[BenchResult]] = {}
+    for enc in encounters:
+        encounter = Encounter(enc)
+        row = [
+            run_deck(
+                deck,
+                monster=encounter,
+                seeds=seeds,
+                iterations=iterations,
+                policy=policy,
+                label=label,
+            )
+            for label, deck in decks.items()
+        ]
+        results[encounter] = row
+
+        baseline = row[0].mean_hp_lost
+        cells = [f"{row[0].label}={baseline:5.1f}"]
+        for r in row[1:]:
+            diff = r.mean_hp_lost - baseline
+            cells.append(f"{r.label}={r.mean_hp_lost:5.1f} (Δ{diff:+5.1f})")
+        print(f"{encounter.value:<20} " + "  ".join(cells))
+
     return results

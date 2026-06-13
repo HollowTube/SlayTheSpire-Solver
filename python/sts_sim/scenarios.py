@@ -1,10 +1,103 @@
+from enum import Enum
+from typing import cast
+
 from . import CombatState, Monster
+
+
+class CardName(str, Enum):
+    """Canonical card names — one per card implemented in `cards.rs`'s
+    `card_data()`. A `str` subclass, so these compare equal to (and can be
+    used wherever code expects) the plain string names — e.g.
+    `CardName.STRIKE == "Strike"` is true and hashes the same. Exists so
+    deck-building code (e.g. IRONCLAD_STARTING_DECK, `sts_sim.bench.PRESETS`)
+    gets autocomplete/typo-checking instead of repeating string literals."""
+
+    AGGRESSION = "Aggression"
+    ASHEN_STRIKE = "AshenStrike"
+    BARRICADE = "Barricade"
+    BASH = "Bash"
+    BLOODLETTING = "Bloodletting"
+    BLOOD_WALL = "BloodWall"
+    BLUDGEON = "Bludgeon"
+    BODY_SLAM = "BodySlam"
+    BREAK = "Break"
+    BULLY = "Bully"
+    BURNING_PACT = "BurningPact"
+    CINDER = "Cinder"
+    COLOSSUS = "Colossus"
+    CONFLAGRATION = "Conflagration"
+    CORRUPTION = "Corruption"
+    CRIMSON_MANTLE = "CrimsonMantle"
+    CRUELTY = "Cruelty"
+    DARK_EMBRACE = "DarkEmbrace"
+    DAZED = "Dazed"
+    DEFEND = "Defend"
+    DEMON_FORM = "DemonForm"
+    DISMANTLE = "Dismantle"
+    DOMINATE = "Dominate"
+    FEEL_NO_PAIN = "FeelNoPain"
+    FIEND_FIRE = "FiendFire"
+    FLAME_BARRIER = "FlameBarrier"
+    HEADBUTT = "Headbutt"
+    HEMOKINESIS = "Hemokinesis"
+    IMPERVIOUS = "Impervious"
+    INFERNAL_BLADE = "InfernalBlade"
+    INFERNO = "Inferno"
+    INFLAME = "Inflame"
+    IRON_WAVE = "Iron Wave"
+    JUGGERNAUT = "Juggernaut"
+    MANGLE = "Mangle"
+    MOLTEN_FIST = "MoltenFist"
+    NOT_YET = "NotYet"
+    OFFERING = "Offering"
+    ONE_TWO_PUNCH = "OneTwoPunch"
+    PERFECTED_STRIKE = "PerfectedStrike"
+    POMMEL_STRIKE = "Pommel Strike"
+    RAGE = "Rage"
+    SECOND_WIND = "SecondWind"
+    SHRUG_IT_OFF = "ShrugItOff"
+    SLIMED = "Slimed"
+    SPITE = "Spite"
+    STRIKE = "Strike"
+    SWORD_BOOMERANG = "Sword Boomerang"
+    TAUNT = "Taunt"
+    TEAR_ASUNDER = "TearAsunder"
+    THRASH = "Thrash"
+    THUNDERCLAP = "Thunderclap"
+    TREMBLE = "Tremble"
+    TRUE_GRIT = "TrueGrit"
+    TWIN_STRIKE = "TwinStrike"
+    UPPERCUT = "Uppercut"
+
+
+class MonsterName(str, Enum):
+    """Canonical monster names used as `Monster(name=...)` below. A `str`
+    subclass, so these compare equal to (and can be used wherever code
+    expects) the plain string names — e.g. `state.monsters[0].name ==
+    MonsterName.JAW_WORM` and `MonsterName.JAW_WORM == "Jaw Worm"` are both
+    true. Exists so scenario authors get autocomplete/typo-checking instead
+    of repeating string literals."""
+
+    JAW_WORM = "Jaw Worm"
+    GREMLIN_NOB = "Gremlin Nob"
+    NIBBIT = "Nibbit"
+    FUZZY_WURM_CRAWLER = "Fuzzy Wurm Crawler"
+    TWIG_SLIME_S = "Twig Slime (S)"
+    SHRINKER_BEETLE = "Shrinker Beetle"
+    LEAF_SLIME_S = "Leaf Slime (S)"
+    LEAF_SLIME_M = "Leaf Slime (M)"
+    TWIG_SLIME_M = "Twig Slime (M)"
+    BYRDONIS = "Byrdonis"
+    INKLET = "Inklet"
+
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
 # 4 Defend, and 1 Bash — 10 cards total. `CombatState`'s `deck` constructor
 # param shuffles this into the draw pile and deals a real opening hand from
 # it (see HOL-13), rather than dumping the whole deck into `hand` at once.
-IRONCLAD_STARTING_DECK = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
+IRONCLAD_STARTING_DECK = cast(
+    "list[str]", [CardName.STRIKE] * 5 + [CardName.DEFEND] * 4 + [CardName.BASH]
+)
 
 # Per the Slay the Spire wiki, Burning Blood heals 6 HP at the *end* of
 # combat — it has no effect during a fight, so there's nothing for the combat
@@ -65,7 +158,9 @@ def ironclad_starter_deck_vs_gremlin_nob(seed, deck=None):
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
-        monsters=[Monster(hp=GREMLIN_NOB_STARTING_HP, attack=0, name="Gremlin Nob")],
+        monsters=[
+            Monster(hp=GREMLIN_NOB_STARTING_HP, attack=0, name=MonsterName.GREMLIN_NOB)
+        ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
     )
@@ -78,7 +173,7 @@ def ironclad_starter_deck_vs_nibbit(seed, deck=None):
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
-        monsters=[Monster(hp=NIBBIT_STARTING_HP, attack=0, name="Nibbit")],
+        monsters=[Monster(hp=NIBBIT_STARTING_HP, attack=0, name=MonsterName.NIBBIT)],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
     )
@@ -93,7 +188,9 @@ def ironclad_starter_deck_vs_fuzzy_wurm_crawler(seed, deck=None):
         player_energy=3,
         monsters=[
             Monster(
-                hp=FUZZY_WURM_CRAWLER_STARTING_HP, attack=0, name="Fuzzy Wurm Crawler"
+                hp=FUZZY_WURM_CRAWLER_STARTING_HP,
+                attack=0,
+                name=MonsterName.FUZZY_WURM_CRAWLER,
             )
         ],
         seed=seed,
@@ -108,7 +205,9 @@ def ironclad_starter_deck_vs_twig_slime_s(seed, deck=None):
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
         monsters=[
-            Monster(hp=TWIG_SLIME_S_STARTING_HP, attack=0, name="Twig Slime (S)")
+            Monster(
+                hp=TWIG_SLIME_S_STARTING_HP, attack=0, name=MonsterName.TWIG_SLIME_S
+            )
         ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
@@ -123,7 +222,11 @@ def ironclad_starter_deck_vs_shrinker_beetle(seed, deck=None):
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
         monsters=[
-            Monster(hp=SHRINKER_BEETLE_STARTING_HP, attack=0, name="Shrinker Beetle")
+            Monster(
+                hp=SHRINKER_BEETLE_STARTING_HP,
+                attack=0,
+                name=MonsterName.SHRINKER_BEETLE,
+            )
         ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
@@ -138,7 +241,9 @@ def ironclad_starter_deck_vs_leaf_slime_s(seed, deck=None):
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
         monsters=[
-            Monster(hp=LEAF_SLIME_S_STARTING_HP, attack=0, name="Leaf Slime (S)")
+            Monster(
+                hp=LEAF_SLIME_S_STARTING_HP, attack=0, name=MonsterName.LEAF_SLIME_S
+            )
         ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
@@ -153,7 +258,9 @@ def ironclad_starter_deck_vs_leaf_slime_m(seed, deck=None):
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
         monsters=[
-            Monster(hp=LEAF_SLIME_M_STARTING_HP, attack=0, name="Leaf Slime (M)")
+            Monster(
+                hp=LEAF_SLIME_M_STARTING_HP, attack=0, name=MonsterName.LEAF_SLIME_M
+            )
         ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
@@ -168,7 +275,9 @@ def ironclad_starter_deck_vs_twig_slime_m(seed, deck=None):
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
         monsters=[
-            Monster(hp=TWIG_SLIME_M_STARTING_HP, attack=0, name="Twig Slime (M)")
+            Monster(
+                hp=TWIG_SLIME_M_STARTING_HP, attack=0, name=MonsterName.TWIG_SLIME_M
+            )
         ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
@@ -188,9 +297,15 @@ def ironclad_starter_deck_vs_slimes_weak(seed, deck=None):
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
         monsters=[
-            Monster(hp=LEAF_SLIME_M_STARTING_HP, attack=0, name="Leaf Slime (M)"),
-            Monster(hp=LEAF_SLIME_S_STARTING_HP, attack=0, name="Leaf Slime (S)"),
-            Monster(hp=TWIG_SLIME_S_STARTING_HP, attack=0, name="Twig Slime (S)"),
+            Monster(
+                hp=LEAF_SLIME_M_STARTING_HP, attack=0, name=MonsterName.LEAF_SLIME_M
+            ),
+            Monster(
+                hp=LEAF_SLIME_S_STARTING_HP, attack=0, name=MonsterName.LEAF_SLIME_S
+            ),
+            Monster(
+                hp=TWIG_SLIME_S_STARTING_HP, attack=0, name=MonsterName.TWIG_SLIME_S
+            ),
         ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
@@ -206,9 +321,15 @@ def ironclad_starter_deck_vs_slimes_weak_twig(seed, deck=None):
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
         monsters=[
-            Monster(hp=TWIG_SLIME_M_STARTING_HP, attack=0, name="Twig Slime (M)"),
-            Monster(hp=LEAF_SLIME_S_STARTING_HP, attack=0, name="Leaf Slime (S)"),
-            Monster(hp=TWIG_SLIME_S_STARTING_HP, attack=0, name="Twig Slime (S)"),
+            Monster(
+                hp=TWIG_SLIME_M_STARTING_HP, attack=0, name=MonsterName.TWIG_SLIME_M
+            ),
+            Monster(
+                hp=LEAF_SLIME_S_STARTING_HP, attack=0, name=MonsterName.LEAF_SLIME_S
+            ),
+            Monster(
+                hp=TWIG_SLIME_S_STARTING_HP, attack=0, name=MonsterName.TWIG_SLIME_S
+            ),
         ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
@@ -230,7 +351,7 @@ def ironclad_starter_deck_vs_jaw_worm(seed, deck=None):
         # monster_attack is meaningless for an AI-driven monster — its move
         # pool decides what it does each turn — but Monster's `attack`
         # defaults to 0, so it's simply omitted here.
-        monsters=[Monster(hp=JAW_WORM_STARTING_HP, name="Jaw Worm")],
+        monsters=[Monster(hp=JAW_WORM_STARTING_HP, name=MonsterName.JAW_WORM)],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
     )
@@ -244,7 +365,9 @@ def ironclad_starter_deck_vs_byrdonis(seed, deck=None):
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
-        monsters=[Monster(hp=BYRDONIS_STARTING_HP, attack=0, name="Byrdonis")],
+        monsters=[
+            Monster(hp=BYRDONIS_STARTING_HP, attack=0, name=MonsterName.BYRDONIS)
+        ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
     )
@@ -262,14 +385,22 @@ def ironclad_starter_deck_vs_inklets(seed, deck=None):
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
         monsters=[
-            Monster(hp=INKLET_STARTING_HP, name="Inklet", statuses=[("Slippery", 1)]),
             Monster(
                 hp=INKLET_STARTING_HP,
-                name="Inklet",
+                name=MonsterName.INKLET,
+                statuses=[("Slippery", 1)],
+            ),
+            Monster(
+                hp=INKLET_STARTING_HP,
+                name=MonsterName.INKLET,
                 statuses=[("Slippery", 1)],
                 intent="Windup Punch",
             ),
-            Monster(hp=INKLET_STARTING_HP, name="Inklet", statuses=[("Slippery", 1)]),
+            Monster(
+                hp=INKLET_STARTING_HP,
+                name=MonsterName.INKLET,
+                statuses=[("Slippery", 1)],
+            ),
         ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
