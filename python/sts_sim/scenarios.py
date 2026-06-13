@@ -181,12 +181,32 @@ def ironclad_starter_deck_vs_slimes_weak(seed, deck=None):
     randomly picks the medium slime from {Leaf Slime (M), Twig Slime (M)} and
     the two smalls from {Leaf Slime (S), Twig Slime (S)} (one of each); this
     fixes one representative composition (Leaf Slime (M) + Leaf Slime (S) +
-    Twig Slime (S)) as the canonical multi-enemy scenario."""
+    Twig Slime (S)) as the canonical multi-enemy scenario. See
+    `ironclad_starter_deck_vs_slimes_weak_twig` for the other possible medium
+    slime roll."""
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
         monsters=[
             Monster(hp=LEAF_SLIME_M_STARTING_HP, attack=0, name="Leaf Slime (M)"),
+            Monster(hp=LEAF_SLIME_S_STARTING_HP, attack=0, name="Leaf Slime (S)"),
+            Monster(hp=TWIG_SLIME_S_STARTING_HP, attack=0, name="Twig Slime (S)"),
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_slimes_weak_twig(seed, deck=None):
+    """Ironclad's starting loadout against the other possible composition of
+    the Act 1 "SlimesWeak" easy-pool encounter: Twig Slime (M) as the medium
+    slime, alongside Leaf Slime (S) and Twig Slime (S). See
+    `ironclad_starter_deck_vs_slimes_weak` for the Leaf Slime (M) variant."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(hp=TWIG_SLIME_M_STARTING_HP, attack=0, name="Twig Slime (M)"),
             Monster(hp=LEAF_SLIME_S_STARTING_HP, attack=0, name="Leaf Slime (S)"),
             Monster(hp=TWIG_SLIME_S_STARTING_HP, attack=0, name="Twig Slime (S)"),
         ],

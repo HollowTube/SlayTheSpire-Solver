@@ -18,6 +18,7 @@ from sts_sim.scenarios import (
     ironclad_starter_deck_vs_leaf_slime_s,
     ironclad_starter_deck_vs_shrinker_beetle,
     ironclad_starter_deck_vs_slimes_weak,
+    ironclad_starter_deck_vs_slimes_weak_twig,
     ironclad_starter_deck_vs_twig_slime_m,
     ironclad_starter_deck_vs_twig_slime_s,
 )
@@ -214,6 +215,23 @@ def test_vs_inklets_loads_with_three_inklets_and_the_middle_ones_intent_override
     assert [m.intent for m in state.monsters] == ["Jab", "Windup Punch", "Jab"]
 
 
+def test_vs_slimes_weak_twig_loads_with_three_slime_monsters():
+    state = ironclad_starter_deck_vs_slimes_weak_twig(seed=42)
+
+    assert state.player_hp == PLAYER_STARTING_HP
+    assert len(state.hand) == 5
+    assert [m.name for m in state.monsters] == [
+        "Twig Slime (M)",
+        "Leaf Slime (S)",
+        "Twig Slime (S)",
+    ]
+    assert [m.hp for m in state.monsters] == [
+        TWIG_SLIME_M_STARTING_HP,
+        LEAF_SLIME_S_STARTING_HP,
+        TWIG_SLIME_S_STARTING_HP,
+    ]
+
+
 def test_complete_random_fights_against_each_easy_pool_monster_reach_correctly_shaped_terminal_states():
     # Mirrors test_complete_random_fights_against_the_jaw_worm_reach_correctly_shaped_terminal_states
     # for the new Act 1 "easy pool" scenarios — every one must terminate with
@@ -226,6 +244,7 @@ def test_complete_random_fights_against_each_easy_pool_monster_reach_correctly_s
         ironclad_starter_deck_vs_twig_slime_m,
         ironclad_starter_deck_vs_slimes_weak,
         ironclad_starter_deck_vs_inklets,
+        ironclad_starter_deck_vs_slimes_weak_twig,
     ]
 
     for scenario_fn in scenario_fns:
