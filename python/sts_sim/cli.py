@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 import click
 
-from . import apply, evaluate, is_terminal, legal_actions, reward
+from . import apply, evaluate, is_terminal, legal_actions, optimal_value, reward
 from .scenarios import (
     ironclad_starter_deck_vs_fuzzy_wurm_crawler,
     ironclad_starter_deck_vs_gremlin_nob,
@@ -226,7 +226,12 @@ def run_interactive(state, input_fn=input, output_fn=print, analysis=False):
         if analysis:
             values = _mcts.action_values(state)
             state_value = max(values.values())
-            output_fn(f"State value: {state_value:+.2f} (MCTS, optimal play)")
+            output_fn(f"State value: {state_value:+.2f} (MCTS, foresight-free average)")
+            ceiling_hp = max(optimal_value(state), 0.0) * state.player_max_hp
+            output_fn(
+                f"Best possible outcome from here: {ceiling_hp:.0f}/{state.player_max_hp} HP "
+                "(clairvoyant optimal — perfect foresight of this seed's RNG)"
+            )
         action = prompt_for_choice(actions, input_fn, output_fn, values=values)
         prev = state
         state = apply(state, action)
