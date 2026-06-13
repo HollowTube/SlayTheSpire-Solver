@@ -61,11 +61,14 @@ def test_colossus_halves_damage_from_a_vulnerable_attacker():
     )
 
     after_play = apply(state, "PlayCard:Colossus")
+    assert after_play.player_block == 5
+
     after_turn = apply(after_play, "EndTurn")
 
     # Jaw Worm's Chomp deals 11; Colossus halves damage from a Vulnerable
-    # attacker, rounded down: floor(11 * 0.5) == 5.
-    assert after_play.player_hp - after_turn.player_hp == 5
+    # attacker, rounded down: floor(11 * 0.5) == 5. Colossus's own 5 Block
+    # then absorbs that fully, so the player takes no HP loss.
+    assert after_play.player_hp - after_turn.player_hp == 0
 
 
 def test_colossus_does_not_reduce_damage_from_a_non_vulnerable_attacker():
@@ -80,4 +83,25 @@ def test_colossus_does_not_reduce_damage_from_a_non_vulnerable_attacker():
     after_play = apply(state, "PlayCard:Colossus")
     after_turn = apply(after_play, "EndTurn")
 
-    assert after_play.player_hp - after_turn.player_hp == 11
+    # Jaw Worm's Chomp deals 11, unmodified (Jaw Worm has no Vulnerable);
+    # Colossus's 5 Block absorbs 5 of it, leaving 6 HP loss.
+    assert after_play.player_hp - after_turn.player_hp == 6
+
+
+def test_colossus_expires_after_one_turn():
+    state = CombatState(
+        player_hp=80,
+        player_energy=3,
+        monsters=[Monster(hp=44, name="Jaw Worm", statuses=[("Vulnerable", 1)])],
+        seed=42,
+        hand=["Colossus"],
+    )
+
+    after_play = apply(state, "PlayCard:Colossus")
+    assert "Colossus" in after_play.player_statuses
+
+    # Colossus only lasts for the turn it's played - it decays away during
+    # the end-of-turn debuff tick, alongside Block being cleared.
+    after_turn_1 = apply(after_play, "EndTurn")
+    assert "Colossus" not in after_turn_1.player_statuses
+    assert after_turn_1.player_block == 0
