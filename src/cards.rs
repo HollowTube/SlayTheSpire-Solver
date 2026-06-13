@@ -655,3 +655,74 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
         _ => None,
     }
 }
+
+// ============================================================================
+// Reference: STS2 Ironclad cards not yet implemented in `card_data`.
+//
+// Exact card text (from the STS2 wiki/screenshots) for cards that appeared
+// in the full Ironclad card-pool dump but have no `card_data` entry above.
+// Kept here so future waves (notably HOL-23's "Phase 4b" triage of Rupture,
+// Vicious, Stampede, etc.) don't need to re-fetch the source material.
+//
+// -- Common --
+// Anger (Attack): Deal 6 damage. Add a copy of this card into your Discard
+//   Pile.
+// Armaments (Skill): Gain 5 Block. Upgrade a card in your Hand.
+// Breakthrough (Attack): Lose 1 HP. Deal 9 damage to ALL enemies.
+// Havoc (Skill): Play the top card of your Draw Pile and Exhaust it.
+// Iron Wave (Attack): Gain 5 Block. Deal 5 damage.
+// Pommel Strike (Attack): Deal 9 damage. Draw 1 card.
+// Setup Strike (Attack): Deal 7 damage. Gain 2 Strength this turn.
+// Sword Boomerang (Attack): Deal 3 damage to a random enemy 3 times.
+//
+// -- Uncommon --
+// Battle Trance (Skill): Draw 3 cards. You cannot draw additional cards this
+//   turn.
+// Demonic Shield (Skill): Lose 1 HP. Give another player Block equal to your
+//   Block. Exhaust. [multiplayer-only — likely N/A for single-player sim]
+// Drum of Battle (Power): Draw 2 cards. At the start of your turn, Exhaust
+//   the top card of your Draw Pile.
+// Evil Eye (Skill): Gain 8 Block. Gain another 8 Block if you have Exhausted
+//   a card this turn.
+// Expect a Fight (Skill): Gain Energy for each Attack in your Hand. You
+//   cannot gain additional Energy this turn.
+// Fight Me! (Attack): Deal 5 damage twice. Gain 3 Strength. The enemy gains
+//   1 Strength.
+// Forgotten Ritual (Skill): If you Exhausted a card this turn, gain 3
+//   Energy. Exhaust.
+// Howl from Beyond (Attack): Deal 16 damage to ALL enemies. At the start of
+//   your turn, if this is in your Exhaust Pile, play it.
+// Juggling (Power): Add a copy of the third Attack you play each turn into
+//   your Hand.
+// Pillage (Attack): Deal 6 damage. Draw cards until you draw a non-Attack
+//   card.
+// Rampage (Attack): Deal 9 damage. Increase this card's damage by 5 this
+//   combat.
+// Rupture (Power): Whenever you lose HP on your turn, gain 1 Strength.
+// Stampede (Power): At the end of your turn, 1 random Attack in your Hand is
+//   played against a random enemy.
+// Stomp (Attack): Deal 12 damage to ALL enemies. Costs 1 less Energy for
+//   each Attack played this turn.
+// Stone Armor (Power): Gain 4 Plating.
+// Unrelenting (Attack): Deal 12 damage. The next Attack you play costs 0
+//   Energy.
+// Vicious (Power): Whenever you apply Vulnerable, draw 1 card.
+// Whirlwind (Attack): Deal 5 damage to ALL enemies X times.
+//
+// -- Rare --
+// Brand (Skill): Lose 1 HP. Exhaust 1 card. Gain 1 Strength.
+// Cascade (Skill): Play the top X cards of your Draw Pile.
+// Feed (Attack): Deal 10 damage. If Fatal, raise your Max HP by 3. Exhaust.
+// Hellraiser (Power): Whenever you draw a card containing "Strike", it is
+//   played against a random enemy.
+// Pact's End (Attack): Can only be played if you have 3 or more cards in
+//   your Exhaust Pile. Deal 17 damage to ALL enemies.
+// Primal Force (Skill): Transform all Attacks in your Hand into Giant Rock.
+// Pyre (Power): Gain Energy at the start of each turn.
+// Stoke (Skill): Exhaust your Hand. Add 1 random card into your Hand for
+//   each card Exhausted.
+// Tank (Power): Take double damage from enemies. Allies take half damage
+//   from enemies. [multiplayer-only — likely N/A for single-player sim]
+// Unmovable (Power): The first time you gain Block from a card each turn,
+//   double the amount gained.
+// ============================================================================
