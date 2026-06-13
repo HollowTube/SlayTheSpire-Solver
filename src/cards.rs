@@ -588,28 +588,28 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             }],
             exhausts: false,
         }),
-        // Per HOL-16, TearAsunder costs 2 and deals 6 damage, hitting one
+        // Per the wiki, TearAsunder costs 2 and deals 5 damage, hitting one
         // extra time for every time the player has been damaged this combat.
         "TearAsunder" => Some(CardData {
             cost: 2,
             targeted: true,
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamageRepeated {
-                amount: 6,
+                amount: 5,
                 hits_base: 1,
                 hits_per_unit: 1,
                 hits_source: ScaleSource::DamageTakenThisCombat,
             }],
             exhausts: false,
         }),
-        // Per HOL-16, Spite costs 0 and deals 3 damage, hitting twice if the
+        // Per the wiki, Spite costs 0 and deals 5 damage, hitting twice if the
         // player has lost HP this turn.
         "Spite" => Some(CardData {
             cost: 0,
             targeted: true,
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamageRepeated {
-                amount: 3,
+                amount: 5,
                 hits_base: 1,
                 hits_per_unit: 1,
                 hits_source: ScaleSource::HpLostThisTurn,
@@ -630,14 +630,14 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             }],
             exhausts: false,
         }),
-        // Per HOL-16, MoltenFist costs 1, doubles the target's existing
-        // Vulnerable stacks, then deals 10 damage.
+        // Per the wiki, MoltenFist costs 1, doubles the target's existing
+        // Vulnerable stacks, deals 10 damage, and Exhausts.
         "MoltenFist" => Some(CardData {
             cost: 1,
             targeted: true,
             card_type: CardType::Attack,
             effects: vec![EffectOp::DoubleVulnerableOnTarget, EffectOp::DealDamage(10)],
-            exhausts: false,
+            exhausts: true,
         }),
         // Per HOL-16, Dominate costs 1, applies Vulnerable to the target,
         // then gains Strength equal to the target's resulting Vulnerable

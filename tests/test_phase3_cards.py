@@ -118,7 +118,7 @@ def test_conflagration_deals_8_plus_2_per_attack_played_this_turn_to_all_enemies
 
 
 def test_tear_asunder_hits_once_per_extra_time_player_was_damaged():
-    # Player hasn't been damaged yet -> 1 + 0 = 1 hit of 6 damage.
+    # Player hasn't been damaged yet -> 1 + 0 = 1 hit of 5 damage.
     state = make_state(hand=["TearAsunder"])
 
     awaiting_target = apply(state, "PlayCard:TearAsunder")
@@ -126,12 +126,12 @@ def test_tear_asunder_hits_once_per_extra_time_player_was_damaged():
 
     resolved = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    assert state.monsters[0].hp - resolved.monsters[0].hp == 6
+    assert state.monsters[0].hp - resolved.monsters[0].hp == 5
 
 
 def test_tear_asunder_hits_twice_after_player_was_damaged_once():
     # Monster attacks once during EndTurn -> player_times_damaged_this_combat
-    # becomes 1 -> TearAsunder hits 1 + 1 = 2 times for 6 each = 12.
+    # becomes 1 -> TearAsunder hits 1 + 1 = 2 times for 5 each = 10.
     state = make_state(hand=["TearAsunder", "Strike", "Strike"])
     after_monster_turn = apply(state, "EndTurn")
     assert after_monster_turn.player_hp < state.player_hp
@@ -141,7 +141,7 @@ def test_tear_asunder_hits_twice_after_player_was_damaged_once():
 
     resolved = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    assert after_monster_turn.monsters[0].hp - resolved.monsters[0].hp == 12
+    assert after_monster_turn.monsters[0].hp - resolved.monsters[0].hp == 10
 
 
 # ── Spite ────────────────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ def test_spite_hits_once_when_no_hp_lost_this_turn():
 
     resolved = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    assert state.monsters[0].hp - resolved.monsters[0].hp == 3
+    assert state.monsters[0].hp - resolved.monsters[0].hp == 5
 
 
 def test_spite_hits_twice_when_hp_lost_this_turn():
@@ -168,7 +168,7 @@ def test_spite_hits_twice_when_hp_lost_this_turn():
 
     resolved = apply(awaiting_target, "SelectTarget:Monster:0")
 
-    assert after_monster_turn.monsters[0].hp - resolved.monsters[0].hp == 6
+    assert after_monster_turn.monsters[0].hp - resolved.monsters[0].hp == 10
 
 
 # ── Dismantle ────────────────────────────────────────────────────────────────
@@ -226,6 +226,8 @@ def test_molten_fist_doubles_targets_vulnerable_then_deals_10_damage():
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 15
     assert resolved.monsters[0].statuses.count("Vulnerable") == 4
+    # MoltenFist Exhausts after being played.
+    assert "MoltenFist" in resolved.exhaust_pile
 
 
 # ── Dominate ─────────────────────────────────────────────────────────────────

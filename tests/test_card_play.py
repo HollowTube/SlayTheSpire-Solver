@@ -192,13 +192,13 @@ def test_thunderclap_deals_damage_and_applies_vulnerable_without_selecting_a_tar
 
 def test_rage_grants_block_when_an_attack_is_played_afterward():
     # Playing Rage (a Skill) installs the Rage status. Each subsequent
-    # Attack played should grant 2 Block to the player.
+    # Attack played should grant 3 Block to the player.
     state = make_state(hand=["Rage", "Strike"])
     after_rage = apply(state, "PlayCard:Rage")
     assert "Rage" in after_rage.player_statuses
 
     after_strike = apply(apply(after_rage, "PlayCard:Strike"), "SelectTarget:Monster:0")
-    assert after_strike.player_block == 2
+    assert after_strike.player_block == 3
 
 
 def test_rage_does_not_grant_block_for_skills():

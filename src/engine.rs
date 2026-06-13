@@ -210,7 +210,7 @@ impl Status {
                 vec![EffectOp::ApplyStatusToSelf(Status::Strength(*n))]
             }
             (Status::Rage, GameEvent::AttackPlayed) => {
-                vec![EffectOp::GainBlock(2)]
+                vec![EffectOp::GainBlock(3)]
             }
             (Status::DemonForm, GameEvent::TurnStart) => {
                 vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))]
