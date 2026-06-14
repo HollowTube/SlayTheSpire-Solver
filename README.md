@@ -143,6 +143,30 @@ Action strings come directly from `legal_actions` (e.g. `PlayCard:Strike`, `Sele
 
 Block absorbs damage before HP and resets at the start of each combatant's own turn. Energy refreshes to 3 at the start of each player turn. The player draws 5 cards per turn; played cards go to the discard pile and reshuffle when the draw pile runs dry.
 
+## Bridge mod — live overlay in Slay the Spire 2
+
+`bridge_mod/` is a C# mod for Slay the Spire 2 that pushes the live combat state to the
+`sts_sim` analysis server (see `python/sts_sim/server.py`) and shows the MCTS-suggested
+move values — and an estimated HP loss for each — in an in-game overlay.
+
+To build and install it (or pick up changes after editing `bridge_mod/Code/*.cs`):
+
+```bash
+cd bridge_mod
+dotnet build sts_sim_bridge_mod.csproj
+```
+
+Then copy the build output into the game's `mods/stssimbridgemod/` directory, e.g.:
+
+```bash
+cp bin/Debug/net9.0/stssimbridgemod.dll bin/Debug/net9.0/stssimbridgemod.pdb \
+  "<Slay the Spire 2 install dir>/mods/stssimbridgemod/"
+```
+
+**The game must be closed while copying** — `stssimbridgemod.dll` is locked while the
+mod is loaded, so overwriting it while the game is running fails with a permissions
+error. Close the game, copy the new build, then relaunch.
+
 ## Python API
 
 The engine is also usable directly from Python:
