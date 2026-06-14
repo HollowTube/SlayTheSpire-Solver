@@ -28,6 +28,16 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         "Inklet" => Some("Jab".to_string()),
         // Vantom always opens with Ink Blot.
         "Vantom" => Some("Ink Blot".to_string()),
+        // Snapping Jaxfruit: single move "Energy Orb" forever.
+        "Snapping Jaxfruit" => Some("Energy Orb".to_string()),
+        // Axe Ruby Raider: 3-move fixed cycle, opens with Swing 1.
+        "Axe Ruby Raider" => Some("Swing 1".to_string()),
+        // Assassin Ruby Raider: single move "Killshot" forever.
+        "Assassin Ruby Raider" => Some("Killshot".to_string()),
+        // Brute Ruby Raider: 2-move fixed cycle, opens with Beat.
+        "Brute Ruby Raider" => Some("Beat".to_string()),
+        // Crossbow Ruby Raider: 2-move fixed cycle, opens with Reload.
+        "Crossbow Ruby Raider" => Some("Reload".to_string()),
         _ => None,
     }
 }
@@ -133,6 +143,32 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
             EffectOp::ApplyCardToTarget("Wound".to_string()),
         ]),
         ("Vantom", "Prepare") => Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))]),
+        // Snapping Jaxfruit: Energy Orb — deal 3 damage, gain 2 Strength.
+        ("Snapping Jaxfruit", "Energy Orb") => Some(vec![
+            EffectOp::DealDamage(3),
+            EffectOp::ApplyStatusToSelf(Status::Strength(2)),
+        ]),
+        // Axe Ruby Raider: Swing 1 (5 damage + 5 block), Swing 2 (5 damage + 5
+        // block), Big Swing (12 damage, no block).
+        ("Axe Ruby Raider", "Swing 1") => Some(vec![
+            EffectOp::DealDamage(5),
+            EffectOp::GainBlock(5),
+        ]),
+        ("Axe Ruby Raider", "Swing 2") => Some(vec![
+            EffectOp::DealDamage(5),
+            EffectOp::GainBlock(5),
+        ]),
+        ("Axe Ruby Raider", "Big Swing") => Some(vec![EffectOp::DealDamage(12)]),
+        // Assassin Ruby Raider: Killshot — deal 11 damage.
+        ("Assassin Ruby Raider", "Killshot") => Some(vec![EffectOp::DealDamage(11)]),
+        // Brute Ruby Raider: Beat (7 damage), Roar (gain 3 Strength).
+        ("Brute Ruby Raider", "Beat") => Some(vec![EffectOp::DealDamage(7)]),
+        ("Brute Ruby Raider", "Roar") => {
+            Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(3))])
+        }
+        // Crossbow Ruby Raider: Reload (gain 3 block), Fire (14 damage).
+        ("Crossbow Ruby Raider", "Reload") => Some(vec![EffectOp::GainBlock(3)]),
+        ("Crossbow Ruby Raider", "Fire") => Some(vec![EffectOp::DealDamage(14)]),
         _ => None,
     }
 }
@@ -268,6 +304,26 @@ pub(crate) fn select_next_intent(
             Some("Inky Lance") => Some("Dismember".to_string()),
             Some("Dismember") => Some("Prepare".to_string()),
             _ => Some("Ink Blot".to_string()),
+        },
+        // Snapping Jaxfruit: single move "Energy Orb" forever.
+        "Snapping Jaxfruit" => Some("Energy Orb".to_string()),
+        // Axe Ruby Raider: 3-move fixed cycle.
+        "Axe Ruby Raider" => match last_move.as_deref() {
+            Some("Swing 1") => Some("Swing 2".to_string()),
+            Some("Swing 2") => Some("Big Swing".to_string()),
+            _ => Some("Swing 1".to_string()),
+        },
+        // Assassin Ruby Raider: single move "Killshot" forever.
+        "Assassin Ruby Raider" => Some("Killshot".to_string()),
+        // Brute Ruby Raider: 2-move fixed cycle.
+        "Brute Ruby Raider" => match last_move.as_deref() {
+            Some("Beat") => Some("Roar".to_string()),
+            _ => Some("Beat".to_string()),
+        },
+        // Crossbow Ruby Raider: Reload <-> Fire alternating, opens with Reload.
+        "Crossbow Ruby Raider" => match last_move.as_deref() {
+            Some("Reload") => Some("Fire".to_string()),
+            _ => Some("Reload".to_string()),
         },
         _ => None,
     }
