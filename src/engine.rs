@@ -14,7 +14,7 @@ pub(crate) enum GameEvent {
     // Fires whenever an `EffectOp::LoseHp` reduces a combatant's HP (e.g.
     // Inferno's own turn-start self-damage, or other self-damage cards).
     HpLost,
-    // Fires whenever a card with the Exhaust keyword (`exhausts: true`) is
+    // Fires whenever a card with the Exhaust keyword (`CardKeyword::Exhaust`) is
     // moved to the exhaust pile, or an `ExhaustRandomFromHand`/
     // `ExhaustAllFromHand` op exhausts a card from hand. Does NOT fire for
     // Power/Status cards leaving play — those aren't "Exhausted" in the
