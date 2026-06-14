@@ -27,6 +27,13 @@ public static class AnalysisClient
     // otherwise one caller could read the other's response.
     private static readonly SemaphoreSlim _lock = new(1, 1);
 
+    // A request that never gets a response (server hung/crashed mid-reply)
+    // would otherwise hold _lock forever, silently wedging every future
+    // push (HookPatches' _requestInFlight guard never resets, and the
+    // overlay stops updating). Cancelling after this long drops the
+    // connection so the next push reconnects and tries again.
+    private static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(10);
+
     /// Sends one line-delimited JSON request and returns the response line,
     /// or null if the server is unreachable. Safe to call from a background
     /// thread (does its own socket I/O); concurrent calls are serialized.
@@ -44,7 +51,8 @@ public static class AnalysisClient
             await stream.WriteAsync(requestBytes);
 
             using var reader = new StreamReader(stream, Encoding.UTF8, leaveOpen: true);
-            var responseLine = await reader.ReadLineAsync();
+            using var cts = new CancellationTokenSource(ResponseTimeout);
+            var responseLine = await reader.ReadLineAsync(cts.Token);
             _loggedConnectFailure = false;
             return responseLine;
         }
