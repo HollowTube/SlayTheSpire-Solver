@@ -62,7 +62,7 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
         "Bash" => Some(CardData {
             cost: 2,
             targeted: true,
-            card_type: CardType::Skill,
+            card_type: CardType::Attack,
             effects: vec![
                 EffectOp::DealDamage(8),
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
@@ -93,7 +93,7 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
         // 3 hits of 3 damage each to a random enemy (always the same target
         // in single-enemy fights). Targeted so SelectTarget resolves first.
         "Sword Boomerang" => Some(CardData {
-            cost: 2,
+            cost: 1,
             targeted: true,
             card_type: CardType::Attack,
             effects: vec![
@@ -236,11 +236,11 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             ethereal: false,
             unplayable: false,
         }),
-        // Per the wiki, Colossus costs 3, gains 5 Block, and installs the
-        // Colossus status for this turn only: incoming damage from attackers
-        // with Vulnerable is halved.
+        // Colossus costs 1, gains 5 Block, and installs the Colossus status
+        // for this turn only: incoming damage from attackers with
+        // Vulnerable is halved.
         "Colossus" => Some(CardData {
-            cost: 3,
+            cost: 1,
             targeted: false,
             card_type: CardType::Skill,
             effects: vec![
