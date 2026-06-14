@@ -20,7 +20,7 @@ def make_state(hand=("Strike",), seed=42, player_energy=3, **kwargs):
 
 
 def test_dark_embrace_draws_a_card_when_a_card_is_exhausted():
-    # Impervious has the Exhaust keyword (exhausts: true). Playing it while
+    # Impervious has the Exhaust keyword. Playing it while
     # Dark Embrace is active should draw 1 extra card -> hand size unchanged
     # (-1 for playing Impervious, +1 from Dark Embrace's draw).
     state = make_state(

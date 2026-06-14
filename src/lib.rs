@@ -4,7 +4,7 @@ mod mcts;
 mod monsters;
 mod state;
 
-use cards::{card_data, CardData, CardType};
+use cards::{card_data, CardData, CardKeyword, CardType};
 use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
 use mcts::{
     fight_outcomes_per_fight, hp_lost_per_fight, mcts_action_values, mcts_search,
@@ -47,7 +47,8 @@ fn legal_actions(state: &CombatState) -> Vec<String> {
                 .filter(|name| {
                     card_data(name)
                         .map(|data| {
-                            !data.unplayable && effective_cost(state, &data) <= state.player_energy
+                            !data.keywords.contains(&CardKeyword::Unplayable)
+                                && effective_cost(state, &data) <= state.player_energy
                         })
                         .unwrap_or(false)
                 })
@@ -80,7 +81,9 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             // Ethereal cards exhaust instead of being discarded.
             let (ethereal, rest): (Vec<String>, Vec<String>) =
                 next.hand.drain(..).partition(|name| {
-                    card_data(name).map(|data| data.ethereal).unwrap_or(false)
+                    card_data(name)
+                        .map(|data| data.keywords.contains(&CardKeyword::Ethereal))
+                        .unwrap_or(false)
                 });
             next.exhaust_pile.extend(ethereal);
             next.discard_pile.extend(rest);
@@ -214,14 +217,15 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                 // of discard, just like the Exhaust keyword.
                 let corruption_exhausts_skill =
                     matches!(data.card_type, CardType::Skill) && next.player.statuses.contains(&Status::Corruption);
-                if matches!(data.card_type, CardType::Power | CardType::Status) || data.exhausts || corruption_exhausts_skill {
+                let data_exhausts = data.keywords.contains(&CardKeyword::Exhaust);
+                if matches!(data.card_type, CardType::Power | CardType::Status) || data_exhausts || corruption_exhausts_skill {
                     next.exhaust_pile.push(played);
                     // Power/Status cards leave play permanently but aren't
                     // "Exhausted" in the keyword sense (e.g. playing
                     // DarkEmbrace itself doesn't trigger DarkEmbrace) — only
                     // cards with the Exhaust keyword (or Corruption's
                     // Skill-exhaust) fire CardExhausted.
-                    if data.exhausts || corruption_exhausts_skill {
+                    if data_exhausts || corruption_exhausts_skill {
                         fire_event(&mut next, GameEvent::CardExhausted);
                     }
                 } else {
