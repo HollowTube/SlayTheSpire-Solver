@@ -15,12 +15,22 @@ Response:
      "expected_hp_lost": float, "action_hp_lost": {action: float}}
 
 `state_value`/`values` are `evaluate`'s `player_fraction - monsters_fraction`
-(see `src/lib.rs`), roughly -1..1. `expected_hp_lost`/`action_hp_lost` convert
-that into an absolute HP figure for display: the player's fraction-remaining
-is approximated as `clamp(value, 0, 1)` (a winning value ~= player_fraction
-since monsters_fraction ~= 0; a non-positive value is treated as "dead, 0 HP
-remaining"), then `expected_hp_lost = player_hp - remaining_fraction *
-player_max_hp`.
+(see `src/lib.rs`), roughly -1..1. `action_hp_lost` converts each action's
+value into an absolute HP figure the same way: the player's
+fraction-remaining is approximated as `clamp(value, 0, 1)` (a winning value
+~= player_fraction since monsters_fraction ~= 0; a non-positive value is
+treated as "dead, 0 HP remaining"), then `hp_lost = player_hp -
+remaining_fraction * player_max_hp`. This is a quick per-action ranking
+signal, not a calibrated HP estimate — `action_values` averages over MCTS
+rollouts whose tails play uniformly at random, which inflates the figure well
+above what skilled play would actually lose.
+
+`expected_hp_lost` (the top-line, "if I keep playing this out" number) is
+instead `simulate_hp_lost` averaged over a few seeds: it plays the fight to
+completion choosing each move via `mcts_search` against the true state
+(non-clairvoyant - it never sees future draws), then reports the player's
+actual HP lost. That mirrors a chess engine's principal-variation eval rather
+than a single rollout-poisoned position value.
 
 `build_state` is a pure function from the JSON `state` dict to a
 `CombatState`, reusing the snapshot-reconstruction constructor parameters
@@ -33,10 +43,16 @@ import argparse
 import json
 import socketserver
 
-from . import CombatState, Monster, evaluate, legal_actions
+from . import CombatState, Monster, evaluate, legal_actions, simulate_hp_lost
 from . import mcts as _mcts
 
 DEFAULT_PORT = 8765
+
+# Number of independent simulate_hp_lost playouts averaged into the top-line
+# expected_hp_lost. Each playout re-runs MCTS search at every decision until
+# the fight ends, so this multiplies the request's cost roughly
+# `playouts * (decisions per fight)`-fold over a single analyze call.
+DEFAULT_PLAYOUTS = 3
 
 
 def _statuses(entries):
@@ -89,6 +105,19 @@ def _expected_hp_lost(value, state):
     return max(state.player_hp - expected_final_hp, 0.0)
 
 
+def _simulated_expected_hp_lost(state, iterations, seed, playouts):
+    """Average `simulate_hp_lost` over `playouts` seeds derived from `seed`:
+    each playout plays the fight to completion picking every move via
+    `mcts_search` against the true state (non-clairvoyant), then reports the
+    player's actual HP lost. See the module docstring for why this — rather
+    than `_expected_hp_lost` over `state_value` — is the top-line figure."""
+    losses = [
+        simulate_hp_lost(state, iterations=iterations, seed=seed + i)
+        for i in range(playouts)
+    ]
+    return sum(losses) / len(losses)
+
+
 def handle_request(payload):
     """Dispatch one decoded request to its handler and return a dict to be
     JSON-encoded as the response. `cmd` is dispatched explicitly so future
@@ -97,6 +126,8 @@ def handle_request(payload):
     if cmd == "analyze":
         state = build_state(payload)
         iterations = payload.get("iterations", _mcts.DEFAULT_ITERATIONS)
+        seed = payload.get("seed", 0)
+        playouts = payload.get("playouts", DEFAULT_PLAYOUTS)
         actions = legal_actions(state)
         values = _mcts.action_values(state, iterations=iterations)
         state_value = max(values.values()) if values else evaluate(state)
@@ -104,7 +135,9 @@ def handle_request(payload):
             "legal_actions": actions,
             "values": values,
             "state_value": state_value,
-            "expected_hp_lost": _expected_hp_lost(state_value, state),
+            "expected_hp_lost": _simulated_expected_hp_lost(
+                state, iterations, seed, playouts
+            ),
             "action_hp_lost": {
                 action: _expected_hp_lost(value, state)
                 for action, value in values.items()
