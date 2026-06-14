@@ -1,5 +1,5 @@
 use crate::cards::{card_data, CardType};
-use crate::state::{draw_cards, CombatState};
+use crate::state::{draw_cards, CardInstance, CombatState};
 use rand::Rng;
 
 /// Game events that statuses can react to via `Status::reactions`. These are
@@ -530,7 +530,7 @@ impl ScaleSource {
             ScaleSource::HandSize => state.hand.len() as i32,
             ScaleSource::CurrentBlock => state.fighter(actor).block,
             ScaleSource::StrikeCardsInDeck => {
-                let count_strikes = |pile: &[String]| pile.iter().filter(|c| c.contains("Strike")).count();
+                let count_strikes = |pile: &[CardInstance]| pile.iter().filter(|c| c.name.contains("Strike")).count();
                 (count_strikes(&state.hand)
                     + count_strikes(&state.draw_pile)
                     + count_strikes(&state.discard_pile)
@@ -737,7 +737,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
             EffectOp::ApplyCardToTarget(card_name) => {
                 for &target in targets {
                     if target == Actor::Player {
-                        state.discard_pile.push(card_name.clone());
+                        state.discard_pile.push(CardInstance::new(card_name.clone()));
                     }
                 }
             }
@@ -746,7 +746,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                     .hand
                     .iter()
                     .enumerate()
-                    .filter(|(_, name)| filter.matches(name))
+                    .filter(|(_, card)| filter.matches(&card.name))
                     .map(|(i, _)| i)
                     .collect();
                 if !candidates.is_empty() {
@@ -760,8 +760,8 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 filter,
                 gain_block_per_card,
             } => {
-                let (matching, remaining): (Vec<String>, Vec<String>) =
-                    state.hand.drain(..).partition(|name| filter.matches(name));
+                let (matching, remaining): (Vec<CardInstance>, Vec<CardInstance>) =
+                    state.hand.drain(..).partition(|card| filter.matches(&card.name));
                 let count = matching.len() as i32;
                 state.hand = remaining;
                 state.exhaust_pile.extend(matching);
@@ -783,7 +783,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                     .discard_pile
                     .iter()
                     .enumerate()
-                    .filter(|(_, name)| filter.matches(name))
+                    .filter(|(_, card)| filter.matches(&card.name))
                     .map(|(i, _)| i)
                     .collect();
                 if !candidates.is_empty() {
@@ -818,7 +818,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
             EffectOp::AddRandomCardToHand(pool) => {
                 if !pool.is_empty() {
                     let pick = state.rng.gen_range(0..pool.len());
-                    state.hand.push(pool[pick].clone());
+                    state.hand.push(CardInstance::new(pool[pick].clone()));
                 }
             }
             EffectOp::DoubleVulnerableOnTarget => {

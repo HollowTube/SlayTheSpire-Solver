@@ -15,7 +15,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rand::{Rng, RngCore};
 use std::collections::HashMap;
-use state::{draw_cards, CombatState, Fighter, Monster, PendingDecision, HAND_SIZE};
+use state::{draw_cards, CardInstance, CombatState, Fighter, Monster, PendingDecision, HAND_SIZE};
 
 /// The Energy cost to play `data`, accounting for Corruption (Skills cost 0
 /// while the player holds it).
@@ -44,15 +44,15 @@ fn legal_actions(state: &CombatState) -> Vec<String> {
                 // Mirrors Slay the Spire greying out cards you can't afford —
                 // unaffordable cards are never legal plays, so the engine
                 // never has to model (or reject) going into negative energy.
-                .filter(|name| {
-                    card_data(name)
+                .filter(|card| {
+                    card_data(&card.name)
                         .map(|data| {
                             !data.keywords.contains(&CardKeyword::Unplayable)
                                 && effective_cost(state, &data) <= state.player_energy
                         })
                         .unwrap_or(false)
                 })
-                .map(|name| format!("PlayCard:{name}"))
+                .map(|card| format!("PlayCard:{}", card.as_str()))
                 .collect();
             actions.push("EndTurn".to_string());
             actions
@@ -79,9 +79,9 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             // The remaining hand is discarded before the monsters' turn
             // resolves — mirrors Slay the Spire's end-of-turn cleanup.
             // Ethereal cards exhaust instead of being discarded.
-            let (ethereal, rest): (Vec<String>, Vec<String>) =
-                next.hand.drain(..).partition(|name| {
-                    card_data(name)
+            let (ethereal, rest): (Vec<CardInstance>, Vec<CardInstance>) =
+                next.hand.drain(..).partition(|card| {
+                    card_data(&card.name)
                         .map(|data| data.keywords.contains(&CardKeyword::Ethereal))
                         .unwrap_or(false)
                 });
@@ -172,7 +172,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     return Err(PyValueError::new_err(format!("unknown action: {other}")));
                 }
                 let mut next = state.clone();
-                let data = card_data(card).expect("pending card is always known");
+                let data = card_data(&card.name).expect("pending card is always known");
                 run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)]);
                 match data.card_type {
                     CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
@@ -197,13 +197,14 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
         },
         other => match other.strip_prefix("PlayCard:") {
             Some(card_name) => {
-                let data = card_data(card_name)
-                    .ok_or_else(|| PyValueError::new_err(format!("unknown card: {card_name}")))?;
+                let instance = CardInstance::parse(card_name);
+                let data = card_data(&instance.name)
+                    .ok_or_else(|| PyValueError::new_err(format!("unknown card: {}", instance.name)))?;
                 let mut next = state.clone();
                 let position = next
                     .hand
                     .iter()
-                    .position(|c| c == card_name)
+                    .position(|c| c.as_str() == card_name)
                     .ok_or_else(|| PyValueError::new_err(format!("{card_name} is not in hand")))?;
                 let cost = effective_cost(&next, &data);
                 if cost > next.player_energy {
@@ -241,9 +242,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     }
                 }
                 if data.targeted {
-                    next.pending = Some(PendingDecision::SelectTarget {
-                        card: card_name.to_string(),
-                    });
+                    next.pending = Some(PendingDecision::SelectTarget { card: instance });
                 } else {
                     // Non-targeted attacks (e.g. Thunderclap) hit every
                     // living enemy; non-targeted skills (Defend, Inflame,
@@ -374,10 +373,10 @@ struct StateKey {
     player_energy: i32,
     monsters: Vec<Monster>,
     turn: u32,
-    hand: Vec<String>,
-    draw_pile: Vec<String>,
-    discard_pile: Vec<String>,
-    exhaust_pile: Vec<String>,
+    hand: Vec<CardInstance>,
+    draw_pile: Vec<CardInstance>,
+    discard_pile: Vec<CardInstance>,
+    exhaust_pile: Vec<CardInstance>,
     attacks_played_this_turn: i32,
     pending: Option<PendingDecision>,
     rng_fingerprint: [u32; 4],
