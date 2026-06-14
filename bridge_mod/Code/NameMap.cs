@@ -31,9 +31,8 @@ public static class NameMap
 
     /// STS2 Creature.ModelId.Entry -> sts_sim monster name. Only monsters
     /// sts_sim's monsters.rs currently models are listed; everything else
-    /// falls back to the generic placeholder (name=null, attack from intent).
-    /// TwigSlimeS/TwigSlimeM/LeafSlimeS/LeafSlimeM match sts_sim names too,
-    /// but aren't modeled in monsters.rs yet - add them here once they are.
+    /// falls back to the generic placeholder (name=null, attack from intent,
+    /// repeated every turn forever - see src/lib.rs's None-name handling).
     public static readonly Dictionary<string, string> MonsterNameMap = new()
     {
         ["NIBBIT"] = "Nibbit",
@@ -42,6 +41,10 @@ public static class NameMap
         // permanent) is applied by sts_sim's own move-resolution when it
         // simulates the Shrink move - no status translation needed here.
         ["SHRINKER_BEETLE"] = "Shrinker Beetle",
+        ["LEAF_SLIME_S"] = "Leaf Slime (S)",
+        ["LEAF_SLIME_M"] = "Leaf Slime (M)",
+        ["TWIG_SLIME_S"] = "Twig Slime (S)",
+        ["TWIG_SLIME_M"] = "Twig Slime (M)",
     };
 
     /// STS2 PowerModel.Id.Entry -> sts_sim status name. Only the statuses
