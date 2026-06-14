@@ -167,6 +167,21 @@ cp bin/Debug/net9.0/stssimbridgemod.dll bin/Debug/net9.0/stssimbridgemod.pdb \
 mod is loaded, so overwriting it while the game is running fails with a permissions
 error. Close the game, copy the new build, then relaunch.
 
+### Closing and relaunching the game (WSL)
+
+From WSL, the game runs as `SlayTheSpire2.exe` on the Windows side and can be
+controlled with the Windows interop binaries under `/mnt/c/Windows/system32/`:
+
+```bash
+# Close it gracefully (sends WM_CLOSE, lets the game save/quit normally)
+taskkill.exe /IM SlayTheSpire2.exe
+
+# Force-kill if it's unresponsive
+taskkill.exe /IM SlayTheSpire2.exe /F
+```
+
+Relaunch it via Steam with the `launch_game` MCP tool (or `steam://rungameid/2868840`).
+
 ## Python API
 
 The engine is also usable directly from Python:
