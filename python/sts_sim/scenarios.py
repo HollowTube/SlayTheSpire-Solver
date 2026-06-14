@@ -62,6 +62,7 @@ class CardName(str, Enum):
     SWORD_BOOMERANG = "Sword Boomerang"
     TAUNT = "Taunt"
     TEAR_ASUNDER = "TearAsunder"
+    WOUND = "Wound"
     THRASH = "Thrash"
     THUNDERCLAP = "Thunderclap"
     TREMBLE = "Tremble"
@@ -89,6 +90,7 @@ class MonsterName(str, Enum):
     TWIG_SLIME_M = "Twig Slime (M)"
     BYRDONIS = "Byrdonis"
     INKLET = "Inklet"
+    VANTOM = "Vantom"
 
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
@@ -144,6 +146,10 @@ BYRDONIS_STARTING_HP = 84
 
 # Inklet HP: 11-17 normal. 15 used as canonical value.
 INKLET_STARTING_HP = 15
+
+# Vantom (Overgrowth boss) HP: 173 normal, 183 at Ascension 8. 173 used as the
+# canonical value, per the existing "pick one documented number" convention.
+VANTOM_STARTING_HP = 173
 
 
 def ironclad_starter_deck_vs_gremlin_nob(seed, deck=None):
@@ -367,6 +373,25 @@ def ironclad_starter_deck_vs_byrdonis(seed, deck=None):
         player_energy=3,
         monsters=[
             Monster(hp=BYRDONIS_STARTING_HP, attack=0, name=MonsterName.BYRDONIS)
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_vantom(seed, deck=None):
+    """Ironclad's starting loadout against Vantom (Overgrowth boss): a fixed
+    4-move cycle (Ink Blot -> Inky Lance -> Dismember -> Prepare -> repeat),
+    starting with 9 stacks of Slippery."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=VANTOM_STARTING_HP,
+                name=MonsterName.VANTOM,
+                statuses=[("Slippery", 9)],
+            ),
         ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
