@@ -8,7 +8,7 @@ import threading
 
 from sts_sim import legal_actions
 from sts_sim.scenarios import ironclad_starter_deck_vs_jaw_worm
-from sts_sim.server import make_server
+from sts_sim.server import handle_request, make_server
 
 
 def _send(server, payload):
@@ -19,6 +19,46 @@ def _send(server, payload):
         while not response.endswith(b"\n"):
             response += sock.recv(4096)
     return json.loads(response.decode("utf-8"))
+
+
+def test_expected_hp_lost_reflects_played_out_fight_not_rollout_poisoned_value():
+    """`expected_hp_lost` should track `simulate_hp_lost` (play the fight to
+    completion via MCTS search at every decision), not `max(values)` converted
+    through `_expected_hp_lost` — the latter is inflated by uniformly-random
+    rollout tails and overstates HP loss for an easily-won fight."""
+    state = ironclad_starter_deck_vs_jaw_worm(seed=42)
+    payload = {
+        "cmd": "analyze",
+        "iterations": 50,
+        "seed": 1,
+        "playouts": 2,
+        "state": {
+            "player": {"hp": state.player_hp, "energy": state.player_energy},
+            "hand": state.hand,
+            "draw_pile": state.draw_pile,
+            "discard_pile": state.discard_pile,
+            "exhaust_pile": state.exhaust_pile,
+            "turn": state.turn,
+            "monsters": [
+                {
+                    "name": m.name,
+                    "hp": m.hp,
+                    "max_hp": m.max_hp,
+                    "intent": m.intent,
+                }
+                for m in state.monsters
+            ],
+        },
+    }
+
+    response = handle_request(payload)
+
+    rollout_estimate = max(
+        0.0,
+        state.player_hp
+        - max(0.0, min(response["state_value"], 1.0)) * state.player_max_hp,
+    )
+    assert response["expected_hp_lost"] < rollout_estimate
 
 
 def test_analyze_opening_state_returns_values_for_every_legal_action():
