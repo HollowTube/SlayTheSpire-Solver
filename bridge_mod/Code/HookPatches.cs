@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
@@ -23,11 +24,63 @@ public static class HookPatches
     // previous push's response has logged.
     private static volatile bool _requestInFlight;
 
+    // The player's HP at the start of the current fight (round 1), used to
+    // derive `actualHpLostSoFar` for the overlay's actual-vs-expected
+    // tracking. -1 means "not yet recorded" (first push of this fight).
+    private static double _fightStartHp = -1;
+
     [HarmonyPatch("AfterPlayerTurnStart")]
     [HarmonyPostfix]
     public static void AfterPlayerTurnStart(CombatState combatState, PlayerChoiceContext choiceContext, Player player)
     {
+        if (combatState.RoundNumber == 1)
+        {
+            _fightStartHp = player.Creature.CurrentHp;
+            Overlay.ResetFightBaseline();
+            PushDeckBaseline(combatState, player);
+        }
         PushAnalysis(combatState, player);
+    }
+
+    // Fetches this fight's "deck vs. monster, before any cards are drawn"
+    // baseline once, in the background, and hands it to the overlay when it
+    // resolves. No-op if this fight isn't a single-monster encounter
+    // StateBuilder.BuildDeckBaselineRequest covers.
+    private static void PushDeckBaseline(CombatState combatState, Player player)
+    {
+        string? requestJson;
+        try
+        {
+            requestJson = StateBuilder.BuildDeckBaselineRequest(combatState, player);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"[sts_sim_bridge_mod] Failed to build deck_baseline request: {ex.Message}");
+            return;
+        }
+
+        if (requestJson == null)
+            return;
+
+        _ = Task.Run(async () =>
+        {
+            var response = await AnalysisClient.SendAnalyzeRequestAsync(requestJson);
+            if (response == null)
+                return;
+
+            Log.Warn($"[sts_sim_bridge_mod] deck_baseline response: {response}");
+            try
+            {
+                var root = JsonNode.Parse(response) as JsonObject;
+                var meanHpLost = root?["mean_hp_lost"]?.GetValue<double>();
+                if (meanHpLost.HasValue)
+                    Overlay.SetDeckBaseline(meanHpLost.Value);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"[sts_sim_bridge_mod] Failed to parse deck_baseline response: {ex.Message}");
+            }
+        });
     }
 
     [HarmonyPatch("AfterCardPlayed")]
@@ -57,6 +110,17 @@ public static class HookPatches
             return;
         }
 
+        // Best-effort fallback if the round-1 AfterPlayerTurnStart push was
+        // missed (e.g. mod loaded mid-fight): treat the first push we see as
+        // the fight's starting HP.
+        if (_fightStartHp < 0)
+            _fightStartHp = player.Creature.CurrentHp;
+        var actualHpLostSoFar = _fightStartHp - player.Creature.CurrentHp;
+
+        var (unknownMonsters, unknownCards) = StateBuilder.FindUnsupported(combatState, player);
+        Overlay.SetWarnings(unknownMonsters, unknownCards);
+
+        Overlay.SetCalculating(true);
         _ = Task.Run(async () =>
         {
             try
@@ -65,11 +129,12 @@ public static class HookPatches
                 if (response != null)
                 {
                     Log.Warn($"[sts_sim_bridge_mod] analyze response: {response}");
-                    Overlay.UpdateValues(response);
+                    Overlay.UpdateValues(response, actualHpLostSoFar, player.Creature.CurrentHp, player.Creature.MaxHp);
                 }
             }
             finally
             {
+                Overlay.SetCalculating(false);
                 _requestInFlight = false;
             }
         });

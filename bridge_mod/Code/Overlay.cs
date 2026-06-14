@@ -10,7 +10,7 @@ namespace sts_sim_bridge_mod;
 /// A small always-on-top panel showing the latest sts_sim "analyze" response
 /// (state_value plus per-action values), refreshed from
 /// <see cref="HookPatches"/>'s analyze pushes. Created lazily on first update
-/// and anchored to the bottom-right of the screen.
+/// and anchored to the top-left of the screen.
 /// </summary>
 public static class Overlay
 {
@@ -21,10 +21,97 @@ public static class Overlay
     private static PanelContainer? _panel;
     private static VBoxContainer? _list;
 
+    // A "deck vs. monster, before any cards are drawn" baseline for the
+    // current fight: the mean HP lost over many fresh-shuffle MCTS playouts
+    // of the player's master deck against this fight's monster, fetched once
+    // via a "deck_baseline" request (see HookPatches.PushDeckBaseline). Null
+    // until that request resolves, or for fights deck_baseline doesn't cover
+    // (multi-monster rooms, unmapped monsters).
+    private static double? _deckBaselineHpLost;
+
+    // Shown while an analyze request is in flight, appended below the
+    // last-rendered rows so the panel keeps showing the previous values
+    // (rather than going blank) until the fresh response arrives.
+    private static Label? _statusLabel;
+
+    /// Shows or hides a "calculating..." indicator below the current rows.
+    /// Safe to call from a background thread. Called from
+    /// <see cref="HookPatches"/> around each analyze request so the panel
+    /// gives feedback while sts_sim is thinking, without discarding the
+    /// last-known values.
+    public static void SetCalculating(bool calculating)
+    {
+        Callable.From(() =>
+        {
+            EnsureCreated();
+            if (_list == null)
+                return;
+
+            if (calculating)
+            {
+                if (_statusLabel == null)
+                {
+                    _statusLabel = new Label { Text = "sts_sim  calculating..." };
+                    _statusLabel.AddThemeColorOverride("font_color", ExplorerDimColor);
+                    _list.AddChild(_statusLabel);
+                }
+            }
+            else if (_statusLabel != null)
+            {
+                _list.RemoveChild(_statusLabel);
+                _statusLabel.QueueFree();
+                _statusLabel = null;
+            }
+        }).CallDeferred();
+    }
+
+    /// Called when a new fight starts (round 1) to clear the previous
+    /// fight's deck-vs-monster baseline until <see cref="SetDeckBaseline"/>
+    /// reports this fight's.
+    public static void ResetFightBaseline()
+    {
+        _deckBaselineHpLost = null;
+    }
+
+    // Raw STS2 ids of monsters/cards in the current fight that NameMap
+    // doesn't recognize (see StateBuilder.FindUnsupported). Non-empty means
+    // this fight's numbers are unreliable - an unmapped monster falls back
+    // to a generic placeholder, and unmapped cards are silently dropped from
+    // the translated piles.
+    private static System.Collections.Generic.List<string> _unknownMonsters = new();
+    private static System.Collections.Generic.List<string> _unknownCards = new();
+
+    /// Records this analyze push's unsupported monster/card ids (see
+    /// StateBuilder.FindUnsupported), shown as warning rows in Render.
+    public static void SetWarnings(System.Collections.Generic.List<string> unknownMonsters, System.Collections.Generic.List<string> unknownCards)
+    {
+        _unknownMonsters = unknownMonsters;
+        _unknownCards = unknownCards;
+    }
+
+    /// Records this fight's "deck vs. monster, before any cards are drawn"
+    /// baseline (the `mean_hp_lost` from a "deck_baseline" response). Safe to
+    /// call from a background thread; re-renders immediately with the
+    /// now-known baseline if an "analyze" response has already been rendered
+    /// for this fight.
+    public static void SetDeckBaseline(double meanHpLost)
+    {
+        _deckBaselineHpLost = meanHpLost;
+        if (_lastRender != null)
+        {
+            var (stateHpLost, actualHpLostSoFar, currentHp, maxHp, rows) = _lastRender.Value;
+            Callable.From(() => Render(stateHpLost, actualHpLostSoFar, currentHp, maxHp, rows)).CallDeferred();
+        }
+    }
+
     /// Parses an "analyze" response and (re)renders the panel. Safe to call
     /// from a background thread; the actual scene tree update is marshaled
-    /// to the main thread.
-    public static void UpdateValues(string? responseJson)
+    /// to the main thread. `actualHpLostSoFar` is the HP the player has
+    /// already lost this fight (current fight's starting HP minus current
+    /// HP), tracked by <see cref="HookPatches"/>. `currentHp`/`maxHp` are the
+    /// player's HP right now, used to turn `expected_hp_lost` into an
+    /// end-of-fight HP estimate.
+    public static void UpdateValues(string? responseJson, double actualHpLostSoFar, double currentHp, double maxHp)
     {
         if (string.IsNullOrEmpty(responseJson))
             return;
@@ -43,10 +130,8 @@ public static class Overlay
         if (root is not JsonObject obj || obj["error"] != null)
             return;
 
-        var stateValue = obj["state_value"]?.GetValue<double>() ?? 0.0;
         var stateHpLost = obj["expected_hp_lost"]?.GetValue<double>() ?? 0.0;
         var values = obj["values"] as JsonObject;
-        var hpLost = obj["action_hp_lost"] as JsonObject;
         var legalActions = obj["legal_actions"] as JsonArray;
         // One row per legal_actions entry (in hand order, duplicates and
         // all) rather than per unique key in `values` - sts_sim collapses
@@ -56,17 +141,23 @@ public static class Overlay
             .Select(a => a!.GetValue<string>())
             .Select(action => (
                 action,
-                value: values?[action]?.GetValue<double>() ?? 0.0,
-                hpLost: hpLost?[action]?.GetValue<double>() ?? 0.0))
+                value: values?[action]?.GetValue<double>() ?? 0.0))
             .ToList();
+
+        _lastRender = (stateHpLost, actualHpLostSoFar, currentHp, maxHp, rows);
 
         // Callable.CallDeferred is Godot's thread-safe way to run code on the
         // main thread next idle frame, regardless of SynchronizationContext
         // setup (which GodotSharp doesn't configure for Task callbacks).
-        Callable.From(() => Render(stateValue, stateHpLost, rows)).CallDeferred();
+        Callable.From(() => Render(stateHpLost, actualHpLostSoFar, currentHp, maxHp, rows)).CallDeferred();
     }
 
-    private static void Render(double stateValue, double stateHpLost, System.Collections.Generic.List<(string action, double value, double hpLost)> rows)
+    // The parameters of the most recently rendered "analyze" response, kept
+    // so SetDeckBaseline can re-render with the now-known baseline as soon
+    // as it arrives, without waiting for the next analyze push.
+    private static (double stateHpLost, double actualHpLostSoFar, double currentHp, double maxHp, System.Collections.Generic.List<(string action, double value)> rows)? _lastRender;
+
+    private static void Render(double stateHpLost, double actualHpLostSoFar, double currentHp, double maxHp, System.Collections.Generic.List<(string action, double value)> rows)
     {
         EnsureCreated();
         if (_list == null)
@@ -77,12 +168,51 @@ public static class Overlay
             _list.RemoveChild(child);
             child.QueueFree();
         }
+        // The "calculating..." label (if any) was just freed above along
+        // with everything else - drop our reference so SetCalculating(false)
+        // (called once the request that triggered this render completes)
+        // doesn't try to remove an already-freed node.
+        _statusLabel = null;
 
-        AddLabel($"sts_sim  state value: {stateValue:F2}  (~{stateHpLost:F1} HP lost)", ExplorerHeaderColor);
-        foreach (var (action, value, hpLost) in rows)
+        // Headline: a chess-engine-style "if the fight ended right now given
+        // optimal non-clairvoyant play from here" HP estimate, derived from
+        // `expected_hp_lost` (further HP loss from the current position).
+        var predictedEndHp = Math.Max(currentHp - stateHpLost, 0.0);
+        AddLabel($"sts_sim  predicted end: ~{predictedEndHp:F1}/{maxHp:F0} HP", ExplorerHeaderColor);
+
+        // Warn when this fight's numbers can't be trusted: an unmapped
+        // monster falls back to a generic placeholder (wrong move pattern),
+        // and unmapped cards are silently dropped from the translated hand/
+        // draw/discard/exhaust/deck piles.
+        if (_unknownMonsters.Count > 0)
+            AddLabel($"unknown enemy: {string.Join(", ", _unknownMonsters)}", ExplorerWarningColor);
+        if (_unknownCards.Count > 0)
+            AddLabel($"unknown card: {string.Join(", ", _unknownCards)}", ExplorerWarningColor);
+
+        // Next two lines: how this fight's actual-loss-so-far +
+        // projected-remaining-loss compares to the baseline expectation
+        // captured at the start of the fight. Split across two short lines
+        // (with explicit "HP" units) rather than one long line, which wraps
+        // awkwardly in the panel.
+        var projectedTotal = actualHpLostSoFar + stateHpLost;
+        AddLabel($"fight: {actualHpLostSoFar:F1} HP lost so far", ExplorerRowColor);
+        var baselineText = _deckBaselineHpLost is double baseline
+            ? $"{baseline:F1} HP"
+            : "calculating...";
+        AddLabel($"on pace for {projectedTotal:F1} HP (deck baseline {baselineText})", ExplorerRowColor);
+
+        // Per-action rows: show each legal action's value relative to the
+        // best legal action, not an absolute HP figure - the per-action
+        // `values`/`action_hp_lost` are rollout-poisoned and on a different
+        // scale than the headline `expected_hp_lost` (see server.py's module
+        // docstring), so an absolute number here would look contradictory
+        // next to the headline. The relative ranking is still meaningful.
+        var best = rows.Count > 0 ? rows.Max(r => r.value) : 0.0;
+        foreach (var (action, value) in rows)
         {
             var label = action.StartsWith("PlayCard:") ? action["PlayCard:".Length..] : action;
-            AddLabel($"{label}: {value:F2}  (~{hpLost:F1} HP lost)", ExplorerRowColor);
+            var delta = value - best;
+            AddLabel($"{label}: {delta:+0.00;-0.00;0.00}", ExplorerRowColor);
         }
 
         Log.Warn($"[sts_sim_bridge_mod] Overlay: rendered {rows.Count} rows, panel rect {_panel?.GetGlobalRect()}");
@@ -90,6 +220,8 @@ public static class Overlay
 
     private static readonly Color ExplorerHeaderColor = new(1f, 0.85f, 0.3f);
     private static readonly Color ExplorerRowColor = Colors.White;
+    private static readonly Color ExplorerDimColor = new(0.6f, 0.6f, 0.6f);
+    private static readonly Color ExplorerWarningColor = new(1f, 0.4f, 0.4f);
 
     private static void AddLabel(string text, Color color)
     {
@@ -120,21 +252,20 @@ public static class Overlay
         _root.MouseFilter = Control.MouseFilterEnum.Ignore;
         _canvasLayer.AddChild(_root);
 
-        // Anchor all four corners to the parent's bottom-right (1,1) and use
-        // negative offsets to size the box - this gives a fixed 320x220 rect
-        // independent of content minimum size. Bottom offset is raised to
-        // -120 (rather than flush with the corner) to clear the End Turn
-        // button and hand of cards docked along the bottom edge. 220px tall
+        // Anchor all four corners to the parent's top-left (0,0) and use
+        // positive offsets to size the box - this gives a fixed 360x240 rect
+        // independent of content minimum size, clear of the End Turn button
+        // and hand of cards docked along the bottom edge. 240px tall
         // comfortably fits a header + one row per hand card (up to 10).
         _panel = new PanelContainer { Name = "StsSimOverlayPanel" };
-        _panel.SetAnchor(Side.Left, 1);
-        _panel.SetAnchor(Side.Top, 1);
-        _panel.SetAnchor(Side.Right, 1);
-        _panel.SetAnchor(Side.Bottom, 1);
-        _panel.OffsetLeft = -340;
-        _panel.OffsetTop = -340;
-        _panel.OffsetRight = -20;
-        _panel.OffsetBottom = -120;
+        _panel.SetAnchor(Side.Left, 0);
+        _panel.SetAnchor(Side.Top, 0);
+        _panel.SetAnchor(Side.Right, 0);
+        _panel.SetAnchor(Side.Bottom, 0);
+        _panel.OffsetLeft = 20;
+        _panel.OffsetTop = 20;
+        _panel.OffsetRight = 380;
+        _panel.OffsetBottom = 260;
         _panel.MouseFilter = Control.MouseFilterEnum.Ignore;
         var style = new StyleBoxFlat
         {
