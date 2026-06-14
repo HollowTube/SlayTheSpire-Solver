@@ -398,6 +398,26 @@ def ironclad_starter_deck_vs_vantom(seed, deck=None):
     )
 
 
+def ironclad_starter_deck_vs_inklet(seed, deck=None):
+    """Ironclad's starting loadout against a single Inklet (an Overgrowth
+    enemy that can also appear alone), starting with one stack of Slippery.
+    Opens with Jab; alternates Piercing Gaze/Windup Punch (50/50) until
+    returning to Jab."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=INKLET_STARTING_HP,
+                name=MonsterName.INKLET,
+                statuses=[("Slippery", 1)],
+            ),
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
 def ironclad_starter_deck_vs_inklets(seed, deck=None):
     """Ironclad's starting loadout against the Overgrowth "Inklet" encounter:
     three Inklets, each starting with one stack of Slippery. Per the wiki,

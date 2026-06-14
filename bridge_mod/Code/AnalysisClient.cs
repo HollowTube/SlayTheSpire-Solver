@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using MegaCrit.Sts2.Core.Logging;
 
@@ -20,11 +21,18 @@ public static class AnalysisClient
     private static TcpClient? _client;
     private static bool _loggedConnectFailure;
 
+    // The connection is a single shared stream, so concurrent callers (e.g.
+    // an "analyze" push racing a round-1 "deck_baseline" push) must take
+    // turns writing their request and reading the matching response line -
+    // otherwise one caller could read the other's response.
+    private static readonly SemaphoreSlim _lock = new(1, 1);
+
     /// Sends one line-delimited JSON request and returns the response line,
     /// or null if the server is unreachable. Safe to call from a background
-    /// thread (does its own socket I/O).
+    /// thread (does its own socket I/O); concurrent calls are serialized.
     public static async Task<string?> SendAnalyzeRequestAsync(string requestJson)
     {
+        await _lock.WaitAsync();
         try
         {
             var client = await GetConnectedClientAsync();
@@ -50,6 +58,10 @@ public static class AnalysisClient
                 _loggedConnectFailure = true;
             }
             return null;
+        }
+        finally
+        {
+            _lock.Release();
         }
     }
 

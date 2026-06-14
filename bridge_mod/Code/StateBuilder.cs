@@ -39,6 +39,60 @@ public static class StateBuilder
         return root.ToJsonString();
     }
 
+    /// Builds a "deck_baseline" request for the player's master deck against
+    /// the current fight's monster, or null if this fight isn't a
+    /// single-monster encounter `NameMap.EncounterNameMap` covers (the
+    /// "deck vs. monster, before any cards are drawn" baseline is undefined
+    /// for anything else).
+    public static string? BuildDeckBaselineRequest(CombatState combatState, Player player)
+    {
+        var enemies = combatState.Enemies.ToList();
+        if (enemies.Count != 1)
+            return null;
+
+        var entry = enemies[0].ModelId.Entry;
+        if (!NameMap.MonsterNameMap.TryGetValue(entry, out var monsterName))
+            return null;
+        if (!NameMap.EncounterNameMap.TryGetValue(monsterName, out var encounter))
+            return null;
+
+        var root = new JsonObject
+        {
+            ["cmd"] = "deck_baseline",
+            ["deck"] = CardNames(player.Deck),
+            ["monster"] = encounter,
+        };
+        return root.ToJsonString();
+    }
+
+    /// Returns the raw STS2 ids of any monsters/cards currently in play that
+    /// `NameMap` doesn't recognize, for the overlay's "unsupported" warning.
+    /// Monsters come from `combatState.Enemies`; cards come from the
+    /// player's hand, draw, discard, and exhaust piles plus their master
+    /// deck. An unmapped monster means this fight's analysis is using the
+    /// generic placeholder (see `BuildMonster`); an unmapped card means it's
+    /// silently dropped from the translated piles (see `CardNames`).
+    public static (List<string> unknownMonsters, List<string> unknownCards) FindUnsupported(CombatState combatState, Player player)
+    {
+        var unknownMonsters = combatState.Enemies
+            .Select(c => c.ModelId.Entry)
+            .Where(entry => !NameMap.MonsterNameMap.ContainsKey(entry))
+            .Distinct()
+            .ToList();
+
+        var pcs = player.PlayerCombatState;
+        var piles = new[] { pcs?.Hand, pcs?.DrawPile, pcs?.DiscardPile, pcs?.ExhaustPile, player.Deck };
+        var unknownCards = piles
+            .Where(pile => pile != null)
+            .SelectMany(pile => pile!.Cards)
+            .Select(card => card.Id.Entry)
+            .Where(entry => !NameMap.CardNameMap.ContainsKey(entry))
+            .Distinct()
+            .ToList();
+
+        return (unknownMonsters, unknownCards);
+    }
+
     private static JsonObject BuildState(CombatState combatState, Player player)
     {
         var pcs = player.PlayerCombatState;

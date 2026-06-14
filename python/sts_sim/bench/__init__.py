@@ -22,6 +22,7 @@ from ..scenarios import (
     ironclad_starter_deck_vs_byrdonis,
     ironclad_starter_deck_vs_fuzzy_wurm_crawler,
     ironclad_starter_deck_vs_gremlin_nob,
+    ironclad_starter_deck_vs_inklet,
     ironclad_starter_deck_vs_inklets,
     ironclad_starter_deck_vs_jaw_worm,
     ironclad_starter_deck_vs_leaf_slime_m,
@@ -32,6 +33,7 @@ from ..scenarios import (
     ironclad_starter_deck_vs_slimes_weak_twig,
     ironclad_starter_deck_vs_twig_slime_m,
     ironclad_starter_deck_vs_twig_slime_s,
+    ironclad_starter_deck_vs_vantom,
 )
 
 
@@ -56,7 +58,9 @@ class Encounter(str, Enum):
     SLIMES_WEAK = "slimes-weak"
     SLIMES_WEAK_TWIG = "slimes-weak-twig"
     BYRDONIS = "byrdonis"
+    INKLET = "inklet"
     INKLETS = "inklets"
+    VANTOM = "vantom"
 
 
 _SCENARIOS = {
@@ -72,13 +76,17 @@ _SCENARIOS = {
     Encounter.SLIMES_WEAK: ironclad_starter_deck_vs_slimes_weak,
     Encounter.SLIMES_WEAK_TWIG: ironclad_starter_deck_vs_slimes_weak_twig,
     Encounter.BYRDONIS: ironclad_starter_deck_vs_byrdonis,
+    Encounter.INKLET: ironclad_starter_deck_vs_inklet,
     Encounter.INKLETS: ironclad_starter_deck_vs_inklets,
+    Encounter.VANTOM: ironclad_starter_deck_vs_vantom,
 }
 
-# Act 1 "easy pool" encounters — every non-elite scenario (i.e. everything
-# except the Gremlin Nob and Byrdonis elites).
+# Act 1 "easy pool" encounters — every non-elite, non-boss scenario (i.e.
+# everything except the Gremlin Nob/Byrdonis elites and the Vantom boss).
 EASY_POOL = [
-    e for e in Encounter if e not in (Encounter.GREMLIN_NOB, Encounter.BYRDONIS)
+    e
+    for e in Encounter
+    if e not in (Encounter.GREMLIN_NOB, Encounter.BYRDONIS, Encounter.VANTOM)
 ]
 
 # Named deck configurations. Each is a list of card names passed as `deck` to

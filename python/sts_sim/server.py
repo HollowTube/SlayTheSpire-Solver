@@ -14,6 +14,21 @@ Response:
     {"legal_actions": [...], "values": {action: float}, "state_value": float,
      "expected_hp_lost": float, "action_hp_lost": {action: float}}
 
+Request (`cmd: "deck_baseline"`):
+    {"cmd": "deck_baseline", "deck": [...], "monster": "fuzzy-wurm-crawler",
+     "seeds": 30, "iterations": 200}
+
+Response:
+    {"mean_hp_lost": float, "win_rate": float}
+
+`deck_baseline` is a "deck vs. monster, before any cards are drawn" figure:
+it runs `sts_sim.bench.run_deck` over `seeds` fresh fights (full player HP,
+the monster's canonical starting HP/stats, the given `deck` reshuffled per
+seed) and reports the average HP lost over a full fight under MCTS play. This
+is independent of any specific draw, unlike `expected_hp_lost` (which is
+anchored to the current, already-drawn state) - intended as a one-time
+per-fight baseline computed when combat starts.
+
 `state_value`/`values` are `evaluate`'s `player_fraction - monsters_fraction`
 (see `src/lib.rs`), roughly -1..1. `action_hp_lost` converts each action's
 value into an absolute HP figure the same way: the player's
@@ -54,11 +69,85 @@ DEFAULT_PORT = 8765
 # `playouts * (decisions per fight)`-fold over a single analyze call.
 DEFAULT_PLAYOUTS = 3
 
+# Number of independent seeds (fresh shuffles/draws) averaged into
+# "deck_baseline"'s mean_hp_lost. run_deck's fight_outcomes_per_fight path
+# runs all seeds in one rayon-parallel Rust call, so 30 seeds is still under
+# 2s at the default iteration count.
+DEFAULT_DECK_BASELINE_SEEDS = 30
+
 
 def _statuses(entries):
     """Translate a JSON list of `[name, amount]` pairs into the list of
     `(name, amount)` tuples the `CombatState`/`Monster` constructors expect."""
     return [(name, amount) for name, amount in entries]
+
+
+# The bridge mod sends each monster's `intent` as the raw STS2 MoveState id
+# (e.g. "ACID_GOOP", "BUTT_MOVE"), but src/monsters.rs's `monster_move` and
+# `select_next_intent` key on the display-style move names it generates
+# itself (e.g. "Acid Goop", "Butt"). Without this translation, the FIRST
+# simulated turn for a freshly-reconstructed monster never matches any
+# `monster_move` arm, so that turn's attack is silently dropped (0 damage)
+# before `select_next_intent` falls back to its own correctly-named moves for
+# subsequent turns. Keyed by sts_sim monster name (post-NameMap.MonsterNameMap
+# translation), then raw STS2 move id -> monsters.rs move name.
+INTENT_NAME_MAP = {
+    "Fuzzy Wurm Crawler": {
+        "FIRST_ACID_GOOP": "Acid Goop",
+        "ACID_GOOP": "Acid Goop",
+        "INHALE": "Inhale",
+    },
+    "Nibbit": {
+        "BUTT_MOVE": "Butt",
+        "SLICE_MOVE": "Hesitant Slice",
+        "HISS_MOVE": "Hiss",
+    },
+    "Shrinker Beetle": {
+        "SHRINKER_MOVE": "Shrink",
+        "CHOMP_MOVE": "Chomp",
+        "STOMP_MOVE": "Stomp",
+    },
+    "Leaf Slime (S)": {
+        "BUTT_MOVE": "Tackle",
+        "GOOP_MOVE": "Goop",
+    },
+    "Leaf Slime (M)": {
+        "CLUMP_SHOT": "ClumpShot",
+        "STICKY_SHOT": "StickyShot",
+    },
+    "Twig Slime (S)": {
+        "BUTT_MOVE": "Tackle",
+    },
+    "Twig Slime (M)": {
+        "CLUMP_SHOT_MOVE": "ClumpShot",
+        "STICKY_SHOT_MOVE": "StickyShot",
+    },
+    "Byrdonis": {
+        "SWOOP_MOVE": "Swoop",
+        "PECK_MOVE": "Peck",
+    },
+    "Inklet": {
+        "JAB_MOVE": "Jab",
+        "PIERCING_GAZE_MOVE": "Piercing Gaze",
+        "WHIRLWIND_MOVE": "Windup Punch",
+    },
+    "Vantom": {
+        "INK_BLOT_MOVE": "Ink Blot",
+        "INKY_LANCE_MOVE": "Inky Lance",
+        "DISMEMBER_MOVE": "Dismember",
+        "PREPARE_MOVE": "Prepare",
+    },
+}
+
+
+def _translate_intent(monster_name, intent):
+    """Map a raw STS2 move id to the move name monsters.rs expects, for the
+    monster names listed in `INTENT_NAME_MAP`. Unmapped monsters/intents pass
+    through unchanged (monsters.rs's `monster_move` returns `None` for them
+    either way, same as before this translation existed)."""
+    if intent is None:
+        return None
+    return INTENT_NAME_MAP.get(monster_name, {}).get(intent, intent)
 
 
 def build_state(payload):
@@ -73,7 +162,7 @@ def build_state(payload):
             name=m.get("name"),
             block=m.get("block", 0),
             statuses=_statuses(m.get("statuses", [])),
-            intent=m.get("intent"),
+            intent=_translate_intent(m.get("name"), m.get("intent")),
             last_move=m.get("last_move"),
             move_streak=m.get("move_streak", 0),
         )
@@ -142,6 +231,19 @@ def handle_request(payload):
                 action: _expected_hp_lost(value, state)
                 for action, value in values.items()
             },
+        }
+    if cmd == "deck_baseline":
+        from .bench import run_deck
+
+        result = run_deck(
+            payload.get("deck"),
+            monster=payload["monster"],
+            seeds=payload.get("seeds", DEFAULT_DECK_BASELINE_SEEDS),
+            iterations=payload.get("iterations", _mcts.DEFAULT_ITERATIONS),
+        )
+        return {
+            "mean_hp_lost": result.mean_hp_lost,
+            "win_rate": result.win_rate,
         }
     raise ValueError(f"unknown cmd: {cmd!r}")
 

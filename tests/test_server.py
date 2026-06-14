@@ -148,3 +148,33 @@ def test_analyze_mid_fight_snapshot_reconstructs_block_statuses_and_piles():
     assert set(response["action_hp_lost"].keys()) == set(response["legal_actions"])
     for hp_lost in response["action_hp_lost"].values():
         assert 0.0 <= hp_lost <= 62
+
+
+def test_deck_baseline_returns_mean_hp_lost_and_win_rate():
+    payload = {
+        "cmd": "deck_baseline",
+        "deck": ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
+        "monster": "fuzzy-wurm-crawler",
+        "seeds": 5,
+        "iterations": 10,
+    }
+
+    with make_server(port=0) as server:
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        response = _send(server, payload)
+        server.shutdown()
+
+    assert "error" not in response
+    assert 0.0 <= response["mean_hp_lost"] <= 80
+    assert 0.0 <= response["win_rate"] <= 1.0
+
+
+def test_deck_baseline_unknown_monster_returns_error():
+    payload = {"cmd": "deck_baseline", "deck": None, "monster": "not-a-monster"}
+
+    with make_server(port=0) as server:
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        response = _send(server, payload)
+        server.shutdown()
+
+    assert "error" in response
