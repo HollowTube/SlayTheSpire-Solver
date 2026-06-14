@@ -91,6 +91,11 @@ class MonsterName(str, Enum):
     BYRDONIS = "Byrdonis"
     INKLET = "Inklet"
     VANTOM = "Vantom"
+    SNAPPING_JAXFRUIT = "Snapping Jaxfruit"
+    AXE_RUBY_RAIDER = "Axe Ruby Raider"
+    ASSASSIN_RUBY_RAIDER = "Assassin Ruby Raider"
+    BRUTE_RUBY_RAIDER = "Brute Ruby Raider"
+    CROSSBOW_RUBY_RAIDER = "Crossbow Ruby Raider"
 
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
@@ -150,6 +155,21 @@ INKLET_STARTING_HP = 15
 # Vantom (Overgrowth boss) HP: 173 normal, 183 at Ascension 8. 173 used as the
 # canonical value, per the existing "pick one documented number" convention.
 VANTOM_STARTING_HP = 173
+
+# Snapping Jaxfruit HP range: 31-33 normal. 31 used as canonical (minimum).
+SNAPPING_JAXFRUIT_STARTING_HP = 31
+
+# Axe Ruby Raider HP range: 20-22 normal. 20 used as canonical (minimum).
+AXE_RUBY_RAIDER_STARTING_HP = 20
+
+# Assassin Ruby Raider HP range: 18-23 normal. 18 used as canonical (minimum).
+ASSASSIN_RUBY_RAIDER_STARTING_HP = 18
+
+# Brute Ruby Raider HP range: 30-33 normal. 30 used as canonical (minimum).
+BRUTE_RUBY_RAIDER_STARTING_HP = 30
+
+# Crossbow Ruby Raider HP range: 18-21 normal. 18 used as canonical (minimum).
+CROSSBOW_RUBY_RAIDER_STARTING_HP = 18
 
 
 def ironclad_starter_deck_vs_gremlin_nob(seed, deck=None):
@@ -391,6 +411,129 @@ def ironclad_starter_deck_vs_vantom(seed, deck=None):
                 hp=VANTOM_STARTING_HP,
                 name=MonsterName.VANTOM,
                 statuses=[("Slippery", 9)],
+            ),
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_snapping_jaxfruit(seed, deck=None):
+    """Ironclad's starting loadout against a Snapping Jaxfruit (Overgrowth
+    normal). Single move "Energy Orb" forever: deal 3 damage, gain 2 Strength
+    — gets progressively harder as Strength accumulates."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=SNAPPING_JAXFRUIT_STARTING_HP,
+                attack=0,
+                name=MonsterName.SNAPPING_JAXFRUIT,
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_axe_ruby_raider(seed, deck=None):
+    """Ironclad's starting loadout against an Axe Ruby Raider (Overgrowth
+    normal). Fixed 3-move cycle: Swing 1 (5 damage + 5 block) → Swing 2
+    (5 damage + 5 block) → Big Swing (12 damage) → repeat."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=AXE_RUBY_RAIDER_STARTING_HP,
+                attack=0,
+                name=MonsterName.AXE_RUBY_RAIDER,
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_assassin_ruby_raider(seed, deck=None):
+    """Ironclad's starting loadout against an Assassin Ruby Raider (Overgrowth
+    normal). Single move "Killshot" forever: deal 11 damage."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=ASSASSIN_RUBY_RAIDER_STARTING_HP,
+                attack=0,
+                name=MonsterName.ASSASSIN_RUBY_RAIDER,
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_brute_ruby_raider(seed, deck=None):
+    """Ironclad's starting loadout against a Brute Ruby Raider (Overgrowth
+    normal). Fixed 2-move cycle: Beat (7 damage) → Roar (gain 3 Strength)
+    → repeat. Strength accumulates, making each Beat hit harder over time."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=BRUTE_RUBY_RAIDER_STARTING_HP,
+                attack=0,
+                name=MonsterName.BRUTE_RUBY_RAIDER,
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_crossbow_ruby_raider(seed, deck=None):
+    """Ironclad's starting loadout against a Crossbow Ruby Raider (Overgrowth
+    normal). Fixed alternating cycle: Reload (gain 3 block) ↔ Fire (14
+    damage), opens with Reload."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=CROSSBOW_RUBY_RAIDER_STARTING_HP,
+                attack=0,
+                name=MonsterName.CROSSBOW_RUBY_RAIDER,
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_ruby_raiders(seed, deck=None):
+    """Ironclad's starting loadout against the "RubyRaidersNormal" Overgrowth
+    encounter: pick 3 of the 5 Ruby Raider types. This canonical scenario
+    uses Axe + Assassin + Crossbow."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=AXE_RUBY_RAIDER_STARTING_HP,
+                attack=0,
+                name=MonsterName.AXE_RUBY_RAIDER,
+            ),
+            Monster(
+                hp=ASSASSIN_RUBY_RAIDER_STARTING_HP,
+                attack=0,
+                name=MonsterName.ASSASSIN_RUBY_RAIDER,
+            ),
+            Monster(
+                hp=CROSSBOW_RUBY_RAIDER_STARTING_HP,
+                attack=0,
+                name=MonsterName.CROSSBOW_RUBY_RAIDER,
             ),
         ],
         seed=seed,
