@@ -26,6 +26,8 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         "Byrdonis" => Some("Swoop".to_string()),
         // Inklet always opens with Jab.
         "Inklet" => Some("Jab".to_string()),
+        // Vantom always opens with Ink Blot.
+        "Vantom" => Some("Ink Blot".to_string()),
         _ => None,
     }
 }
@@ -116,6 +118,21 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
             EffectOp::DealDamage(2),
         ]),
         ("Inklet", "Piercing Gaze") => Some(vec![EffectOp::DealDamage(10)]),
+        // Vantom: fixed 4-move cycle, no RNG - Ink Blot (7) -> Inky Lance
+        // (6 x2) -> Dismember (27 + three "Wound" cards) -> Prepare
+        // (+2 Strength) -> repeat.
+        ("Vantom", "Ink Blot") => Some(vec![EffectOp::DealDamage(7)]),
+        ("Vantom", "Inky Lance") => Some(vec![
+            EffectOp::DealDamage(6),
+            EffectOp::DealDamage(6),
+        ]),
+        ("Vantom", "Dismember") => Some(vec![
+            EffectOp::DealDamage(27),
+            EffectOp::ApplyCardToTarget("Wound".to_string()),
+            EffectOp::ApplyCardToTarget("Wound".to_string()),
+            EffectOp::ApplyCardToTarget("Wound".to_string()),
+        ]),
+        ("Vantom", "Prepare") => Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))]),
         _ => None,
     }
 }
@@ -243,6 +260,14 @@ pub(crate) fn select_next_intent(
                     Some("Windup Punch".to_string())
                 }
             }
+        },
+        // Vantom cycles deterministically: Ink Blot -> Inky Lance ->
+        // Dismember -> Prepare -> Ink Blot...
+        "Vantom" => match last_move.as_deref() {
+            Some("Ink Blot") => Some("Inky Lance".to_string()),
+            Some("Inky Lance") => Some("Dismember".to_string()),
+            Some("Dismember") => Some("Prepare".to_string()),
+            _ => Some("Ink Blot".to_string()),
         },
         _ => None,
     }

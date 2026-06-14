@@ -12,6 +12,7 @@ from sts_sim.scenarios import (
     SHRINKER_BEETLE_STARTING_HP,
     TWIG_SLIME_M_STARTING_HP,
     TWIG_SLIME_S_STARTING_HP,
+    VANTOM_STARTING_HP,
     ironclad_starter_deck_vs_inklets,
     ironclad_starter_deck_vs_jaw_worm,
     ironclad_starter_deck_vs_leaf_slime_m,
@@ -21,6 +22,7 @@ from sts_sim.scenarios import (
     ironclad_starter_deck_vs_slimes_weak_twig,
     ironclad_starter_deck_vs_twig_slime_m,
     ironclad_starter_deck_vs_twig_slime_s,
+    ironclad_starter_deck_vs_vantom,
 )
 
 
@@ -215,6 +217,17 @@ def test_vs_inklets_loads_with_three_inklets_and_the_middle_ones_intent_override
     assert [m.intent for m in state.monsters] == ["Jab", "Windup Punch", "Jab"]
 
 
+def test_vs_vantom_loads_with_slippery_x9_and_ink_blot_opener():
+    state = ironclad_starter_deck_vs_vantom(seed=42)
+
+    assert state.player_hp == PLAYER_STARTING_HP
+    assert len(state.hand) == 5
+    assert state.monsters[0].name == "Vantom"
+    assert state.monsters[0].hp == VANTOM_STARTING_HP
+    assert state.monsters[0].statuses == ["Slippery"]
+    assert state.monsters[0].intent == "Ink Blot"
+
+
 def test_vs_slimes_weak_twig_loads_with_three_slime_monsters():
     state = ironclad_starter_deck_vs_slimes_weak_twig(seed=42)
 
@@ -245,6 +258,7 @@ def test_complete_random_fights_against_each_easy_pool_monster_reach_correctly_s
         ironclad_starter_deck_vs_slimes_weak,
         ironclad_starter_deck_vs_inklets,
         ironclad_starter_deck_vs_slimes_weak_twig,
+        ironclad_starter_deck_vs_vantom,
     ]
 
     for scenario_fn in scenario_fns:

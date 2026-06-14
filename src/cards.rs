@@ -403,6 +403,18 @@ pub(crate) fn card_data(name: &str) -> Option<CardData> {
             ethereal: false,
             unplayable: false,
         }),
+        // Vantom's Dismember sticks these into the player's discard pile.
+        // Per the wiki, Wound is identical to "Slimed": 1 energy, draws 1
+        // card, no exhaust.
+        "Wound" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Status,
+            effects: vec![EffectOp::DrawCards(1)],
+            exhausts: false,
+            ethereal: false,
+            unplayable: false,
+        }),
         // Per the wiki: Dazed is Unplayable and Ethereal, and does nothing —
         // a junk card the Defect's orbs and some monsters stick into the
         // player's hand/draw pile to clog it up.
