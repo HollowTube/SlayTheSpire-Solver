@@ -30,9 +30,9 @@ def test_playing_an_upgraded_card_uses_base_card_data_and_lands_in_discard():
     after_play = apply(state, "PlayCard:Strike+")
     after = apply(after_play, "SelectTarget:Monster:0")
 
-    # Strike+ deals the same 6 damage as Strike today (upgraded effects are a
-    # later phase); the `+` only needs to not break the card_data lookup.
-    assert after.monsters[0].hp == 44 - 6
+    # Strike+ deals 9 damage (HOL-53's UpgradeDelta mechanism applies the
+    # upgrade); the `+` doesn't break the card_data lookup.
+    assert after.monsters[0].hp == 44 - 9
     assert after.discard_pile == ["Strike+"]
     assert after.hand == []
 

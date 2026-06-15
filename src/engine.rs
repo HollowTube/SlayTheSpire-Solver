@@ -572,7 +572,7 @@ impl HandFilter {
         match self {
             HandFilter::Any => true,
             HandFilter::Attack | HandFilter::NonAttack => {
-                let is_attack = card_data(card_name)
+                let is_attack = card_data(card_name, 0)
                     .map(|data| matches!(data.card_type, CardType::Attack))
                     .unwrap_or(false);
                 if matches!(self, HandFilter::Attack) {
