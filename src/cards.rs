@@ -29,6 +29,10 @@ pub(crate) enum CardKeyword {
     // Unplayable: never appears as a legal `PlayCard:` action regardless of
     // cost/energy (e.g. status cards like Dazed).
     Unplayable,
+    // Innate: always starts in the opening hand (e.g. Aggression+). Not yet
+    // wired into the engine's opening-hand logic; declared so upgrades that
+    // add it (per STS2's `OnUpgrade`) round-trip through `card_data`.
+    Innate,
 }
 
 /// A card's energy cost and declarative effect pipeline (run once any
@@ -55,10 +59,22 @@ pub(crate) struct CardData {
 /// `effects_override` replaces `effects` wholesale instead of nudging values.
 #[derive(Clone, Default)]
 pub(crate) struct UpgradeDelta {
-    /// Added to every `EffectOp::DealDamage(n)` in `effects`.
+    /// Added to every `EffectOp::DealDamage(n)`/`DealDamageToAllEnemies(n)`
+    /// in `effects`.
     pub(crate) damage_delta: i32,
     /// Added to every `EffectOp::GainBlock(n)` in `effects`.
     pub(crate) block_delta: i32,
+    /// Added to every `EffectOp::GainEnergy(n)` in `effects` (e.g.
+    /// Bloodletting+: 2 -> 3 energy).
+    pub(crate) energy_delta: i32,
+    /// Added to every `EffectOp::DrawCards(n)` in `effects` (e.g.
+    /// BurningPact+: 2 -> 3 cards).
+    pub(crate) draw_delta: i32,
+    /// Added to `base`/`per_unit` of every `EffectOp::DealDamageScaled` in
+    /// `effects` (e.g. AshenStrike+/Bully+'s `per_unit`, Conflagration+'s
+    /// `base` and `per_unit`).
+    pub(crate) scaled_base_delta: i32,
+    pub(crate) scaled_per_unit_delta: i32,
     /// Extra `ApplyStatusToTarget` ops appended after the base effects (e.g.
     /// Bash+'s third Vulnerable stack).
     pub(crate) extra_status_applications: Vec<Status>,
@@ -87,7 +103,16 @@ impl UpgradeDelta {
         for effect in &mut data.effects {
             match effect {
                 EffectOp::DealDamage(amount) => *amount += self.damage_delta,
+                EffectOp::DealDamageToAllEnemies(amount) => *amount += self.damage_delta,
                 EffectOp::GainBlock(amount) => *amount += self.block_delta,
+                EffectOp::GainEnergy(amount) => *amount += self.energy_delta,
+                EffectOp::DrawCards(amount) => {
+                    *amount = (*amount as i32 + self.draw_delta) as usize
+                }
+                EffectOp::DealDamageScaled { base, per_unit, .. } => {
+                    *base += self.scaled_base_delta;
+                    *per_unit += self.scaled_per_unit_delta;
+                }
                 _ => {}
             }
         }
@@ -112,6 +137,43 @@ fn upgrade_delta(name: &str) -> Option<UpgradeDelta> {
         }),
         // Barricade+: cost 3 -> 2.
         "Barricade" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // Aggression+: gains the Innate keyword.
+        "Aggression" => Some(UpgradeDelta {
+            keywords_added: HashSet::from([CardKeyword::Innate]),
+            ..Default::default()
+        }),
+        // AshenStrike+: 6 + 3*exhaust -> 6 + 4*exhaust.
+        "AshenStrike" => Some(UpgradeDelta { scaled_per_unit_delta: 1, ..Default::default() }),
+        // Bloodletting+: gain 2 energy -> gain 3 energy.
+        "Bloodletting" => Some(UpgradeDelta { energy_delta: 1, ..Default::default() }),
+        // BloodWall+: 16 -> 20 block.
+        "BloodWall" => Some(UpgradeDelta { block_delta: 4, ..Default::default() }),
+        // Bludgeon+: 32 -> 42 damage.
+        "Bludgeon" => Some(UpgradeDelta { damage_delta: 10, ..Default::default() }),
+        // BodySlam+: cost 1 -> 0.
+        "BodySlam" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // Break+: 20 -> 30 damage, 5 -> 7 Vulnerable stacks.
+        "Break" => Some(UpgradeDelta {
+            damage_delta: 10,
+            extra_status_applications: vec![Status::Vulnerable, Status::Vulnerable],
+            ..Default::default()
+        }),
+        // Breakthrough+: 9 -> 13 damage to all enemies.
+        "Breakthrough" => Some(UpgradeDelta { damage_delta: 4, ..Default::default() }),
+        // Bully+: 4 + 2*vulnerable -> 4 + 3*vulnerable.
+        "Bully" => Some(UpgradeDelta { scaled_per_unit_delta: 1, ..Default::default() }),
+        // BurningPact+: draw 2 -> draw 3.
+        "BurningPact" => Some(UpgradeDelta { draw_delta: 1, ..Default::default() }),
+        // Cinder+: 18 -> 24 damage.
+        "Cinder" => Some(UpgradeDelta { damage_delta: 6, ..Default::default() }),
+        // Colossus+: 5 -> 8 block.
+        "Colossus" => Some(UpgradeDelta { block_delta: 3, ..Default::default() }),
+        // Conflagration+: 8 + 2*attacks -> 9 + 3*attacks.
+        "Conflagration" => Some(UpgradeDelta {
+            scaled_base_delta: 1,
+            scaled_per_unit_delta: 1,
+            ..Default::default()
+        }),
         _ => None,
     }
 }
