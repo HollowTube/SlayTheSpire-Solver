@@ -69,6 +69,11 @@ class CardName(str, Enum):
     TRUE_GRIT = "TrueGrit"
     TWIN_STRIKE = "TwinStrike"
     UPPERCUT = "Uppercut"
+    FIGHT_ME = "FightMe!"
+    PYRE = "Pyre"
+    ANGER = "Anger"
+    DRUM_OF_BATTLE = "DrumOfBattle"
+    STOMP = "Stomp"
 
 
 class MonsterName(str, Enum):

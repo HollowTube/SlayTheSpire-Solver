@@ -101,6 +101,11 @@ pub(crate) enum Status {
     // PlayCard branch); if unused, decays at the start of the next turn —
     // same one-shot lifecycle as `OneTwoPunch`.
     FreeAttack,
+    // Pyre: at the start of each turn, gain 1 Energy.
+    Pyre,
+    // DrumOfBattle: at the start of each turn, Exhaust the top card of the
+    // draw pile.
+    BattleDrum,
 }
 
 impl Status {
@@ -128,6 +133,8 @@ impl Status {
             Status::Slippery(_) => "Slippery",
             Status::StrengthThisTurn(_) => "StrengthThisTurn",
             Status::FreeAttack => "FreeAttack",
+            Status::Pyre => "Pyre",
+            Status::BattleDrum => "BattleDrum",
         }
     }
 
@@ -162,6 +169,8 @@ impl Status {
             "Enrage" => vec![Status::Enrage(amount)],
             "StrengthThisTurn" => vec![Status::StrengthThisTurn(amount)],
             "FreeAttack" => vec![Status::FreeAttack; amount.max(0) as usize],
+            "Pyre" => vec![Status::Pyre; amount.max(0) as usize],
+            "BattleDrum" => vec![Status::BattleDrum; amount.max(0) as usize],
             _ => Vec::new(),
         }
     }
@@ -271,6 +280,8 @@ impl Status {
             (Status::FlameBarrier, GameEvent::DamageReceived) => {
                 vec![EffectOp::DealDamageToLastAttacker(4)]
             }
+            (Status::Pyre, GameEvent::TurnStart) => vec![EffectOp::GainEnergy(1)],
+            (Status::BattleDrum, GameEvent::TurnStart) => vec![EffectOp::ExhaustTopOfDrawPile],
             _ => vec![],
         }
     }
@@ -490,6 +501,11 @@ pub(crate) enum EffectOp {
         per_unit: i32,
         source: ScaleSource,
     },
+    // Exhaust the top card of the player's draw pile (e.g. DrumOfBattle's
+    // turn-start trigger).
+    ExhaustTopOfDrawPile,
+    // Add a copy of the named card to the player's discard pile (e.g. Anger).
+    AddCardToDiscard(String),
 }
 
 /// What a `DealDamageScaled` op reads its multiplier from. New scaling
@@ -739,6 +755,15 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                     if target == Actor::Player {
                         state.discard_pile.push(CardInstance::new(card_name.clone()));
                     }
+                }
+            }
+            EffectOp::AddCardToDiscard(card_name) => {
+                state.discard_pile.push(CardInstance::new(card_name.clone()));
+            }
+            EffectOp::ExhaustTopOfDrawPile => {
+                if let Some(card) = state.draw_pile.pop() {
+                    state.exhaust_pile.push(card);
+                    fire_event(state, GameEvent::CardExhausted);
                 }
             }
             EffectOp::ExhaustRandomFromHand(filter) => {

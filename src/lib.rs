@@ -18,14 +18,20 @@ use std::collections::HashMap;
 use state::{draw_cards, CardInstance, CombatState, Fighter, Monster, PendingDecision, HAND_SIZE};
 
 /// The Energy cost to play `data`, accounting for Corruption (Skills cost 0
-/// while the player holds it).
+/// while the player holds it) and Stomp (costs 1 less per Attack played).
 fn effective_cost(state: &CombatState, data: &CardData) -> i32 {
     if matches!(data.card_type, CardType::Skill) && state.player.statuses.contains(&Status::Corruption) {
         0
     } else if matches!(data.card_type, CardType::Attack) && state.player.statuses.contains(&Status::FreeAttack) {
         0
     } else {
-        data.cost
+        let cost = data.cost;
+        // Stomp costs 1 less for each Attack played this turn (min 0).
+        if data.effects.iter().any(|op| matches!(op, engine::EffectOp::DealDamageToAllEnemies(_))) {
+            (cost - state.attacks_played_this_turn).max(0)
+        } else {
+            cost
+        }
     }
 }
 
