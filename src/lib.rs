@@ -45,7 +45,7 @@ fn legal_actions(state: &CombatState) -> Vec<String> {
                 // unaffordable cards are never legal plays, so the engine
                 // never has to model (or reject) going into negative energy.
                 .filter(|card| {
-                    card_data(&card.name)
+                    card_data(&card.name, card.upgrade_level)
                         .map(|data| {
                             !data.keywords.contains(&CardKeyword::Unplayable)
                                 && effective_cost(state, &data) <= state.player_energy
@@ -81,7 +81,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             // Ethereal cards exhaust instead of being discarded.
             let (ethereal, rest): (Vec<CardInstance>, Vec<CardInstance>) =
                 next.hand.drain(..).partition(|card| {
-                    card_data(&card.name)
+                    card_data(&card.name, card.upgrade_level)
                         .map(|data| data.keywords.contains(&CardKeyword::Ethereal))
                         .unwrap_or(false)
                 });
@@ -172,7 +172,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     return Err(PyValueError::new_err(format!("unknown action: {other}")));
                 }
                 let mut next = state.clone();
-                let data = card_data(&card.name).expect("pending card is always known");
+                let data = card_data(&card.name, card.upgrade_level).expect("pending card is always known");
                 run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)]);
                 match data.card_type {
                     CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
@@ -198,7 +198,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
         other => match other.strip_prefix("PlayCard:") {
             Some(card_name) => {
                 let instance = CardInstance::parse(card_name);
-                let data = card_data(&instance.name)
+                let data = card_data(&instance.name, instance.upgrade_level)
                     .ok_or_else(|| PyValueError::new_err(format!("unknown card: {}", instance.name)))?;
                 let mut next = state.clone();
                 let position = next

@@ -46,7 +46,90 @@ pub(crate) struct CardData {
     pub(crate) keywords: HashSet<CardKeyword>,
 }
 
-pub(crate) fn card_data(name: &str) -> Option<CardData> {
+/// How a card's `CardData` changes at `upgrade_level >= 1`, mirroring STS2's
+/// `CardModel.OnUpgrade()`. Most cards just nudge one or two numbers
+/// (`DealDamage`/`GainBlock` amounts, extra status applications, or the
+/// card's cost) — the common fields below cover those. A handful of cards
+/// change *which* effects run on upgrade (e.g. True Grit lets the player
+/// choose which card to Exhaust instead of picking randomly); for those,
+/// `effects_override` replaces `effects` wholesale instead of nudging values.
+#[derive(Clone, Default)]
+pub(crate) struct UpgradeDelta {
+    /// Added to every `EffectOp::DealDamage(n)` in `effects`.
+    pub(crate) damage_delta: i32,
+    /// Added to every `EffectOp::GainBlock(n)` in `effects`.
+    pub(crate) block_delta: i32,
+    /// Extra `ApplyStatusToTarget` ops appended after the base effects (e.g.
+    /// Bash+'s third Vulnerable stack).
+    pub(crate) extra_status_applications: Vec<Status>,
+    /// Added to `CardData.cost` (e.g. Barricade+: -1).
+    pub(crate) cost_delta: i32,
+    pub(crate) keywords_added: HashSet<CardKeyword>,
+    pub(crate) keywords_removed: HashSet<CardKeyword>,
+    /// When set, replaces `CardData.effects` entirely instead of applying
+    /// `damage_delta`/`block_delta`/`extra_status_applications`.
+    pub(crate) effects_override: Option<Vec<EffectOp>>,
+}
+
+impl UpgradeDelta {
+    fn apply(&self, mut data: CardData) -> CardData {
+        data.cost += self.cost_delta;
+        for keyword in &self.keywords_removed {
+            data.keywords.remove(keyword);
+        }
+        for keyword in &self.keywords_added {
+            data.keywords.insert(keyword.clone());
+        }
+        if let Some(effects) = &self.effects_override {
+            data.effects = effects.clone();
+            return data;
+        }
+        for effect in &mut data.effects {
+            match effect {
+                EffectOp::DealDamage(amount) => *amount += self.damage_delta,
+                EffectOp::GainBlock(amount) => *amount += self.block_delta,
+                _ => {}
+            }
+        }
+        for status in &self.extra_status_applications {
+            data.effects.push(EffectOp::ApplyStatusToTarget(status.clone()));
+        }
+        data
+    }
+}
+
+fn upgrade_delta(name: &str) -> Option<UpgradeDelta> {
+    match name {
+        // Strike+: 6 -> 9 damage.
+        "Strike" => Some(UpgradeDelta { damage_delta: 3, ..Default::default() }),
+        // Defend+: 5 -> 8 block.
+        "Defend" => Some(UpgradeDelta { block_delta: 3, ..Default::default() }),
+        // Bash+: 8 -> 10 damage, 2 -> 3 Vulnerable stacks.
+        "Bash" => Some(UpgradeDelta {
+            damage_delta: 2,
+            extra_status_applications: vec![Status::Vulnerable],
+            ..Default::default()
+        }),
+        // Barricade+: cost 3 -> 2.
+        "Barricade" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        _ => None,
+    }
+}
+
+/// Resolves `name`'s base `CardData` and, at `upgrade_level >= 1`, applies its
+/// `UpgradeDelta` (if any — cards without a declared delta are unaffected by
+/// upgrade level).
+pub(crate) fn card_data(name: &str, upgrade_level: u8) -> Option<CardData> {
+    let data = card_data_base(name)?;
+    if upgrade_level >= 1 {
+        if let Some(delta) = upgrade_delta(name) {
+            return Some(delta.apply(data));
+        }
+    }
+    Some(data)
+}
+
+fn card_data_base(name: &str) -> Option<CardData> {
     match name {
         "Strike" => Some(CardData {
             cost: 1,
