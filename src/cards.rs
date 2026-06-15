@@ -836,6 +836,20 @@ fn card_data_base(name: &str) -> Option<CardData> {
             ],
             keywords: HashSet::from([CardKeyword::Exhaust]),
         }),
+        // Per the wiki, FightMe! costs 1, deals 5 damage twice, grants 3
+        // Strength to the player, and 1 Strength to the targeted enemy.
+        "FightMe!" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![
+                EffectOp::DealDamage(5),
+                EffectOp::DealDamage(5),
+                EffectOp::ApplyStatusToSelf(Status::Strength(3)),
+                EffectOp::ApplyStatusToTarget(Status::Strength(1)),
+            ],
+            keywords: HashSet::new(),
+        }),
         // Per the wiki, Breakthrough costs 1, makes the player Lose 1 HP,
         // and deals 9 damage to ALL enemies (non-targeted, like Thunderclap).
         "Breakthrough" => Some(CardData {
@@ -890,6 +904,45 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 source: ScaleSource::ExhaustedCardThisTurn,
             }],
             keywords: HashSet::from([CardKeyword::Exhaust]),
+        }),
+        // Per the wiki, Pyre (Power) costs 1. At the start of each turn, gain
+        // 1 Energy — identical shape to DemonForm's TurnStart->Strength.
+        "Pyre" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Pyre)],
+            keywords: HashSet::new(),
+        }),
+        // Per the wiki, Anger costs 0, deals 6 damage, and adds a copy of
+        // itself to the player's discard pile.
+        "Anger" => Some(CardData {
+            cost: 0,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamage(6), EffectOp::AddCardToDiscard("Anger".to_string())],
+            keywords: HashSet::new(),
+        }),
+        // Per the wiki, DrumOfBattle (Power) costs 1. On play, draw 2 cards.
+        // At the start of each turn, Exhaust the top card of the draw pile.
+        "DrumOfBattle" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![
+                EffectOp::DrawCards(2),
+                EffectOp::ApplyStatusToSelf(Status::BattleDrum),
+            ],
+            keywords: HashSet::new(),
+        }),
+        // Per the wiki, Stomp costs 2 (base, minus 1 per Attack played this
+        // turn) and deals 12 damage to ALL enemies.
+        "Stomp" => Some(CardData {
+            cost: 2,
+            targeted: false,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamageToAllEnemies(12)],
+            keywords: HashSet::new(),
         }),
         _ => None,
     }
