@@ -60,7 +60,10 @@ public static class HookPatches
         }
 
         if (requestJson == null)
+        {
+            Overlay.SetBaselineNotAvailable();
             return;
+        }
 
         _ = Task.Run(async () =>
         {

@@ -25,9 +25,10 @@ public static class Overlay
     // current fight: the mean HP lost over many fresh-shuffle MCTS playouts
     // of the player's master deck against this fight's monster, fetched once
     // via a "deck_baseline" request (see HookPatches.PushDeckBaseline). Null
-    // until that request resolves, or for fights deck_baseline doesn't cover
-    // (multi-monster rooms, unmapped monsters).
+    // while waiting for the response; _deckBaselineNA=true means no request
+    // was sent for this fight (multi-monster room or unmapped monster).
     private static double? _deckBaselineHpLost;
+    private static bool _deckBaselineNA;
 
     // Shown while an analyze request is in flight, appended below the
     // last-rendered rows so the panel keeps showing the previous values
@@ -67,10 +68,24 @@ public static class Overlay
 
     /// Called when a new fight starts (round 1) to clear the previous
     /// fight's deck-vs-monster baseline until <see cref="SetDeckBaseline"/>
-    /// reports this fight's.
+    /// or <see cref="SetBaselineNotAvailable"/> reports this fight's status.
     public static void ResetFightBaseline()
     {
         _deckBaselineHpLost = null;
+        _deckBaselineNA = false;
+    }
+
+    /// Called when no deck_baseline request will be sent for this fight
+    /// (multi-monster room or unmapped monster), so the overlay shows "n/a"
+    /// instead of "calculating..." indefinitely.
+    public static void SetBaselineNotAvailable()
+    {
+        _deckBaselineNA = true;
+        if (_lastRender != null)
+        {
+            var (stateHpLost, actualHpLostSoFar, currentHp, maxHp, rows) = _lastRender.Value;
+            Callable.From(() => Render(stateHpLost, actualHpLostSoFar, currentHp, maxHp, rows)).CallDeferred();
+        }
     }
 
     // Raw STS2 ids of monsters/cards in the current fight that NameMap
@@ -213,7 +228,7 @@ public static class Overlay
         AddLabel($"fight: {actualHpLostSoFar:F1} HP lost so far", ExplorerRowColor);
         var baselineText = _deckBaselineHpLost is double baseline
             ? $"{baseline:F1} HP"
-            : "calculating...";
+            : _deckBaselineNA ? "n/a" : "calculating...";
         AddLabel($"on pace for {projectedTotal:F1} HP (deck baseline {baselineText})", ExplorerRowColor);
 
         // Per-action rows: show each legal action's value relative to the
