@@ -102,6 +102,7 @@ public static class Overlay
             var (stateHpLost, actualHpLostSoFar, currentHp, maxHp, rows) = _lastRender.Value;
             Callable.From(() => Render(stateHpLost, actualHpLostSoFar, currentHp, maxHp, rows)).CallDeferred();
         }
+
     }
 
     /// Parses an "analyze" response and (re)renders the panel. Safe to call
@@ -133,15 +134,29 @@ public static class Overlay
         var stateHpLost = obj["expected_hp_lost"]?.GetValue<double>() ?? 0.0;
         var values = obj["values"] as JsonObject;
         var legalActions = obj["legal_actions"] as JsonArray;
+        var targetValues = obj["target_values"] as JsonObject;
         // One row per legal_actions entry (in hand order, duplicates and
         // all) rather than per unique key in `values` - sts_sim collapses
         // duplicate card names (e.g. two Strikes) into a single values
         // entry, but the player has a distinct card in hand for each.
+        // `bestTarget` is the monster index (0-based) to hit for single-target
+        // cards in multi-monster fights, null otherwise.
         var rows = (legalActions ?? new JsonArray())
             .Select(a => a!.GetValue<string>())
-            .Select(action => (
-                action,
-                value: values?[action]?.GetValue<double>() ?? 0.0))
+            .Select(action =>
+            {
+                string? bestTarget = null;
+                if (targetValues?[action] is JsonObject tv)
+                {
+                    var best = tv
+                        .OrderByDescending(kv => kv.Value?.GetValue<double>() ?? double.MinValue)
+                        .FirstOrDefault();
+                    const string prefix = "SelectTarget:Monster:";
+                    if (best.Key?.StartsWith(prefix) == true)
+                        bestTarget = best.Key[prefix.Length..];
+                }
+                return (action, value: values?[action]?.GetValue<double>() ?? 0.0, bestTarget);
+            })
             .ToList();
 
         _lastRender = (stateHpLost, actualHpLostSoFar, currentHp, maxHp, rows);
@@ -155,9 +170,9 @@ public static class Overlay
     // The parameters of the most recently rendered "analyze" response, kept
     // so SetDeckBaseline can re-render with the now-known baseline as soon
     // as it arrives, without waiting for the next analyze push.
-    private static (double stateHpLost, double actualHpLostSoFar, double currentHp, double maxHp, System.Collections.Generic.List<(string action, double value)> rows)? _lastRender;
+    private static (double stateHpLost, double actualHpLostSoFar, double currentHp, double maxHp, System.Collections.Generic.List<(string action, double value, string? bestTarget)> rows)? _lastRender;
 
-    private static void Render(double stateHpLost, double actualHpLostSoFar, double currentHp, double maxHp, System.Collections.Generic.List<(string action, double value)> rows)
+    private static void Render(double stateHpLost, double actualHpLostSoFar, double currentHp, double maxHp, System.Collections.Generic.List<(string action, double value, string? bestTarget)> rows)
     {
         EnsureCreated();
         if (_list == null)
@@ -208,11 +223,12 @@ public static class Overlay
         // docstring), so an absolute number here would look contradictory
         // next to the headline. The relative ranking is still meaningful.
         var best = rows.Count > 0 ? rows.Max(r => r.value) : 0.0;
-        foreach (var (action, value) in rows)
+        foreach (var (action, value, bestTarget) in rows)
         {
             var label = action.StartsWith("PlayCard:") ? action["PlayCard:".Length..] : action;
             var delta = value - best;
-            AddLabel($"{label}: {delta:+0.00;-0.00;0.00}", ExplorerRowColor);
+            var targetSuffix = bestTarget != null ? $" (→{bestTarget})" : "";
+            AddLabel($"{label}: {delta:+0.00;-0.00;0.00}{targetSuffix}", ExplorerRowColor);
         }
 
         Log.Warn($"[sts_sim_bridge_mod] Overlay: rendered {rows.Count} rows, panel rect {_panel?.GetGlobalRect()}");
