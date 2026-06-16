@@ -106,6 +106,11 @@ pub(crate) enum Status {
     // DrumOfBattle: at the start of each turn, Exhaust the top card of the
     // draw pile.
     BattleDrum,
+    // Constrict: at the end of the player's turn, the holder takes `n`
+    // unblockable damage (bypasses block, unaffected by damage modifiers).
+    // Stacks add when reapplied (counter-style, like Strength); does NOT
+    // decay (permanent for the combat).
+    Constrict(i32),
 }
 
 impl Status {
@@ -135,6 +140,7 @@ impl Status {
             Status::FreeAttack => "FreeAttack",
             Status::Pyre => "Pyre",
             Status::BattleDrum => "BattleDrum",
+            Status::Constrict(_) => "Constrict",
         }
     }
 
@@ -171,6 +177,7 @@ impl Status {
             "FreeAttack" => vec![Status::FreeAttack; amount.max(0) as usize],
             "Pyre" => vec![Status::Pyre; amount.max(0) as usize],
             "BattleDrum" => vec![Status::BattleDrum; amount.max(0) as usize],
+            "Constrict" => vec![Status::Constrict(amount)],
             _ => Vec::new(),
         }
     }
