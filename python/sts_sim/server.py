@@ -58,7 +58,7 @@ import argparse
 import json
 import socketserver
 
-from . import CombatState, Monster, evaluate, legal_actions, simulate_hp_lost
+from . import CombatState, Monster, apply, evaluate, legal_actions, simulate_hp_lost
 from . import mcts as _mcts
 
 DEFAULT_PORT = 8765
@@ -220,6 +220,31 @@ def handle_request(payload):
         actions = legal_actions(state)
         values = _mcts.action_values(state, iterations=iterations)
         state_value = max(values.values()) if values else evaluate(state)
+        # Per-target greedy evaluation for single-target cards in multi-monster
+        # fights. MCTS action_values already fold in the optimal target
+        # internally; this tells the player *which* target that is. Uses
+        # evaluate() (one-step greedy) rather than another MCTS pass — the
+        # ranking across targets is what matters, not calibrated HP estimates.
+        target_values = {}
+        if len(state.monsters) > 1:
+            for action in actions:
+                if not action.startswith("PlayCard:"):
+                    continue
+                try:
+                    mid = apply(state, action)
+                except Exception:
+                    continue
+                sub = legal_actions(mid)
+                if not sub or not sub[0].startswith("SelectTarget:Monster:"):
+                    continue
+                tv = {}
+                for sub_action in sub:
+                    try:
+                        tv[sub_action] = evaluate(apply(mid, sub_action))
+                    except Exception:
+                        pass
+                if tv:
+                    target_values[action] = tv
         return {
             "legal_actions": actions,
             "values": values,
@@ -231,6 +256,7 @@ def handle_request(payload):
                 action: _expected_hp_lost(value, state)
                 for action, value in values.items()
             },
+            "target_values": target_values,
         }
     if cmd == "deck_baseline":
         from .bench import run_deck
