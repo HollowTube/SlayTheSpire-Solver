@@ -111,6 +111,10 @@ pub(crate) enum Status {
     // Stacks add when reapplied (counter-style, like Strength); does NOT
     // decay (permanent for the combat).
     Constrict(i32),
+    // Artifact: negates the next `n` debuff-type status applications to this
+    // combatant. Decrements on each blocked application; non-debuff statuses
+    // (Strength, block, etc.) pass through unaffected.
+    Artifact(i32),
 }
 
 impl Status {
@@ -141,6 +145,7 @@ impl Status {
             Status::Pyre => "Pyre",
             Status::BattleDrum => "BattleDrum",
             Status::Constrict(_) => "Constrict",
+            Status::Artifact(_) => "Artifact",
         }
     }
 
@@ -178,6 +183,7 @@ impl Status {
             "Pyre" => vec![Status::Pyre; amount.max(0) as usize],
             "BattleDrum" => vec![Status::BattleDrum; amount.max(0) as usize],
             "Constrict" => vec![Status::Constrict(amount)],
+            "Artifact" => vec![Status::Artifact(amount)],
             _ => Vec::new(),
         }
     }
@@ -247,6 +253,16 @@ impl Status {
                 | Status::Colossus(_)
                 | Status::StrengthThisTurn(_)
                 | Status::FreeAttack
+        )
+    }
+
+    /// Whether this status is a debuff (negative effect on the holder).
+    /// Artifact blocks only debuff-type status applications; buffs and other
+    /// neutral statuses pass through.
+    pub(crate) fn is_debuff(&self) -> bool {
+        matches!(
+            self,
+            Status::Vulnerable | Status::Weak | Status::Shrink | Status::Constrict(_)
         )
     }
 
@@ -728,6 +744,29 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
             }
             EffectOp::ApplyStatusToTarget(status) => {
                 for &target in targets {
+                    if status.is_debuff() {
+                        let consumed = {
+                            let fighter = state.fighter_mut(target);
+                            let pos = fighter.statuses.iter().position(|s| {
+                                matches!(s, Status::Artifact(n) if *n > 0)
+                            });
+                            if let Some(pos) = pos {
+                                match &mut fighter.statuses[pos] {
+                                    Status::Artifact(n) => *n -= 1,
+                                    _ => unreachable!(),
+                                }
+                                if matches!(fighter.statuses[pos], Status::Artifact(0)) {
+                                    fighter.statuses.remove(pos);
+                                }
+                                true
+                            } else {
+                                false
+                            }
+                        };
+                        if consumed {
+                            continue;
+                        }
+                    }
                     state.fighter_mut(target).statuses.push(status.clone());
                 }
             }
