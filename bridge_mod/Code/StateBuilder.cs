@@ -47,14 +47,28 @@ public static class StateBuilder
     public static string? BuildDeckBaselineRequest(CombatState combatState, Player player)
     {
         var enemies = combatState.Enemies.ToList();
-        if (enemies.Count != 1)
-            return null;
-
-        var entry = enemies[0].ModelId.Entry;
-        if (!NameMap.MonsterNameMap.TryGetValue(entry, out var monsterName))
-            return null;
-        if (!NameMap.EncounterNameMap.TryGetValue(monsterName, out var encounter))
-            return null;
+        string? encounter;
+        if (enemies.Count == 1)
+        {
+            var entry = enemies[0].ModelId.Entry;
+            if (!NameMap.MonsterNameMap.TryGetValue(entry, out var monsterName))
+                return null;
+            if (!NameMap.EncounterNameMap.TryGetValue(monsterName, out encounter))
+                return null;
+        }
+        else
+        {
+            // For multi-monster fights, build a sorted "|"-joined key from
+            // each enemy's sts_sim name and look up MultiMonsterEncounterMap.
+            var names = enemies
+                .Select(c => NameMap.MonsterNameMap.TryGetValue(c.ModelId.Entry, out var n) ? n : null)
+                .ToList();
+            if (names.Any(n => n == null))
+                return null;
+            var key = string.Join("|", names.OrderBy(n => n));
+            if (!NameMap.MultiMonsterEncounterMap.TryGetValue(key, out encounter))
+                return null;
+        }
 
         var root = new JsonObject
         {
