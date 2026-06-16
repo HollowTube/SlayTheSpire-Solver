@@ -176,6 +176,30 @@ BRUTE_RUBY_RAIDER_STARTING_HP = 30
 # Crossbow Ruby Raider HP range: 18-21 normal. 18 used as canonical (minimum).
 CROSSBOW_RUBY_RAIDER_STARTING_HP = 18
 
+# Canonical starting HP keyed by MonsterName value. Used by the server's
+# deck_baseline handler to construct a "fresh start" scenario from a named
+# monster list, so the benchmark uses canonical HP regardless of what the
+# game rolled for this specific encounter.
+MONSTER_STARTING_HP: dict[str, int] = {
+    MonsterName.JAW_WORM: JAW_WORM_STARTING_HP,
+    MonsterName.GREMLIN_NOB: GREMLIN_NOB_STARTING_HP,
+    MonsterName.NIBBIT: NIBBIT_STARTING_HP,
+    MonsterName.FUZZY_WURM_CRAWLER: FUZZY_WURM_CRAWLER_STARTING_HP,
+    MonsterName.TWIG_SLIME_S: TWIG_SLIME_S_STARTING_HP,
+    MonsterName.SHRINKER_BEETLE: SHRINKER_BEETLE_STARTING_HP,
+    MonsterName.LEAF_SLIME_S: LEAF_SLIME_S_STARTING_HP,
+    MonsterName.LEAF_SLIME_M: LEAF_SLIME_M_STARTING_HP,
+    MonsterName.TWIG_SLIME_M: TWIG_SLIME_M_STARTING_HP,
+    MonsterName.BYRDONIS: BYRDONIS_STARTING_HP,
+    MonsterName.INKLET: INKLET_STARTING_HP,
+    MonsterName.VANTOM: VANTOM_STARTING_HP,
+    MonsterName.SNAPPING_JAXFRUIT: SNAPPING_JAXFRUIT_STARTING_HP,
+    MonsterName.AXE_RUBY_RAIDER: AXE_RUBY_RAIDER_STARTING_HP,
+    MonsterName.ASSASSIN_RUBY_RAIDER: ASSASSIN_RUBY_RAIDER_STARTING_HP,
+    MonsterName.BRUTE_RUBY_RAIDER: BRUTE_RUBY_RAIDER_STARTING_HP,
+    MonsterName.CROSSBOW_RUBY_RAIDER: CROSSBOW_RUBY_RAIDER_STARTING_HP,
+}
+
 
 def ironclad_starter_deck_vs_gremlin_nob(seed, deck=None):
     """Harder canonical scenario: Ironclad's starting loadout against Gremlin

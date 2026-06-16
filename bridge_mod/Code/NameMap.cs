@@ -256,35 +256,4 @@ public static class NameMap
         ["SLIPPERY"] = "Slippery",
     };
 
-    /// sts_sim monster name (MonsterNameMap's values) -> python/sts_sim's
-    /// `Encounter` key, for the "deck_baseline" command's `monster` field.
-    /// Only single-monster encounters that `sts_sim.bench._SCENARIOS` models
-    /// are listed; multi-monster encounters use MultiMonsterEncounterMap.
-    public static readonly Dictionary<string, string> EncounterNameMap = new()
-    {
-        ["Nibbit"] = "nibbit",
-        ["Fuzzy Wurm Crawler"] = "fuzzy-wurm-crawler",
-        ["Shrinker Beetle"] = "shrinker-beetle",
-        ["Leaf Slime (S)"] = "leaf-slime-s",
-        ["Leaf Slime (M)"] = "leaf-slime-m",
-        ["Twig Slime (S)"] = "twig-slime-s",
-        ["Twig Slime (M)"] = "twig-slime-m",
-        ["Byrdonis"] = "byrdonis",
-        ["Inklet"] = "inklet",
-        ["Vantom"] = "vantom",
-    };
-
-    /// Sorted "|"-joined sts_sim monster names -> `Encounter` key for
-    /// multi-monster fights. Keys are `string.Join("|", names.OrderBy(n=>n))`
-    /// of each enemy's MonsterNameMap value. Covers the three multi-monster
-    /// encounters that `sts_sim.bench._SCENARIOS` has modeled scenarios for.
-    public static readonly Dictionary<string, string> MultiMonsterEncounterMap = new()
-    {
-        // SlimesWeak — Leaf Slime (M) + Leaf Slime (S) + Twig Slime (S)
-        ["Leaf Slime (M)|Leaf Slime (S)|Twig Slime (S)"] = "slimes-weak",
-        // SlimesWeak — Twig Slime (M) variant
-        ["Leaf Slime (S)|Twig Slime (M)|Twig Slime (S)"] = "slimes-weak-twig",
-        // Inklet encounter — three Inklets
-        ["Inklet|Inklet|Inklet"] = "inklets",
-    };
 }

@@ -260,6 +260,7 @@ def _run_one_random(args: tuple) -> tuple[int, int]:
 def run_deck(
     deck: list[str] | None,
     monster: Encounter | str = Encounter.JAW_WORM,
+    scenario_fn=None,
     seeds: int = 50,
     iterations: int = 200,
     workers: int = 4,
@@ -272,6 +273,10 @@ def run_deck(
     Args:
         deck: Card list (or None for the scenario default).
         monster: Encounter key — see `Encounter` for the full list.
+        scenario_fn: Optional callable ``(seed, deck) -> CombatState`` that
+            overrides `monster`. Only supported with ``policy='mcts'``; lets
+            callers (e.g. server.py) construct a scenario dynamically from a
+            live monster list without registering a named `Encounter`.
         seeds: Number of independent seeds (fights) to run.
         iterations: MCTS iterations per decision (ignored when policy='random').
         workers: Parallel worker processes (ignored when policy='mcts', which
@@ -283,19 +288,28 @@ def run_deck(
             the policy's average HP loss as `regret`. Off by default since
             it's a separate search per seed on top of the policy runs.
     """
-    try:
-        encounter = Encounter(monster)
-    except ValueError:
-        raise ValueError(
-            f"unknown monster {monster!r}; choices: {', '.join(_SCENARIOS)}"
-        ) from None
+    if scenario_fn is not None:
+        if policy != "mcts":
+            raise ValueError("scenario_fn is only supported with policy='mcts'")
+        if ceiling:
+            raise ValueError("scenario_fn is not supported with ceiling=True")
+        the_scenario = scenario_fn
+        encounter = None
+    else:
+        try:
+            encounter = Encounter(monster)
+        except ValueError:
+            raise ValueError(
+                f"unknown monster {monster!r}; choices: {', '.join(_SCENARIOS)}"
+            ) from None
+        the_scenario = _SCENARIOS[encounter]
 
     result = BenchResult(label=label or repr(deck))
 
     if policy == "mcts":
         from .. import fight_outcomes_per_fight
 
-        states = [_SCENARIOS[encounter](seed=seed, deck=deck) for seed in range(seeds)]
+        states = [the_scenario(seed=seed, deck=deck) for seed in range(seeds)]
         outcomes = fight_outcomes_per_fight(states, iterations=iterations)
         result.hp_outcomes = [PLAYER_STARTING_HP - hp_lost for hp_lost, _ in outcomes]
         result.turn_outcomes = [turns for _, turns in outcomes]

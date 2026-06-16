@@ -15,6 +15,12 @@ Response:
      "expected_hp_lost": float, "action_hp_lost": {action: float}}
 
 Request (`cmd: "deck_baseline"`):
+    {"cmd": "deck_baseline", "deck": [...],
+     "monsters": [{"name": "Fuzzy Wurm Crawler", "intent": "ACID_GOOP",
+                   "statuses": [["Vulnerable", 1]]}],
+     "seeds": 30, "iterations": 200}
+
+    Legacy form (single named encounter, still supported):
     {"cmd": "deck_baseline", "deck": [...], "monster": "fuzzy-wurm-crawler",
      "seeds": 30, "iterations": 200}
 
@@ -260,13 +266,58 @@ def handle_request(payload):
         }
     if cmd == "deck_baseline":
         from .bench import run_deck
+        from .scenarios import IRONCLAD_STARTING_DECK, MONSTER_STARTING_HP, PLAYER_STARTING_HP
 
-        result = run_deck(
-            payload.get("deck"),
-            monster=payload["monster"],
-            seeds=payload.get("seeds", DEFAULT_DECK_BASELINE_SEEDS),
-            iterations=payload.get("iterations", _mcts.DEFAULT_ITERATIONS),
-        )
+        monsters_list = payload.get("monsters")
+        if monsters_list is not None:
+            # Dynamic monsters protocol: build a scenario_fn closure from the
+            # live monster list rather than a named Encounter key. Each entry
+            # must have "name" (sts_sim monster name) and may have "intent"
+            # (raw STS2 move id) and "statuses" ([[name, amount], ...]).
+            monster_specs = []
+            for m in monsters_list:
+                name = m["name"]
+                hp = MONSTER_STARTING_HP.get(name)
+                if hp is None:
+                    raise ValueError(f"unknown monster name for deck_baseline: {name!r}")
+                monster_specs.append({
+                    "name": name,
+                    "hp": hp,
+                    "intent": _translate_intent(name, m.get("intent")),
+                    "statuses": _statuses(m.get("statuses", [])),
+                })
+
+            def _scenario_fn(seed, deck):
+                return CombatState(
+                    player_hp=PLAYER_STARTING_HP,
+                    player_energy=3,
+                    monsters=[
+                        Monster(
+                            hp=spec["hp"],
+                            attack=0,
+                            name=spec["name"],
+                            intent=spec["intent"],
+                            statuses=spec["statuses"],
+                        )
+                        for spec in monster_specs
+                    ],
+                    seed=seed,
+                    deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+                )
+
+            result = run_deck(
+                payload.get("deck"),
+                scenario_fn=_scenario_fn,
+                seeds=payload.get("seeds", DEFAULT_DECK_BASELINE_SEEDS),
+                iterations=payload.get("iterations", _mcts.DEFAULT_ITERATIONS),
+            )
+        else:
+            result = run_deck(
+                payload.get("deck"),
+                monster=payload["monster"],
+                seeds=payload.get("seeds", DEFAULT_DECK_BASELINE_SEEDS),
+                iterations=payload.get("iterations", _mcts.DEFAULT_ITERATIONS),
+            )
         return {
             "mean_hp_lost": result.mean_hp_lost,
             "win_rate": result.win_rate,
