@@ -144,6 +144,26 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                 tick_debuffs(&mut next.monsters[i].fighter.statuses);
             }
 
+            // Constrict: the player takes `n` unblockable damage at end of
+            // their turn, summed across all Constrict stacks. Damage bypasses
+            // block and the damage-modifier pipeline entirely.
+            let constrict_damage: i32 = next
+                .player
+                .statuses
+                .iter()
+                .filter_map(|s| {
+                    if let Status::Constrict(n) = s {
+                        Some(*n)
+                    } else {
+                        None
+                    }
+                })
+                .sum();
+            if constrict_damage > 0 {
+                next.player.hp -= constrict_damage;
+                next.player_hp_lost_this_turn = true;
+            }
+
             // Block does not carry over between turns, unless Barricade is
             // held.
             if !next.player.statuses.contains(&Status::Barricade) {

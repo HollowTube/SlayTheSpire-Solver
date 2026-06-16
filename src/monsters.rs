@@ -38,6 +38,8 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         "Brute Ruby Raider" => Some("Beat".to_string()),
         // Crossbow Ruby Raider: 2-move fixed cycle, opens with Reload.
         "Crossbow Ruby Raider" => Some("Reload".to_string()),
+        // Slithering Strangler: opens with Constrict.
+        "Slithering Strangler" => Some("Constrict".to_string()),
         _ => None,
     }
 }
@@ -169,6 +171,16 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
         // Crossbow Ruby Raider: Reload (gain 3 block), Fire (14 damage).
         ("Crossbow Ruby Raider", "Reload") => Some(vec![EffectOp::GainBlock(3)]),
         ("Crossbow Ruby Raider", "Fire") => Some(vec![EffectOp::DealDamage(14)]),
+        // Slithering Strangler (elite): Constrict applies 3 stacks, then
+        // alternates Thwack/Lash with Constrict reapplied each time.
+        ("Slithering Strangler", "Constrict") => {
+            Some(vec![EffectOp::ApplyStatusToTarget(Status::Constrict(3))])
+        }
+        ("Slithering Strangler", "Thwack") => Some(vec![
+            EffectOp::DealDamage(7),
+            EffectOp::GainBlock(5),
+        ]),
+        ("Slithering Strangler", "Lash") => Some(vec![EffectOp::DealDamage(12)]),
         _ => None,
     }
 }
@@ -324,6 +336,20 @@ pub(crate) fn select_next_intent(
         "Crossbow Ruby Raider" => match last_move.as_deref() {
             Some("Reload") => Some("Fire".to_string()),
             _ => Some("Reload".to_string()),
+        },
+        // Slithering Strangler: Constrict (opening) -> random Thwack/Lash ->
+        // Constrict -> random Thwack/Lash -> ... (Constrict reapplied every
+        // other turn, so stacks accumulate: 3, 6, 9, ...).
+        "Slithering Strangler" => match last_move.as_deref() {
+            Some("Constrict") => {
+                let roll = rng.gen_range(0..100);
+                if roll < 50 {
+                    Some("Thwack".to_string())
+                } else {
+                    Some("Lash".to_string())
+                }
+            }
+            _ => Some("Constrict".to_string()),
         },
         _ => None,
     }

@@ -101,6 +101,7 @@ class MonsterName(str, Enum):
     ASSASSIN_RUBY_RAIDER = "Assassin Ruby Raider"
     BRUTE_RUBY_RAIDER = "Brute Ruby Raider"
     CROSSBOW_RUBY_RAIDER = "Crossbow Ruby Raider"
+    SLITHERING_STRANGLER = "Slithering Strangler"
 
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
@@ -176,6 +177,9 @@ BRUTE_RUBY_RAIDER_STARTING_HP = 30
 # Crossbow Ruby Raider HP range: 18-21 normal. 18 used as canonical (minimum).
 CROSSBOW_RUBY_RAIDER_STARTING_HP = 18
 
+# Slithering Strangler (elite) HP range: 53-55 normal. 54 used as canonical.
+SLITHERING_STRANGLER_STARTING_HP = 54
+
 # Canonical starting HP keyed by MonsterName value. Used by the server's
 # deck_baseline handler to construct a "fresh start" scenario from a named
 # monster list, so the benchmark uses canonical HP regardless of what the
@@ -198,6 +202,7 @@ MONSTER_STARTING_HP: dict[str, int] = {
     MonsterName.ASSASSIN_RUBY_RAIDER: ASSASSIN_RUBY_RAIDER_STARTING_HP,
     MonsterName.BRUTE_RUBY_RAIDER: BRUTE_RUBY_RAIDER_STARTING_HP,
     MonsterName.CROSSBOW_RUBY_RAIDER: CROSSBOW_RUBY_RAIDER_STARTING_HP,
+    MonsterName.SLITHERING_STRANGLER: SLITHERING_STRANGLER_STARTING_HP,
 }
 
 
@@ -534,6 +539,27 @@ def ironclad_starter_deck_vs_crossbow_ruby_raider(seed, deck=None):
                 hp=CROSSBOW_RUBY_RAIDER_STARTING_HP,
                 attack=0,
                 name=MonsterName.CROSSBOW_RUBY_RAIDER,
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_slithering_strangler(seed, deck=None):
+    """Ironclad's starting loadout against Slithering Strangler (Overgrowth
+    elite). Opens with Constrict (applies 3 stacks), then alternates
+    Thwack/Lash (random 50/50) with Constrict reapplied every other turn.
+    Constrict stacks accumulate (3, 6, 9, ...), dealing escalating end-of-turn
+    unblockable damage."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=SLITHERING_STRANGLER_STARTING_HP,
+                attack=0,
+                name=MonsterName.SLITHERING_STRANGLER,
             )
         ],
         seed=seed,
