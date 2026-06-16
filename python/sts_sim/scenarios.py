@@ -103,6 +103,8 @@ class MonsterName(str, Enum):
     CROSSBOW_RUBY_RAIDER = "Crossbow Ruby Raider"
     SLITHERING_STRANGLER = "Slithering Strangler"
     CUBEX_CONSTRUCT = "Cubex Construct"
+    KIN_PRIEST = "Kin Priest"
+    KIN_FOLLOWER = "Kin Follower"
 
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
@@ -183,6 +185,12 @@ SLITHERING_STRANGLER_STARTING_HP = 54
 # Cubex Construct (elite) HP: 65 normal. 65 used as canonical.
 CUBEX_CONSTRUCT_STARTING_HP = 65
 
+# Kin Priest HP: 190 normal, 199 at Ascension 8. 190 used as canonical.
+KIN_PRIEST_STARTING_HP = 190
+
+# Kin Follower HP: 58-59 normal, 62-63 at Ascension 8. 59 used as canonical.
+KIN_FOLLOWER_STARTING_HP = 59
+
 # Canonical starting HP keyed by MonsterName value. Used by the server's
 # deck_baseline handler to construct a "fresh start" scenario from a named
 # monster list, so the benchmark uses canonical HP regardless of what the
@@ -207,6 +215,8 @@ MONSTER_STARTING_HP: dict[str, int] = {
     MonsterName.CROSSBOW_RUBY_RAIDER: CROSSBOW_RUBY_RAIDER_STARTING_HP,
     MonsterName.SLITHERING_STRANGLER: SLITHERING_STRANGLER_STARTING_HP,
     MonsterName.CUBEX_CONSTRUCT: CUBEX_CONSTRUCT_STARTING_HP,
+    MonsterName.KIN_PRIEST: KIN_PRIEST_STARTING_HP,
+    MonsterName.KIN_FOLLOWER: KIN_FOLLOWER_STARTING_HP,
 }
 
 
@@ -633,6 +643,38 @@ def ironclad_starter_deck_vs_inklet(seed, deck=None):
                 hp=INKLET_STARTING_HP,
                 name=MonsterName.INKLET,
                 statuses=[("Slippery", 1)],
+            ),
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_the_kin(seed, deck=None):
+    """Ironclad's starting loadout against The Kin (Overgrowth boss): Kin Priest
+    + 2x Kin Follower. Kin Priest follows a fixed 4-move cycle (Orb of Frailty
+    -> Orb of Weakness -> Soul Beam -> Dark Ritual -> repeat). Each Follower
+    follows an independent fixed 3-move cycle (Quick Slash -> Boomerang ->
+    Power Dance -> repeat), with offset openers: Follower A opens on Quick
+    Slash, Follower B on Power Dance. Both Followers start with
+    Status::Minion { leader: "Kin Priest" } — they flee (stop acting) once
+    the Priest is dead."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(hp=KIN_PRIEST_STARTING_HP, name=MonsterName.KIN_PRIEST),
+            Monster(
+                hp=KIN_FOLLOWER_STARTING_HP,
+                name=MonsterName.KIN_FOLLOWER,
+                intent="Quick Slash",
+                statuses=[("Minion", 0)],
+            ),
+            Monster(
+                hp=KIN_FOLLOWER_STARTING_HP,
+                name=MonsterName.KIN_FOLLOWER,
+                intent="Power Dance",
+                statuses=[("Minion", 0)],
             ),
         ],
         seed=seed,

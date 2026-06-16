@@ -115,6 +115,13 @@ pub(crate) enum Status {
     // combatant. Decrements on each blocked application; non-debuff statuses
     // (Strength, block, etc.) pass through unaffected.
     Artifact(i32),
+    // Frail: −25% Block gained (rounds down). Decays per turn like Weak
+    // (binary debuff — multiple stacks extend duration, not effect).
+    Frail(i32),
+    // Minion: the combatant skips its turn entirely if the monster named
+    // `leader` has hp <= 0. The `leader` field is not part of the string key
+    // so all Minion variants collapse to "Minion" for binary dedup.
+    Minion { leader: String },
 }
 
 impl Status {
@@ -146,6 +153,8 @@ impl Status {
             Status::BattleDrum => "BattleDrum",
             Status::Constrict(_) => "Constrict",
             Status::Artifact(_) => "Artifact",
+            Status::Frail(_) => "Frail",
+            Status::Minion { .. } => "Minion",
         }
     }
 
@@ -184,6 +193,10 @@ impl Status {
             "BattleDrum" => vec![Status::BattleDrum; amount.max(0) as usize],
             "Constrict" => vec![Status::Constrict(amount)],
             "Artifact" => vec![Status::Artifact(amount)],
+            "Frail" => vec![Status::Frail(amount)],
+            "Minion" => vec![Status::Minion {
+                leader: "Kin Priest".to_string(),
+            }],
             _ => Vec::new(),
         }
     }
@@ -234,6 +247,10 @@ impl Status {
             {
                 Some(Modifier::MultiplyDamage(0.5_f64.powi(*n)))
             }
+            // Frail: −25% Block gained, rounded down (target side only).
+            (Status::Frail(_), Side::Target, EventType::OnBlockGained) => {
+                Some(Modifier::MultiplyBlock(0.75))
+            }
             _ => None,
         }
     }
@@ -253,6 +270,7 @@ impl Status {
                 | Status::Colossus(_)
                 | Status::StrengthThisTurn(_)
                 | Status::FreeAttack
+                | Status::Frail(_)
         )
     }
 
@@ -262,7 +280,7 @@ impl Status {
     pub(crate) fn is_debuff(&self) -> bool {
         matches!(
             self,
-            Status::Vulnerable | Status::Weak | Status::Shrink | Status::Constrict(_)
+            Status::Vulnerable | Status::Weak | Status::Shrink | Status::Constrict(_) | Status::Frail(_)
         )
     }
 
@@ -316,6 +334,7 @@ impl Status {
 #[derive(Clone, Copy, PartialEq)]
 enum EventType {
     OnDamageDealt,
+    OnBlockGained,
 }
 
 /// Which side of a damage exchange a status is sitting on — lets a status
@@ -337,6 +356,7 @@ enum Side {
 enum Modifier {
     MultiplyDamage(f64),
     AddDamage(i32),
+    MultiplyBlock(f64),
 }
 
 /// Whether a status is a binary debuff (stacks extend duration, not effect
@@ -384,17 +404,30 @@ fn apply_damage_modifiers(
 
     let additive = modifiers.iter().fold(base, |amount, modifier| match modifier {
         Modifier::AddDamage(delta) => amount + delta,
-        Modifier::MultiplyDamage(_) => amount,
+        _ => amount,
     });
 
     let multiplied = modifiers
         .iter()
         .fold(additive as f64, |amount, modifier| match modifier {
             Modifier::MultiplyDamage(factor) => amount * factor,
-            Modifier::AddDamage(_) => amount,
+            _ => amount,
         });
 
     multiplied.floor() as i32
+}
+
+/// Runs `base` through every block modifier that `holder_statuses` registers
+/// for `EventType::OnBlockGained` — only `Modifier::MultiplyBlock` variants
+/// are applied, so damage-only modifiers (AddDamage, MultiplyDamage) pass
+/// through unchanged. Right now only Frail contributes here, but the pipeline
+/// is generic enough for future block-modifying statuses.
+fn apply_block_modifiers(base: i32, holder_statuses: &[Status]) -> i32 {
+    let modifiers: Vec<Modifier> = collect_modifiers(holder_statuses, Side::Target, EventType::OnBlockGained, &[]);
+    modifiers.iter().fold(base as f64, |amount, modifier| match modifier {
+        Modifier::MultiplyBlock(factor) => amount * factor,
+        _ => amount,
+    }).floor() as i32
 }
 
 /// Which combatant an effect pipeline is acting on behalf of — lets the same
@@ -737,7 +770,8 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 }
             }
             EffectOp::GainBlock(amount) => {
-                state.fighter_mut(actor).block += amount;
+                let modified = apply_block_modifiers(*amount, &state.fighter(actor).statuses);
+                state.fighter_mut(actor).block += modified;
                 if actor == Actor::Player {
                     fire_event(state, GameEvent::BlockGained);
                 }
@@ -934,8 +968,9 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 }
             }
             EffectOp::GainBlockScaled { base, per_unit, source } => {
-                let amount = base + per_unit * source.read(state, actor, actor);
-                state.fighter_mut(actor).block += amount;
+                let raw = base + per_unit * source.read(state, actor, actor);
+                let modified = apply_block_modifiers(raw, &state.fighter(actor).statuses);
+                state.fighter_mut(actor).block += modified;
                 if actor == Actor::Player {
                     fire_event(state, GameEvent::BlockGained);
                 }

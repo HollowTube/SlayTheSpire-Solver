@@ -42,6 +42,10 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         "Slithering Strangler" => Some("Constrict".to_string()),
         // Cubex Construct: opens with Charge Up.
         "Cubex Construct" => Some("Charge Up".to_string()),
+        // Kin Priest: fixed 4-move cycle, opens with Orb of Frailty.
+        "Kin Priest" => Some("Orb of Frailty".to_string()),
+        // Kin Follower: fixed 3-move cycle, opens with Quick Slash.
+        "Kin Follower" => Some("Quick Slash".to_string()),
         _ => None,
     }
 }
@@ -195,6 +199,28 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
         ("Cubex Construct", "Expel Blast") => Some(vec![
             EffectOp::DealDamage(5),
             EffectOp::DealDamage(5),
+        ]),
+        // Kin Priest: fixed 4-move cycle.
+        ("Kin Priest", "Orb of Frailty") => Some(vec![
+            EffectOp::DealDamage(8),
+            EffectOp::ApplyStatusToTarget(Status::Frail(1)),
+        ]),
+        ("Kin Priest", "Orb of Weakness") => Some(vec![
+            EffectOp::DealDamage(8),
+            EffectOp::ApplyStatusToTarget(Status::Weak),
+        ]),
+        ("Kin Priest", "Soul Beam") => Some(vec![
+            EffectOp::DealDamage(3),
+            EffectOp::DealDamage(3),
+        ]),
+        ("Kin Priest", "Dark Ritual") => {
+            Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))])
+        }
+        // Kin Follower: fixed 3-move cycle.
+        ("Kin Follower", "Quick Slash") => Some(vec![EffectOp::DealDamage(5)]),
+        ("Kin Follower", "Boomerang") => Some(vec![
+            EffectOp::DealDamage(2),
+            EffectOp::DealDamage(2),
         ]),
         _ => None,
     }
@@ -374,6 +400,22 @@ pub(crate) fn select_next_intent(
             Some("Repeater Blast") => Some("Repeater Blast".to_string()),
             Some("Expel Blast") => Some("Repeater Blast".to_string()),
             _ => Some("Charge Up".to_string()),
+        },
+        // Kin Priest: fixed 4-move cycle: Orb of Frailty -> Orb of Weakness
+        // -> Soul Beam -> Dark Ritual -> repeat.
+        "Kin Priest" => match last_move.as_deref() {
+            Some("Orb of Frailty") => Some("Orb of Weakness".to_string()),
+            Some("Orb of Weakness") => Some("Soul Beam".to_string()),
+            Some("Soul Beam") => Some("Dark Ritual".to_string()),
+            _ => Some("Orb of Frailty".to_string()),
+        },
+        // Kin Follower: fixed 3-move cycle: Quick Slash -> Boomerang ->
+        // Power Dance -> repeat.
+        "Kin Follower" => match last_move.as_deref() {
+            Some("Quick Slash") => Some("Boomerang".to_string()),
+            Some("Boomerang") => Some("Power Dance".to_string()),
+            _ => Some("Quick Slash".to_string()),
+        },
         },
         _ => None,
     }
