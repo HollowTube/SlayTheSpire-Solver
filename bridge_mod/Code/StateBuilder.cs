@@ -40,41 +40,36 @@ public static class StateBuilder
     }
 
     /// Builds a "deck_baseline" request for the player's master deck against
-    /// the current fight's monster, or null if this fight isn't a
-    /// single-monster encounter `NameMap.EncounterNameMap` covers (the
-    /// "deck vs. monster, before any cards are drawn" baseline is undefined
-    /// for anything else).
+    /// the current fight's monsters, or null if any enemy isn't in
+    /// `NameMap.MonsterNameMap` (i.e. sts_sim doesn't model that monster and
+    /// can't run a deck-baseline simulation for this fight).
     public static string? BuildDeckBaselineRequest(CombatState combatState, Player player)
     {
         var enemies = combatState.Enemies.ToList();
-        string? encounter;
-        if (enemies.Count == 1)
+        var targets = combatState.Players.Select(p => p.Creature).ToList();
+
+        var monstersArray = new JsonArray();
+        foreach (var creature in enemies)
         {
-            var entry = enemies[0].ModelId.Entry;
+            var entry = creature.ModelId.Entry;
             if (!NameMap.MonsterNameMap.TryGetValue(entry, out var monsterName))
                 return null;
-            if (!NameMap.EncounterNameMap.TryGetValue(monsterName, out encounter))
-                return null;
-        }
-        else
-        {
-            // For multi-monster fights, build a sorted "|"-joined key from
-            // each enemy's sts_sim name and look up MultiMonsterEncounterMap.
-            var names = enemies
-                .Select(c => NameMap.MonsterNameMap.TryGetValue(c.ModelId.Entry, out var n) ? n : null)
-                .ToList();
-            if (names.Any(n => n == null))
-                return null;
-            var key = string.Join("|", names.OrderBy(n => n));
-            if (!NameMap.MultiMonsterEncounterMap.TryGetValue(key, out encounter))
-                return null;
+
+            var (intentId, _) = NextMoveIntent(creature, targets);
+            var monsterObj = new JsonObject { ["name"] = monsterName };
+            if (intentId != null)
+                monsterObj["intent"] = intentId;
+            var statuses = Statuses(creature);
+            if (statuses.Count > 0)
+                monsterObj["statuses"] = statuses;
+            monstersArray.Add(monsterObj);
         }
 
         var root = new JsonObject
         {
             ["cmd"] = "deck_baseline",
             ["deck"] = CardNames(player.Deck),
-            ["monster"] = encounter,
+            ["monsters"] = monstersArray,
         };
         return root.ToJsonString();
     }
