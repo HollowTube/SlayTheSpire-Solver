@@ -105,6 +105,23 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                 if next.monsters[i].fighter.hp <= 0 {
                     continue;
                 }
+
+                // Minion flee check: if this monster has Status::Minion and
+                // its named leader is dead, skip its turn entirely.
+                let is_fled_minion = next.monsters[i].fighter.statuses.iter().any(|s| {
+                    if let Status::Minion { leader } = s {
+                        next.monsters.iter().any(|m| {
+                            m.name.as_deref() == Some(leader.as_str()) && m.fighter.hp <= 0
+                        })
+                    } else {
+                        false
+                    }
+                });
+                if is_fled_minion {
+                    next.monsters[i].intent = None;
+                    continue;
+                }
+
                 next.monsters[i].fighter.block = 0;
                 match next.monsters[i].name.clone() {
                     Some(name) => {

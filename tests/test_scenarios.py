@@ -6,6 +6,8 @@ from sts_sim.scenarios import (
     INKLET_STARTING_HP,
     IRONCLAD_STARTING_DECK,
     JAW_WORM_STARTING_HP,
+    KIN_FOLLOWER_STARTING_HP,
+    KIN_PRIEST_STARTING_HP,
     LEAF_SLIME_M_STARTING_HP,
     LEAF_SLIME_S_STARTING_HP,
     PLAYER_STARTING_HP,
@@ -20,6 +22,7 @@ from sts_sim.scenarios import (
     ironclad_starter_deck_vs_shrinker_beetle,
     ironclad_starter_deck_vs_slimes_weak,
     ironclad_starter_deck_vs_slimes_weak_twig,
+    ironclad_starter_deck_vs_the_kin,
     ironclad_starter_deck_vs_twig_slime_m,
     ironclad_starter_deck_vs_twig_slime_s,
     ironclad_starter_deck_vs_vantom,
@@ -228,6 +231,29 @@ def test_vs_vantom_loads_with_slippery_x9_and_ink_blot_opener():
     assert state.monsters[0].intent == "Ink Blot"
 
 
+def test_vs_the_kin_loads_with_three_monsters_and_minion_statuses():
+    state = ironclad_starter_deck_vs_the_kin(seed=42)
+
+    assert state.player_hp == PLAYER_STARTING_HP
+    assert len(state.hand) == 5
+    assert [m.name for m in state.monsters] == [
+        "Kin Priest",
+        "Kin Follower",
+        "Kin Follower",
+    ]
+    assert [m.hp for m in state.monsters] == [
+        KIN_PRIEST_STARTING_HP,
+        KIN_FOLLOWER_STARTING_HP,
+        KIN_FOLLOWER_STARTING_HP,
+    ]
+    assert state.monsters[0].intent == "Orb of Frailty"
+    assert state.monsters[1].intent == "Quick Slash"
+    assert state.monsters[2].intent == "Power Dance"
+    assert state.monsters[0].statuses == []
+    assert state.monsters[1].statuses == ["Minion"]
+    assert state.monsters[2].statuses == ["Minion"]
+
+
 def test_vs_slimes_weak_twig_loads_with_three_slime_monsters():
     state = ironclad_starter_deck_vs_slimes_weak_twig(seed=42)
 
@@ -258,6 +284,7 @@ def test_complete_random_fights_against_each_easy_pool_monster_reach_correctly_s
         ironclad_starter_deck_vs_slimes_weak,
         ironclad_starter_deck_vs_inklets,
         ironclad_starter_deck_vs_slimes_weak_twig,
+        ironclad_starter_deck_vs_the_kin,
         ironclad_starter_deck_vs_vantom,
     ]
 
