@@ -266,7 +266,11 @@ def handle_request(payload):
         }
     if cmd == "deck_baseline":
         from .bench import run_deck
-        from .scenarios import IRONCLAD_STARTING_DECK, MONSTER_STARTING_HP, PLAYER_STARTING_HP
+        from .scenarios import (
+            IRONCLAD_STARTING_DECK,
+            MONSTER_STARTING_HP,
+            PLAYER_STARTING_HP,
+        )
 
         monsters_list = payload.get("monsters")
         if monsters_list is not None:
@@ -279,13 +283,17 @@ def handle_request(payload):
                 name = m["name"]
                 hp = MONSTER_STARTING_HP.get(name)
                 if hp is None:
-                    raise ValueError(f"unknown monster name for deck_baseline: {name!r}")
-                monster_specs.append({
-                    "name": name,
-                    "hp": hp,
-                    "intent": _translate_intent(name, m.get("intent")),
-                    "statuses": _statuses(m.get("statuses", [])),
-                })
+                    raise ValueError(
+                        f"unknown monster name for deck_baseline: {name!r}"
+                    )
+                monster_specs.append(
+                    {
+                        "name": name,
+                        "hp": hp,
+                        "intent": _translate_intent(name, m.get("intent")),
+                        "statuses": _statuses(m.get("statuses", [])),
+                    }
+                )
 
             def _scenario_fn(seed, deck):
                 return CombatState(
