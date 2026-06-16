@@ -40,6 +40,8 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         "Crossbow Ruby Raider" => Some("Reload".to_string()),
         // Slithering Strangler: opens with Constrict.
         "Slithering Strangler" => Some("Constrict".to_string()),
+        // Cubex Construct: opens with Charge Up.
+        "Cubex Construct" => Some("Charge Up".to_string()),
         _ => None,
     }
 }
@@ -181,6 +183,19 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
             EffectOp::GainBlock(5),
         ]),
         ("Slithering Strangler", "Lash") => Some(vec![EffectOp::DealDamage(12)]),
+        // Cubex Construct (elite): fixed cycle with two consecutive Repeater Blasts
+        // then one Expel Blast.
+        ("Cubex Construct", "Charge Up") => {
+            Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))])
+        }
+        ("Cubex Construct", "Repeater Blast") => Some(vec![
+            EffectOp::DealDamage(7),
+            EffectOp::ApplyStatusToSelf(Status::Strength(2)),
+        ]),
+        ("Cubex Construct", "Expel Blast") => Some(vec![
+            EffectOp::DealDamage(5),
+            EffectOp::DealDamage(5),
+        ]),
         _ => None,
     }
 }
@@ -350,6 +365,15 @@ pub(crate) fn select_next_intent(
                 }
             }
             _ => Some("Constrict".to_string()),
+        },
+        // Cubex Construct: Charge Up (opening) → Repeater Blast → Repeater
+        // Blast → Expel Blast → Repeater Blast → ...
+        "Cubex Construct" => match last_move.as_deref() {
+            Some("Charge Up") => Some("Repeater Blast".to_string()),
+            Some("Repeater Blast") if streak >= 2 => Some("Expel Blast".to_string()),
+            Some("Repeater Blast") => Some("Repeater Blast".to_string()),
+            Some("Expel Blast") => Some("Repeater Blast".to_string()),
+            _ => Some("Charge Up".to_string()),
         },
         _ => None,
     }

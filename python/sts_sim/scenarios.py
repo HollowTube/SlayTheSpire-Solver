@@ -102,6 +102,7 @@ class MonsterName(str, Enum):
     BRUTE_RUBY_RAIDER = "Brute Ruby Raider"
     CROSSBOW_RUBY_RAIDER = "Crossbow Ruby Raider"
     SLITHERING_STRANGLER = "Slithering Strangler"
+    CUBEX_CONSTRUCT = "Cubex Construct"
 
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
@@ -179,6 +180,8 @@ CROSSBOW_RUBY_RAIDER_STARTING_HP = 18
 
 # Slithering Strangler (elite) HP range: 53-55 normal. 54 used as canonical.
 SLITHERING_STRANGLER_STARTING_HP = 54
+# Cubex Construct (elite) HP: 65 normal. 65 used as canonical.
+CUBEX_CONSTRUCT_STARTING_HP = 65
 
 # Canonical starting HP keyed by MonsterName value. Used by the server's
 # deck_baseline handler to construct a "fresh start" scenario from a named
@@ -203,6 +206,7 @@ MONSTER_STARTING_HP: dict[str, int] = {
     MonsterName.BRUTE_RUBY_RAIDER: BRUTE_RUBY_RAIDER_STARTING_HP,
     MonsterName.CROSSBOW_RUBY_RAIDER: CROSSBOW_RUBY_RAIDER_STARTING_HP,
     MonsterName.SLITHERING_STRANGLER: SLITHERING_STRANGLER_STARTING_HP,
+    MonsterName.CUBEX_CONSTRUCT: CUBEX_CONSTRUCT_STARTING_HP,
 }
 
 
@@ -560,6 +564,26 @@ def ironclad_starter_deck_vs_slithering_strangler(seed, deck=None):
                 hp=SLITHERING_STRANGLER_STARTING_HP,
                 attack=0,
                 name=MonsterName.SLITHERING_STRANGLER,
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_cubex_construct(seed, deck=None):
+    """Ironclad's starting loadout against Cubex Construct (Overgrowth elite).
+    Starts with 13 block and 1 Artifact. Fixed cycle: Charge Up (opening) →
+    Repeater Blast → Repeater Blast → Expel Blast → repeat."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=CUBEX_CONSTRUCT_STARTING_HP,
+                name=MonsterName.CUBEX_CONSTRUCT,
+                block=13,
+                statuses=[("Artifact", 1)],
             )
         ],
         seed=seed,
