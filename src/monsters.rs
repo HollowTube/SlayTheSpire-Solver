@@ -212,6 +212,7 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
         ("Kin Priest", "Soul Beam") => Some(vec![
             EffectOp::DealDamage(3),
             EffectOp::DealDamage(3),
+            EffectOp::DealDamage(3),
         ]),
         ("Kin Priest", "Dark Ritual") => {
             Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))])
