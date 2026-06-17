@@ -222,6 +222,9 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
             EffectOp::DealDamage(2),
             EffectOp::DealDamage(2),
         ]),
+        ("Kin Follower", "Power Dance") => {
+            Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))])
+        }
         _ => None,
     }
 }
@@ -415,7 +418,6 @@ pub(crate) fn select_next_intent(
             Some("Quick Slash") => Some("Boomerang".to_string()),
             Some("Boomerang") => Some("Power Dance".to_string()),
             _ => Some("Quick Slash".to_string()),
-        },
         },
         _ => None,
     }
