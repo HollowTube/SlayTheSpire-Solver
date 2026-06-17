@@ -89,11 +89,15 @@ def test_minion_acts_normally_when_leader_is_alive():
         monsters=[
             Monster(hp=190, name="Kin Priest"),
             Monster(
-                hp=59, name="Kin Follower", intent="Quick Slash",
+                hp=59,
+                name="Kin Follower",
+                intent="Quick Slash",
                 statuses=[("Minion", 0)],
             ),
             Monster(
-                hp=59, name="Kin Follower", intent="Power Dance",
+                hp=59,
+                name="Kin Follower",
+                intent="Power Dance",
                 statuses=[("Minion", 0)],
             ),
         ],
@@ -113,11 +117,15 @@ def test_minion_skips_turn_when_leader_is_dead():
         monsters=[
             Monster(hp=0, name="Kin Priest"),
             Monster(
-                hp=59, name="Kin Follower", intent="Quick Slash",
+                hp=59,
+                name="Kin Follower",
+                intent="Quick Slash",
                 statuses=[("Minion", 0)],
             ),
             Monster(
-                hp=59, name="Kin Follower", intent="Power Dance",
+                hp=59,
+                name="Kin Follower",
+                intent="Power Dance",
                 statuses=[("Minion", 0)],
             ),
         ],
@@ -137,11 +145,15 @@ def test_only_specific_leader_death_triggers_minion_flee():
         monsters=[
             Monster(hp=190, name="Kin Priest"),
             Monster(
-                hp=0, name="Kin Follower", intent="Quick Slash",
+                hp=0,
+                name="Kin Follower",
+                intent="Quick Slash",
                 statuses=[("Minion", 0)],
             ),
             Monster(
-                hp=59, name="Kin Follower", intent="Power Dance",
+                hp=59,
+                name="Kin Follower",
+                intent="Power Dance",
                 statuses=[("Minion", 0)],
             ),
         ],
@@ -215,6 +227,7 @@ def test_kin_priest_cycle_repeats():
 
 
 # ── Kin Follower move pool / fixed cycle ──────────────────────────────────────
+
 
 def _kin_follower(seed=42, intent=None):
     return CombatState(
