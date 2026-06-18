@@ -505,6 +505,15 @@ fn card_data_base(name: &str) -> Option<CardData> {
             effects: vec![EffectOp::DrawCards(1)],
             keywords: HashSet::new(),
         }),
+        // Phrog Parasite's Infect sticks these into the player's discard pile.
+        // Same stats as Wound: 1 energy, draws 1 card, exhausts on play.
+        "Infection" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Status,
+            effects: vec![EffectOp::DrawCards(1)],
+            keywords: HashSet::new(),
+        }),
         // Per the wiki: Dazed is Unplayable and Ethereal, and does nothing —
         // a junk card the Defect's orbs and some monsters stick into the
         // player's hand/draw pile to clog it up.

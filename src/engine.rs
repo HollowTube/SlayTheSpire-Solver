@@ -122,6 +122,18 @@ pub(crate) enum Status {
     // `leader` has hp <= 0. The `leader` field is not part of the string key
     // so all Minion variants collapse to "Minion" for binary dedup.
     Minion { leader: String },
+    // Stun: the combatant skips its entire next turn (no intent resolution,
+    // no damage/effects). Consumed after the skip — designed for reuse by
+    // Ceremonial Beast's self-stun at the Plow threshold.
+    Stun,
+    // Infested: when holder's HP reaches ≤ 0, spawns `count` monsters with
+    // `minion_name` and `minion_hp`, each starting with Stun(1). Designed for
+    // reuse by future summon-on-death enemies.
+    Infested {
+        minion_name: String,
+        minion_hp: i32,
+        count: i32,
+    },
 }
 
 impl Status {
@@ -155,6 +167,8 @@ impl Status {
             Status::Artifact(_) => "Artifact",
             Status::Frail(_) => "Frail",
             Status::Minion { .. } => "Minion",
+            Status::Stun => "Stun",
+            Status::Infested { .. } => "Infested",
         }
     }
 
@@ -196,6 +210,12 @@ impl Status {
             "Frail" => vec![Status::Frail(amount)],
             "Minion" => vec![Status::Minion {
                 leader: "Kin Priest".to_string(),
+            }],
+            "Stun" => vec![Status::Stun; amount.max(0) as usize],
+            "Infested" => vec![Status::Infested {
+                minion_name: "Wriggler".to_string(),
+                minion_hp: 21,
+                count: amount,
             }],
             _ => Vec::new(),
         }
