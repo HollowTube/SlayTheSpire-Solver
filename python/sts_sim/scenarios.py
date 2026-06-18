@@ -105,6 +105,8 @@ class MonsterName(str, Enum):
     CUBEX_CONSTRUCT = "Cubex Construct"
     KIN_PRIEST = "Kin Priest"
     KIN_FOLLOWER = "Kin Follower"
+    PHROG_PARASITE = "Phrog Parasite"
+    WRIGGLER = "Wriggler"
 
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
@@ -191,6 +193,12 @@ KIN_PRIEST_STARTING_HP = 190
 # Kin Follower HP: 58-59 normal, 62-63 at Ascension 8. 59 used as canonical.
 KIN_FOLLOWER_STARTING_HP = 59
 
+# Phrog Parasite (elite) HP: 61-64 normal. 64 used as canonical (max).
+PHROG_PARASITE_STARTING_HP = 64
+
+# Wriggler (summoned minion) HP: 17-21 normal. 21 used as canonical (max).
+WRIGGLER_STARTING_HP = 21
+
 # Canonical starting HP keyed by MonsterName value. Used by the server's
 # deck_baseline handler to construct a "fresh start" scenario from a named
 # monster list, so the benchmark uses canonical HP regardless of what the
@@ -217,6 +225,8 @@ MONSTER_STARTING_HP: dict[str, int] = {
     MonsterName.CUBEX_CONSTRUCT: CUBEX_CONSTRUCT_STARTING_HP,
     MonsterName.KIN_PRIEST: KIN_PRIEST_STARTING_HP,
     MonsterName.KIN_FOLLOWER: KIN_FOLLOWER_STARTING_HP,
+    MonsterName.PHROG_PARASITE: PHROG_PARASITE_STARTING_HP,
+    MonsterName.WRIGGLER: WRIGGLER_STARTING_HP,
 }
 
 
@@ -710,6 +720,23 @@ def ironclad_starter_deck_vs_inklets(seed, deck=None):
                 name=MonsterName.INKLET,
                 statuses=[("Slippery", 1)],
             ),
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_phrog_parasite(seed, deck=None):
+    """Ironclad's starting loadout against Phrog Parasite (Overgrowth elite)."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=PHROG_PARASITE_STARTING_HP,
+                name=MonsterName.PHROG_PARASITE,
+                statuses=[("Infested", 4)],
+            )
         ],
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),

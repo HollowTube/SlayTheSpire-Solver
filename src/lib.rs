@@ -10,7 +10,7 @@ use mcts::{
     fight_outcomes_per_fight, hp_lost_per_fight, mcts_action_values, mcts_search,
     simulate_hp_lost,
 };
-use monsters::{monster_move, select_next_intent};
+use monsters::{monster_move, opening_intent, select_next_intent};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rand::{Rng, RngCore};
@@ -102,7 +102,44 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             // test) — it always swings for its fixed `attack`. Dead monsters
             // (hp <= 0) don't act.
             for i in 0..next.monsters.len() {
+                // Infested spawn-on-death: if the monster has hp <= 0 and
+                // carries Status::Infested, spawn its minions before skipping
+                // its turn. Spawned monsters go to the end of the list so
+                // existing loop indices remain valid; they'll act on subsequent
+                // EndTurn cycles.
+                let infested = next.monsters[i]
+                    .fighter
+                    .statuses
+                    .iter()
+                    .find_map(|s| {
+                        if let Status::Infested { minion_name, minion_hp, count } = s {
+                            Some((minion_name.clone(), *minion_hp, *count))
+                        } else {
+                            None
+                        }
+                    });
                 if next.monsters[i].fighter.hp <= 0 {
+                    if let Some((mname, mhp, mcount)) = infested {
+                        for _ in 0..mcount {
+                            let monster = Monster {
+                                fighter: Fighter {
+                                    hp: mhp,
+                                    max_hp: mhp,
+                                    block: 0,
+                                    statuses: vec![Status::Stun],
+                                },
+                                attack: 0,
+                                name: Some(mname.clone()),
+                                intent: opening_intent(&mname),
+                                last_move: None,
+                                move_streak: 0,
+                            };
+                            next.monsters.push(monster);
+                        }
+                        next.monsters[i].fighter.statuses.retain(|s| {
+                            !matches!(s, Status::Infested { .. })
+                        });
+                    }
                     continue;
                 }
 
@@ -118,6 +155,19 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     }
                 });
                 if is_fled_minion {
+                    next.monsters[i].intent = None;
+                    continue;
+                }
+
+                // Stun check: the monster skips its turn entirely. The status
+                // is consumed after the skip.
+                let is_stunned = next.monsters[i]
+                    .fighter
+                    .statuses
+                    .iter()
+                    .any(|s| matches!(s, Status::Stun));
+                if is_stunned {
+                    next.monsters[i].fighter.statuses.retain(|s| !matches!(s, Status::Stun));
                     next.monsters[i].intent = None;
                     continue;
                 }

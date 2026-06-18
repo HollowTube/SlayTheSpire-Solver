@@ -46,6 +46,12 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         "Kin Priest" => Some("Orb of Frailty".to_string()),
         // Kin Follower: fixed 3-move cycle, opens with Quick Slash.
         "Kin Follower" => Some("Quick Slash".to_string()),
+        // Phrog Parasite: fixed 2-move cycle, opens with Infect.
+        "Phrog Parasite" => Some("Infect".to_string()),
+        // Wriggler: the opening intent is set via the intent= constructor
+        // override (odd-index Wrigglers open with Nasty Bite, even-index open
+        // with Wriggle). The default opener is Nasty Bite.
+        "Wriggler" => Some("Nasty Bite".to_string()),
         _ => None,
     }
 }
@@ -226,6 +232,26 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
         ("Kin Follower", "Power Dance") => {
             Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))])
         }
+        // Phrog Parasite (elite): fixed 2-move cycle — Infect (apply 3
+        // Infection cards) ↔ Lash (4 hits of 4 damage).
+        ("Phrog Parasite", "Infect") => Some(vec![
+            EffectOp::ApplyCardToTarget("Infection".to_string()),
+            EffectOp::ApplyCardToTarget("Infection".to_string()),
+            EffectOp::ApplyCardToTarget("Infection".to_string()),
+        ]),
+        ("Phrog Parasite", "Lash") => Some(vec![
+            EffectOp::DealDamage(4),
+            EffectOp::DealDamage(4),
+            EffectOp::DealDamage(4),
+            EffectOp::DealDamage(4),
+        ]),
+        // Wriggler (summoned minion): fixed 2-move cycle — Nasty Bite (6
+        // damage) ↔ Wriggle (1 Infection card + self +2 Strength).
+        ("Wriggler", "Nasty Bite") => Some(vec![EffectOp::DealDamage(6)]),
+        ("Wriggler", "Wriggle") => Some(vec![
+            EffectOp::ApplyCardToTarget("Infection".to_string()),
+            EffectOp::ApplyStatusToSelf(Status::Strength(2)),
+        ]),
         _ => None,
     }
 }
@@ -419,6 +445,16 @@ pub(crate) fn select_next_intent(
             Some("Quick Slash") => Some("Boomerang".to_string()),
             Some("Boomerang") => Some("Power Dance".to_string()),
             _ => Some("Quick Slash".to_string()),
+        },
+        // Phrog Parasite: Infect ↔ Lash forever.
+        "Phrog Parasite" => match last_move.as_deref() {
+            Some("Infect") => Some("Lash".to_string()),
+            _ => Some("Infect".to_string()),
+        },
+        // Wriggler: Nasty Bite ↔ Wriggle forever.
+        "Wriggler" => match last_move.as_deref() {
+            Some("Nasty Bite") => Some("Wriggle".to_string()),
+            _ => Some("Nasty Bite".to_string()),
         },
         _ => None,
     }
