@@ -20,7 +20,7 @@ use state::{draw_cards, CardInstance, CombatState, Fighter, Monster, PendingDeci
 /// The Energy cost to play `data`, accounting for Corruption (Skills cost 0
 /// while the player holds it) and Stomp (costs 1 less per Attack played).
 fn effective_cost(state: &CombatState, data: &CardData) -> i32 {
-    if matches!(data.card_type, CardType::Skill) && state.player.statuses.contains(&Status::Corruption) {
+    let base = if matches!(data.card_type, CardType::Skill) && state.player.statuses.contains(&Status::Corruption) {
         0
     } else if matches!(data.card_type, CardType::Attack) && state.player.statuses.contains(&Status::FreeAttack) {
         0
@@ -32,7 +32,25 @@ fn effective_cost(state: &CombatState, data: &CardData) -> i32 {
         } else {
             cost
         }
-    }
+    };
+    // Tangled: while active on the player, all Attack cards cost +n energy.
+    let tangled_bonus = if matches!(data.card_type, CardType::Attack) {
+        state
+            .player
+            .statuses
+            .iter()
+            .filter_map(|s| {
+                if let Status::Tangled(n) = s {
+                    Some(*n)
+                } else {
+                    None
+                }
+            })
+            .sum::<i32>()
+    } else {
+        0
+    };
+    base + tangled_bonus
 }
 
 #[pyfunction]
@@ -81,6 +99,11 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             // EndTurn — reset here for the upcoming player turn (e.g. Evil
             // Eye, Forgotten Ritual).
             next.player_exhausted_card_this_turn = false;
+
+            // Tangled is removed at the end of the player's turn (before the
+            // monster resolves its next action), not at the start — so it
+            // persists through the player's full card-play window.
+            next.player.statuses.retain(|s| !matches!(s, Status::Tangled(_)));
 
             // The remaining hand is discarded before the monsters' turn
             // resolves — mirrors Slay the Spire's end-of-turn cleanup.

@@ -109,6 +109,7 @@ class MonsterName(str, Enum):
     WRIGGLER = "Wriggler"
     TRACKER_RUBY_RAIDER = "Tracker Ruby Raider"
     MAWLER = "Mawler"
+    VINE_SHAMBLER = "Vine Shambler"
 
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
@@ -207,6 +208,9 @@ TRACKER_RUBY_RAIDER_STARTING_HP = 21
 # Mawler (elite) HP: 72 normal. 72 used as canonical.
 MAWLER_STARTING_HP = 72
 
+# Vine Shambler (elite) HP: 61-64 normal. 64 used as canonical (max).
+VINE_SHAMBLER_STARTING_HP = 64
+
 # Canonical starting HP keyed by MonsterName value. Used by the server's
 # deck_baseline handler to construct a "fresh start" scenario from a named
 # monster list, so the benchmark uses canonical HP regardless of what the
@@ -237,6 +241,7 @@ MONSTER_STARTING_HP: dict[str, int] = {
     MonsterName.WRIGGLER: WRIGGLER_STARTING_HP,
     MonsterName.TRACKER_RUBY_RAIDER: TRACKER_RUBY_RAIDER_STARTING_HP,
     MonsterName.MAWLER: MAWLER_STARTING_HP,
+    MonsterName.VINE_SHAMBLER: VINE_SHAMBLER_STARTING_HP,
 }
 
 
@@ -780,6 +785,23 @@ def ironclad_starter_deck_vs_mawler(seed, deck=None):
             Monster(
                 hp=MAWLER_STARTING_HP,
                 name=MonsterName.MAWLER,
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_vine_shambler(seed, deck=None):
+    """Ironclad's starting loadout against Vine Shambler (Overgrowth elite).
+    Fixed 3-move cycle: Swipe → Grasping Vines → Chomp → repeat."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=VINE_SHAMBLER_STARTING_HP,
+                name=MonsterName.VINE_SHAMBLER,
             )
         ],
         seed=seed,

@@ -258,6 +258,9 @@ public static class NameMap
         ["TRACKER_RUBY_RAIDER"] = "Tracker Ruby Raider",
         // Mawler (elite): opening Claw → random Rip and Tear / Roar / Claw.
         ["MAWLER"] = "Mawler",
+        // Vine Shambler (elite): 3-move fixed cycle — Swipe → Grasping Vines
+        // (+Tangled) → Chomp → repeat.
+        ["VINE_SHAMBLER"] = "Vine Shambler",
     };
 
     /// STS2 PowerModel.Id.Entry -> sts_sim status name. Only the statuses
@@ -293,6 +296,9 @@ public static class NameMap
         // Stun: monster skips next turn. Applied to spawned Wrigglers (Phrog
         // Parasite) and reusable for Ceremonial Beast's Plow self-stun.
         ["STUN"] = "Stun",
+        // Tangled: Attack cards cost +n to play this turn. Removed at end of
+        // player's turn. Applied by Vine Shambler's Grasping Vines.
+        ["TANGLED"] = "Tangled",
         // Minion: { leader } — not straightforward to map from a simple
         // name+amount power; the `leader` field must be set explicitly. If
         // the bridge encounters a MinionPower, it should be dropped and the
@@ -327,5 +333,6 @@ public static class NameMap
         ["Cubex Construct"] = "cubex-construct",
         ["Tracker Ruby Raider"] = "tracker-ruby-raider",
         ["Mawler"] = "mawler",
+        ["Vine Shambler"] = "vine-shambler",
     };
 }

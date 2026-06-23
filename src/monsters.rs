@@ -57,6 +57,8 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         "Tracker Ruby Raider" => Some("Track".to_string()),
         // Mawler (elite): opens with Claw (2x4 damage), then random branch.
         "Mawler" => Some("Claw".to_string()),
+        // Vine Shambler (elite): opens with Swipe.
+        "Vine Shambler" => Some("Swipe".to_string()),
         _ => None,
     }
 }
@@ -284,6 +286,17 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
             EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             EffectOp::ApplyStatusToTarget(Status::Vulnerable),
         ]),
+        // Vine Shambler (elite): fixed 3-move cycle — Swipe (2x6), Grasping
+        // Vines (8 + Tangled), Chomp (16).
+        ("Vine Shambler", "Swipe") => Some(vec![
+            EffectOp::DealDamage(6),
+            EffectOp::DealDamage(6),
+        ]),
+        ("Vine Shambler", "Grasping Vines") => Some(vec![
+            EffectOp::DealDamage(8),
+            EffectOp::ApplyStatusToTarget(Status::Tangled(1)),
+        ]),
+        ("Vine Shambler", "Chomp") => Some(vec![EffectOp::DealDamage(16)]),
         _ => None,
     }
 }
@@ -542,6 +555,14 @@ pub(crate) fn select_next_intent(
                 return Some(available[idx].to_string());
             }
         }
+        // Vine Shambler (elite): fixed 3-cycle — Swipe → Grasping Vines →
+        // Chomp → repeat.
+        "Vine Shambler" => match last_move.as_deref() {
+            Some("Swipe") => Some("Grasping Vines".to_string()),
+            Some("Grasping Vines") => Some("Chomp".to_string()),
+            Some("Chomp") => Some("Swipe".to_string()),
+            _ => Some("Swipe".to_string()),
+        },
         _ => None,
     }
 }
