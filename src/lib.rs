@@ -10,7 +10,7 @@ use mcts::{
     fight_outcomes_per_fight, hp_lost_per_fight, mcts_action_values, mcts_search,
     simulate_hp_lost,
 };
-use monsters::{monster_move, opening_intent, select_next_intent};
+use monsters::{monster_move, opening_intent, select_next_intent, is_one_time_move};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rand::{Rng, RngCore};
@@ -133,6 +133,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                                 intent: opening_intent(&mname),
                                 last_move: None,
                                 move_streak: 0,
+                                moves_used: Vec::new(),
                             };
                             next.monsters.push(monster);
                         }
@@ -186,10 +187,14 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                             };
                             next.monsters[i].move_streak = streak;
                             next.monsters[i].last_move = Some(intent.clone());
+                            if is_one_time_move(&name, &intent) {
+                                next.monsters[i].moves_used.push(intent.clone());
+                            }
                             next.monsters[i].intent = select_next_intent(
                                 &name,
                                 &next.monsters[i].last_move,
                                 streak,
+                                &next.monsters[i].moves_used,
                                 &mut next.rng,
                             );
                         }

@@ -136,12 +136,15 @@ pub struct Monster {
     // without replaying full move history.
     pub(crate) last_move: Option<String>,
     pub(crate) move_streak: u32,
+    // Moves the monster has already used this combat, for the "use only once"
+    // constraint (e.g. Mawler's Roar). Checked by select_next_intent.
+    pub(crate) moves_used: Vec<String>,
 }
 
 #[pymethods]
 impl Monster {
     #[new]
-    #[pyo3(signature = (hp, attack=0, max_hp=None, name=None, block=0, statuses=Vec::new(), intent=None, last_move=None, move_streak=0))]
+    #[pyo3(signature = (hp, attack=0, max_hp=None, name=None, block=0, statuses=Vec::new(), intent=None, last_move=None, move_streak=0, moves_used=Vec::new()))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         hp: i32,
@@ -153,6 +156,7 @@ impl Monster {
         intent: Option<String>,
         last_move: Option<String>,
         move_streak: u32,
+        moves_used: Vec<String>,
     ) -> Self {
         // `intent` lets a reconstructed monster show its *actual* current
         // telegraph rather than the species' opener — defaults to the opener
@@ -173,6 +177,7 @@ impl Monster {
             intent,
             last_move,
             move_streak,
+            moves_used,
         }
     }
 

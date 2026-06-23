@@ -52,6 +52,11 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         // override (odd-index Wrigglers open with Nasty Bite, even-index open
         // with Wriggle). The default opener is Nasty Bite.
         "Wriggler" => Some("Nasty Bite".to_string()),
+        // Tracker Ruby Raider: opens with Track (no damage, 2 Frail), then
+        // Hounds forever.
+        "Tracker Ruby Raider" => Some("Track".to_string()),
+        // Mawler (elite): opens with Claw (2x4 damage), then random branch.
+        "Mawler" => Some("Claw".to_string()),
         _ => None,
     }
 }
@@ -252,6 +257,33 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
             EffectOp::ApplyCardToTarget("Infection".to_string()),
             EffectOp::ApplyStatusToSelf(Status::Strength(2)),
         ]),
+        // Tracker Ruby Raider: Track applies 2 Frail, Hounds is 8 hits of 1.
+        ("Tracker Ruby Raider", "Track") => Some(vec![
+            EffectOp::ApplyStatusToTarget(Status::Frail(1)),
+            EffectOp::ApplyStatusToTarget(Status::Frail(1)),
+        ]),
+        ("Tracker Ruby Raider", "Hounds") => Some(vec![
+            EffectOp::DealDamage(1),
+            EffectOp::DealDamage(1),
+            EffectOp::DealDamage(1),
+            EffectOp::DealDamage(1),
+            EffectOp::DealDamage(1),
+            EffectOp::DealDamage(1),
+            EffectOp::DealDamage(1),
+            EffectOp::DealDamage(1),
+        ]),
+        // Mawler (elite): Claw is 2x4, Rip and Tear is 14, Roar is 3
+        // Vulnerable.
+        ("Mawler", "Claw") => Some(vec![
+            EffectOp::DealDamage(4),
+            EffectOp::DealDamage(4),
+        ]),
+        ("Mawler", "Rip and Tear") => Some(vec![EffectOp::DealDamage(14)]),
+        ("Mawler", "Roar") => Some(vec![
+            EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+            EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+            EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+        ]),
         _ => None,
     }
 }
@@ -269,8 +301,23 @@ fn max_streak(monster_name: &str, move_name: &str) -> u32 {
         ("Gremlin Nob", _) => 1,
         // Twig Slime (M)'s StickyShot can never repeat consecutively.
         ("Twig Slime (M)", "StickyShot") => 1,
+        // Mawler: Rip and Tear and Claw never repeat consecutively.
+        ("Mawler", "Rip and Tear") => 1,
+        ("Mawler", "Claw") => 1,
+        // Mawler's Roar is "use only once" per combat — handled via
+        // moves_used, not max_streak. Streak limit here is 1 to prevent
+        // consecutive repeats if moved out of moves_used somehow.
+        ("Mawler", "Roar") => 1,
         _ => u32::MAX,
     }
+}
+
+/// Whether a move can only be used once across the entire combat (not just
+/// "not twice in a row"). Once executed, the move is added to the monster's
+/// `moves_used` set and `select_next_intent` will never return it again.
+/// Currently only Mawler's Roar uses this.
+pub(crate) fn is_one_time_move(monster_name: &str, move_name: &str) -> bool {
+    matches!((monster_name, move_name), ("Mawler", "Roar"))
 }
 
 /// Rolls the monster's next telegraphed move from its documented weighted
@@ -283,6 +330,7 @@ pub(crate) fn select_next_intent(
     monster_name: &str,
     last_move: &Option<String>,
     streak: u32,
+    moves_used: &[String],
     rng: &mut Pcg32,
 ) -> Option<String> {
     match monster_name {
@@ -456,6 +504,44 @@ pub(crate) fn select_next_intent(
             Some("Nasty Bite") => Some("Wriggle".to_string()),
             _ => Some("Nasty Bite".to_string()),
         },
+        // Tracker Ruby Raider: Track once, then Hounds forever.
+        "Tracker Ruby Raider" => match last_move.as_deref() {
+            Some("Track") => Some("Hounds".to_string()),
+            _ => Some("Hounds".to_string()),
+        },
+        // Mawler (elite): opening Claw, then equal-weight random among three
+        // moves. Roar is "use only once" per combat (checked via moves_used).
+        // Rip and Tear and Claw are "cannot repeat" (max_streak 1).
+        "Mawler" => {
+            let candidates = ["Rip and Tear", "Roar", "Claw"];
+            loop {
+                let available: Vec<_> = candidates
+                    .iter()
+                    .filter(|c| {
+                        // Skip one-time moves already used.
+                        if moves_used.iter().any(|m| m == *c) {
+                            return false;
+                        }
+                        // Skip moves that would exceed their streak limit.
+                        let resulting_streak = if last_move.as_deref() == Some(*c) {
+                            streak + 1
+                        } else {
+                            1
+                        };
+                        resulting_streak <= max_streak(monster_name, c)
+                    })
+                    .copied()
+                    .collect();
+                if available.is_empty() {
+                    // Fallback: just repeat Claw (shouldn't happen in
+                    // practice if the spec guarantees at least one move is
+                    // always valid).
+                    return Some("Claw".to_string());
+                }
+                let idx = rng.gen_range(0..available.len());
+                return Some(available[idx].to_string());
+            }
+        }
         _ => None,
     }
 }

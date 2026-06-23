@@ -107,6 +107,8 @@ class MonsterName(str, Enum):
     KIN_FOLLOWER = "Kin Follower"
     PHROG_PARASITE = "Phrog Parasite"
     WRIGGLER = "Wriggler"
+    TRACKER_RUBY_RAIDER = "Tracker Ruby Raider"
+    MAWLER = "Mawler"
 
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
@@ -199,6 +201,12 @@ PHROG_PARASITE_STARTING_HP = 64
 # Wriggler (summoned minion) HP: 17-21 normal. 21 used as canonical (max).
 WRIGGLER_STARTING_HP = 21
 
+# Tracker Ruby Raider (normal) HP: 21-25 normal. 21 used as canonical (min).
+TRACKER_RUBY_RAIDER_STARTING_HP = 21
+
+# Mawler (elite) HP: 72 normal. 72 used as canonical.
+MAWLER_STARTING_HP = 72
+
 # Canonical starting HP keyed by MonsterName value. Used by the server's
 # deck_baseline handler to construct a "fresh start" scenario from a named
 # monster list, so the benchmark uses canonical HP regardless of what the
@@ -227,6 +235,8 @@ MONSTER_STARTING_HP: dict[str, int] = {
     MonsterName.KIN_FOLLOWER: KIN_FOLLOWER_STARTING_HP,
     MonsterName.PHROG_PARASITE: PHROG_PARASITE_STARTING_HP,
     MonsterName.WRIGGLER: WRIGGLER_STARTING_HP,
+    MonsterName.TRACKER_RUBY_RAIDER: TRACKER_RUBY_RAIDER_STARTING_HP,
+    MonsterName.MAWLER: MAWLER_STARTING_HP,
 }
 
 
@@ -736,6 +746,40 @@ def ironclad_starter_deck_vs_phrog_parasite(seed, deck=None):
                 hp=PHROG_PARASITE_STARTING_HP,
                 name=MonsterName.PHROG_PARASITE,
                 statuses=[("Infested", 4)],
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_tracker_ruby_raider(seed, deck=None):
+    """Ironclad's starting loadout against a Tracker Ruby Raider (Overgrowth
+    normal). Opens with Track (2 Frail, no damage), then Hounds forever."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=TRACKER_RUBY_RAIDER_STARTING_HP,
+                name=MonsterName.TRACKER_RUBY_RAIDER,
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_mawler(seed, deck=None):
+    """Ironclad's starting loadout against Mawler (Overgrowth elite). Opens with
+    Claw (2x4 damage), then random Roar/Rip and Tear/Claw with equal weights."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=MAWLER_STARTING_HP,
+                name=MonsterName.MAWLER,
             )
         ],
         seed=seed,
