@@ -134,6 +134,9 @@ pub(crate) enum Status {
         minion_hp: i32,
         count: i32,
     },
+    // Tangled: while active on the player, all Attack cards cost +n energy
+    // to play. Removed at end of the player's turn (decays_per_turn).
+    Tangled(i32),
 }
 
 impl Status {
@@ -169,6 +172,7 @@ impl Status {
             Status::Minion { .. } => "Minion",
             Status::Stun => "Stun",
             Status::Infested { .. } => "Infested",
+            Status::Tangled(_) => "Tangled",
         }
     }
 
@@ -217,6 +221,7 @@ impl Status {
                 minion_hp: 21,
                 count: amount,
             }],
+            "Tangled" => vec![Status::Tangled(amount)],
             _ => Vec::new(),
         }
     }
@@ -300,7 +305,7 @@ impl Status {
     pub(crate) fn is_debuff(&self) -> bool {
         matches!(
             self,
-            Status::Vulnerable | Status::Weak | Status::Shrink | Status::Constrict(_) | Status::Frail(_)
+            Status::Vulnerable | Status::Weak | Status::Shrink | Status::Constrict(_) | Status::Frail(_) | Status::Tangled(_)
         )
     }
 
