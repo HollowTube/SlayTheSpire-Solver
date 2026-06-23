@@ -27,10 +27,12 @@ from ..scenarios import (
     ironclad_starter_deck_vs_jaw_worm,
     ironclad_starter_deck_vs_leaf_slime_m,
     ironclad_starter_deck_vs_leaf_slime_s,
+    ironclad_starter_deck_vs_mawler,
     ironclad_starter_deck_vs_nibbit,
     ironclad_starter_deck_vs_shrinker_beetle,
     ironclad_starter_deck_vs_slimes_weak,
     ironclad_starter_deck_vs_slimes_weak_twig,
+    ironclad_starter_deck_vs_tracker_ruby_raider,
     ironclad_starter_deck_vs_twig_slime_m,
     ironclad_starter_deck_vs_twig_slime_s,
     ironclad_starter_deck_vs_vantom,
@@ -61,6 +63,8 @@ class Encounter(str, Enum):
     INKLET = "inklet"
     INKLETS = "inklets"
     VANTOM = "vantom"
+    TRACKER_RUBY_RAIDER = "tracker-ruby-raider"
+    MAWLER = "mawler"
 
 
 _SCENARIOS = {
@@ -79,6 +83,8 @@ _SCENARIOS = {
     Encounter.INKLET: ironclad_starter_deck_vs_inklet,
     Encounter.INKLETS: ironclad_starter_deck_vs_inklets,
     Encounter.VANTOM: ironclad_starter_deck_vs_vantom,
+    Encounter.TRACKER_RUBY_RAIDER: ironclad_starter_deck_vs_tracker_ruby_raider,
+    Encounter.MAWLER: ironclad_starter_deck_vs_mawler,
 }
 
 # Act 1 "easy pool" encounters — every non-elite, non-boss scenario (i.e.

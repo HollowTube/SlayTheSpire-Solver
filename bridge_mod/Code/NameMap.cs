@@ -254,6 +254,10 @@ public static class NameMap
         // The Kin boss encounter: Kin Priest + 2 Kin Followers.
         ["KIN_PRIEST"] = "Kin Priest",
         ["KIN_FOLLOWER"] = "Kin Follower",
+        // Tracker Ruby Raider: Track (2 Frail, no damage) → Hounds forever.
+        ["TRACKER_RUBY_RAIDER"] = "Tracker Ruby Raider",
+        // Mawler (elite): opening Claw → random Rip and Tear / Roar / Claw.
+        ["MAWLER"] = "Mawler",
     };
 
     /// STS2 PowerModel.Id.Entry -> sts_sim status name. Only the statuses
@@ -321,5 +325,7 @@ public static class NameMap
         ["Crossbow Ruby Raider"] = "crossbow-ruby-raider",
         ["Slithering Strangler"] = "slithering-strangler",
         ["Cubex Construct"] = "cubex-construct",
+        ["Tracker Ruby Raider"] = "tracker-ruby-raider",
+        ["Mawler"] = "mawler",
     };
 }
