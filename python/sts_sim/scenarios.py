@@ -110,6 +110,7 @@ class MonsterName(str, Enum):
     TRACKER_RUBY_RAIDER = "Tracker Ruby Raider"
     MAWLER = "Mawler"
     VINE_SHAMBLER = "Vine Shambler"
+    BYGONE_EFFIGY = "Bygone Effigy"
 
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
@@ -211,6 +212,9 @@ MAWLER_STARTING_HP = 72
 # Vine Shambler (elite) HP: 61-64 normal. 64 used as canonical (max).
 VINE_SHAMBLER_STARTING_HP = 64
 
+# Bygone Effigy (elite) HP: 127 normal, 132 at A8. 132 used as canonical (max).
+BYGONE_EFFIGY_STARTING_HP = 132
+
 # Canonical starting HP keyed by MonsterName value. Used by the server's
 # deck_baseline handler to construct a "fresh start" scenario from a named
 # monster list, so the benchmark uses canonical HP regardless of what the
@@ -242,6 +246,7 @@ MONSTER_STARTING_HP: dict[str, int] = {
     MonsterName.TRACKER_RUBY_RAIDER: TRACKER_RUBY_RAIDER_STARTING_HP,
     MonsterName.MAWLER: MAWLER_STARTING_HP,
     MonsterName.VINE_SHAMBLER: VINE_SHAMBLER_STARTING_HP,
+    MonsterName.BYGONE_EFFIGY: BYGONE_EFFIGY_STARTING_HP,
 }
 
 
@@ -802,6 +807,26 @@ def ironclad_starter_deck_vs_vine_shambler(seed, deck=None):
             Monster(
                 hp=VINE_SHAMBLER_STARTING_HP,
                 name=MonsterName.VINE_SHAMBLER,
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_bygone_effigy(seed, deck=None):
+    """Ironclad's starting loadout against Bygone Effigy (Overgrowth elite).
+    Fixed cycle: Sleep (no-op) → Wake (+10 Strength) → Slashes (13 damage) →
+    repeat Slashes forever. Status::Slow makes Attack-card damage scale with
+    cards played this turn."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=BYGONE_EFFIGY_STARTING_HP,
+                name=MonsterName.BYGONE_EFFIGY,
+                statuses=[("Slow", 1)],
             )
         ],
         seed=seed,

@@ -59,6 +59,8 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         "Mawler" => Some("Claw".to_string()),
         // Vine Shambler (elite): opens with Swipe.
         "Vine Shambler" => Some("Swipe".to_string()),
+        // Bygone Effigy (elite): opens with Sleep (no-op).
+        "Bygone Effigy" => Some("Sleep".to_string()),
         _ => None,
     }
 }
@@ -297,6 +299,13 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
             EffectOp::ApplyStatusToTarget(Status::Tangled(1)),
         ]),
         ("Vine Shambler", "Chomp") => Some(vec![EffectOp::DealDamage(16)]),
+        // Bygone Effigy (elite): Sleep (no-op), Wake (+10 Strength),
+        // Slashes (13 damage).
+        ("Bygone Effigy", "Sleep") => Some(vec![]),
+        ("Bygone Effigy", "Wake") => Some(vec![
+            EffectOp::ApplyStatusToSelf(Status::Strength(10)),
+        ]),
+        ("Bygone Effigy", "Slashes") => Some(vec![EffectOp::DealDamage(13)]),
         _ => None,
     }
 }
@@ -562,6 +571,12 @@ pub(crate) fn select_next_intent(
             Some("Grasping Vines") => Some("Chomp".to_string()),
             Some("Chomp") => Some("Swipe".to_string()),
             _ => Some("Swipe".to_string()),
+        },
+        // Bygone Effigy (elite): fixed cycle — Sleep → Wake → Slashes → Slashes
+        // → Slashes → ... (after Wake, always Slashes).
+        "Bygone Effigy" => match last_move.as_deref() {
+            Some("Sleep") => Some("Wake".to_string()),
+            _ => Some("Slashes".to_string()),
         },
         _ => None,
     }
