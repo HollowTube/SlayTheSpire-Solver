@@ -1,6 +1,6 @@
 """Behavioural tests for HOL-32: Bygone Effigy — Status::Slow + cards_played_this_turn."""
 
-from sts_sim import CombatState, Monster, apply, legal_actions
+from sts_sim import CombatState, Monster, apply
 
 
 def _strike_and_target(state):
@@ -14,9 +14,11 @@ def _strike_and_target(state):
 def test_slow_scales_attack_damage_by_cards_played():
     """Each Strike counts itself: 1st at ~1.1x (6), 2nd at ~1.2x (7)."""
     state = CombatState(
-        player_hp=80, player_energy=3,
+        player_hp=80,
+        player_energy=3,
         monsters=[Monster(hp=100, name="Bygone Effigy", statuses=[("Slow", 1)])],
-        seed=42, hand=["Strike", "Strike"],
+        seed=42,
+        hand=["Strike", "Strike"],
     )
     a1 = _strike_and_target(state)
     # 1 card this turn (counting itself) → 1.1x → floor(6.6) = 6
@@ -24,42 +26,50 @@ def test_slow_scales_attack_damage_by_cards_played():
 
     a2 = _strike_and_target(a1)
     # 2 cards this turn → 1.2x → floor(7.2) = 7
-    assert a1.monsters[0].hp - a2.monsters[0].hp == 7, f"expected 7, got {a1.monsters[0].hp - a2.monsters[0].hp}"
+    assert a1.monsters[0].hp - a2.monsters[0].hp == 7, (
+        f"expected 7, got {a1.monsters[0].hp - a2.monsters[0].hp}"
+    )
 
 
 def test_slow_scales_with_more_cards():
     """At 3 cards played this turn → 1.3x → Strike deals 7 (floor(6*1.3)=7)."""
     state = CombatState(
-        player_hp=80, player_energy=3,
+        player_hp=80,
+        player_energy=3,
         monsters=[Monster(hp=100, name="Bygone Effigy", statuses=[("Slow", 1)])],
-        seed=42, hand=["Defend", "Defend", "Strike"],
+        seed=42,
+        hand=["Defend", "Defend", "Strike"],
     )
-    a1 = apply(state, "PlayCard:Defend")   # 1 card
-    a2 = apply(a1, "PlayCard:Defend")      # 2 cards
-    a3 = _strike_and_target(a2)            # 3 cards → 1.3x → floor(7.8) = 7
+    a1 = apply(state, "PlayCard:Defend")  # 1 card
+    a2 = apply(a1, "PlayCard:Defend")  # 2 cards
+    a3 = _strike_and_target(a2)  # 3 cards → 1.3x → floor(7.8) = 7
     assert 100 - a3.monsters[0].hp == 7, f"expected 7, got {100 - a3.monsters[0].hp}"
 
 
 def test_slow_does_not_scale_non_attack_damage():
     """Slow only applies to Attack cards."""
     state = CombatState(
-        player_hp=80, player_energy=3,
+        player_hp=80,
+        player_energy=3,
         monsters=[Monster(hp=50, name="Bygone Effigy", statuses=[("Slow", 1)])],
-        seed=42, hand=["Defend", "Strike"],
+        seed=42,
+        hand=["Defend", "Strike"],
     )
-    a1 = apply(state, "PlayCard:Defend")   # 1 card, no damage
+    a1 = apply(state, "PlayCard:Defend")  # 1 card, no damage
     assert a1.monsters[0].hp == 50
 
-    a2 = _strike_and_target(a1)            # 2 cards → 1.2x → floor(7.2) = 7
+    a2 = _strike_and_target(a1)  # 2 cards → 1.2x → floor(7.2) = 7
     assert 50 - a2.monsters[0].hp == 7
 
 
 def test_slow_requires_target_to_have_it():
     """Monsters without Slow deal normal damage."""
     state = CombatState(
-        player_hp=80, player_energy=3,
+        player_hp=80,
+        player_energy=3,
         monsters=[Monster(hp=50, name="Jaw Worm")],
-        seed=42, hand=["Strike"],
+        seed=42,
+        hand=["Strike"],
     )
     a1 = _strike_and_target(state)
     assert 50 - a1.monsters[0].hp == 6
@@ -70,9 +80,11 @@ def test_slow_requires_target_to_have_it():
 
 def _effigy(seed=42, hand=None):
     return CombatState(
-        player_hp=80, player_energy=3,
+        player_hp=80,
+        player_energy=3,
         monsters=[Monster(hp=132, name="Bygone Effigy")],
-        seed=seed, hand=hand or [],
+        seed=seed,
+        hand=hand or [],
     )
 
 

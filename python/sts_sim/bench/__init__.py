@@ -21,7 +21,6 @@ from ..scenarios import (
     CardName,
     ironclad_starter_deck_vs_bygone_effigy,
     ironclad_starter_deck_vs_byrdonis,
-    ironclad_starter_deck_vs_crossbow_ruby_raider,
     ironclad_starter_deck_vs_fuzzy_wurm_crawler,
     ironclad_starter_deck_vs_gremlin_nob,
     ironclad_starter_deck_vs_inklet,
