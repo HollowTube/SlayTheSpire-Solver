@@ -137,6 +137,11 @@ pub(crate) enum Status {
     // Tangled: while active on the player, all Attack cards cost +n energy
     // to play. Removed at end of the player's turn (decays_per_turn).
     Tangled(i32),
+    // Slow: Attack-card damage dealt to the holder is multiplied by
+    // (1 + 0.1 * cards_played_this_turn), floor-rounded. Inherent to the
+    // holder (e.g. Bygone Effigy), not a conventional stack-based debuff —
+    // never decays, not blocked by Artifact.
+    Slow(i32),
 }
 
 impl Status {
@@ -173,6 +178,7 @@ impl Status {
             Status::Stun => "Stun",
             Status::Infested { .. } => "Infested",
             Status::Tangled(_) => "Tangled",
+            Status::Slow(_) => "Slow",
         }
     }
 
@@ -222,6 +228,7 @@ impl Status {
                 count: amount,
             }],
             "Tangled" => vec![Status::Tangled(amount)],
+            "Slow" => vec![Status::Slow(amount)],
             _ => Vec::new(),
         }
     }
@@ -416,11 +423,17 @@ fn collect_modifiers(
 /// (e.g. Strength applies before Vulnerable). Each pass ignores modifier
 /// kinds it doesn't handle, so a new status that contributes either kind from
 /// either side needs no change here, only a `modifier_for` entry.
+///
+/// If `is_attack_card` is true and `target_statuses` contains `Status::Slow`,
+/// the result is additionally multiplied by `(1 + 0.1 * cards_played_this_turn)`,
+/// floor-rounded — the Bygone Effigy's inherent Slow damage scaling.
 fn apply_damage_modifiers(
     base: i32,
     attacker_statuses: &[Status],
     target_statuses: &[Status],
     event: EventType,
+    is_attack_card: bool,
+    cards_played_this_turn: i32,
 ) -> i32 {
     let modifiers: Vec<Modifier> = collect_modifiers(attacker_statuses, Side::Attacker, event, target_statuses)
         .into_iter()
@@ -439,7 +452,14 @@ fn apply_damage_modifiers(
             _ => amount,
         });
 
-    multiplied.floor() as i32
+    let result = multiplied.floor() as i32;
+
+    if is_attack_card && target_statuses.iter().any(|s| matches!(s, Status::Slow(_))) {
+        let factor = 1.0 + 0.1 * cards_played_this_turn as f64;
+        (result as f64 * factor).floor() as i32
+    } else {
+        result
+    }
 }
 
 /// Runs `base` through every block modifier that `holder_statuses` registers
@@ -686,12 +706,19 @@ impl HandFilter {
 /// combatants' damage-modifier pipelines first and `target`'s block second —
 /// the same absorb-then-spill arithmetic regardless of which side is hitting
 /// which (mirrors Slay the Spire: block reduces incoming damage from anyone).
-fn deal_damage(state: &mut CombatState, attacker: Actor, target: Actor, amount: i32) {
+///
+/// `is_attack_card` tells the damage pipeline whether the source is an Attack
+/// card (used by `Status::Slow`), and `cards_played_this_turn` drives the
+/// Slow multiplier. These are only meaningful for player-Attack-card damage;
+/// all other callers pass `false` / `0` respectively.
+fn deal_damage(state: &mut CombatState, attacker: Actor, target: Actor, amount: i32, is_attack_card: bool, cards_played_this_turn: i32) {
     let modified = apply_damage_modifiers(
         amount,
         &state.fighter(attacker).statuses,
         &state.fighter(target).statuses,
         EventType::OnDamageDealt,
+        is_attack_card,
+        cards_played_this_turn,
     );
 
     let hp_loss;
@@ -759,7 +786,7 @@ pub(crate) fn fire_event(state: &mut CombatState, event: GameEvent) {
             .iter()
             .flat_map(|s| s.reactions(event))
             .collect();
-        run_effect_ops(state, &ops, actor, &[]);
+        run_effect_ops(state, &ops, actor, &[], false);
     }
 }
 
@@ -786,12 +813,16 @@ pub(crate) fn tick_debuffs(statuses: &mut Vec<Status>) {
 /// Thunderclap hits all enemies, Sword Boomerang hits its selected target
 /// three times); `GainBlock`, `ApplyStatusToSelf`, and `DrawCards` affect
 /// `actor` once regardless of `targets`.
-pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor, targets: &[Actor]) {
+///
+/// `is_attack_card` tells the damage pipeline whether the source is an Attack
+/// card (used by `Status::Slow`). Pass `false` for monster moves, status
+/// reactions, and any non-Attack card effects.
+pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor, targets: &[Actor], is_attack_card: bool) {
     for op in ops {
         match op {
             EffectOp::DealDamage(amount) => {
                 for &target in targets {
-                    deal_damage(state, actor, target, *amount);
+                    deal_damage(state, actor, target, *amount, is_attack_card, state.cards_played_this_turn);
                 }
             }
             EffectOp::GainBlock(amount) => {
@@ -929,7 +960,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
             } => {
                 for &target in targets {
                     let amount = base + per_unit * source.read(state, actor, target);
-                    deal_damage(state, actor, target, amount);
+                    deal_damage(state, actor, target, amount, is_attack_card, state.cards_played_this_turn);
                 }
             }
             EffectOp::DealDamageRepeated {
@@ -941,7 +972,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 for &target in targets {
                     let hits = hits_base + hits_per_unit * hits_source.read(state, actor, target);
                     for _ in 0..hits {
-                        deal_damage(state, actor, target, *amount);
+                        deal_damage(state, actor, target, *amount, is_attack_card, state.cards_played_this_turn);
                     }
                 }
             }
@@ -977,19 +1008,19 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
             }
             EffectOp::DealDamageToAllEnemies(amount) => {
                 for i in state.living_monster_indices() {
-                    deal_damage(state, actor, Actor::Monster(i), *amount);
+                    deal_damage(state, actor, Actor::Monster(i), *amount, is_attack_card, state.cards_played_this_turn);
                 }
             }
             EffectOp::DealDamageToRandomEnemy(amount) => {
                 let living = state.living_monster_indices();
                 if !living.is_empty() {
                     let pick = living[state.rng.gen_range(0..living.len())];
-                    deal_damage(state, actor, Actor::Monster(pick), *amount);
+                    deal_damage(state, actor, Actor::Monster(pick), *amount, is_attack_card, state.cards_played_this_turn);
                 }
             }
             EffectOp::DealDamageToLastAttacker(amount) => {
                 if let Some(i) = state.last_attacker {
-                    deal_damage(state, actor, Actor::Monster(i), *amount);
+                    deal_damage(state, actor, Actor::Monster(i), *amount, is_attack_card, state.cards_played_this_turn);
                 }
             }
             EffectOp::GainBlockScaled { base, per_unit, source } => {

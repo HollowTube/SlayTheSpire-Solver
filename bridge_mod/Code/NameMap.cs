@@ -261,6 +261,9 @@ public static class NameMap
         // Vine Shambler (elite): 3-move fixed cycle — Swipe → Grasping Vines
         // (+Tangled) → Chomp → repeat.
         ["VINE_SHAMBLER"] = "Vine Shambler",
+        // Bygone Effigy (elite): Sleep → Wake → Slashes → repeat.
+        // Status::Slow scales Attack-card damage by cards_played_this_turn.
+        ["BYGONE_EFFIGY"] = "Bygone Effigy",
     };
 
     /// STS2 PowerModel.Id.Entry -> sts_sim status name. Only the statuses
@@ -299,6 +302,10 @@ public static class NameMap
         // Tangled: Attack cards cost +n to play this turn. Removed at end of
         // player's turn. Applied by Vine Shambler's Grasping Vines.
         ["TANGLED"] = "Tangled",
+        // Slow: Attack-card damage to the holder scales with
+        // cards_played_this_turn. Inherent to Bygone Effigy (no decay, not a
+        // debuff).
+        ["SLOW"] = "Slow",
         // Minion: { leader } — not straightforward to map from a simple
         // name+amount power; the `leader` field must be set explicitly. If
         // the bridge encounters a MinionPower, it should be dropped and the
@@ -334,5 +341,6 @@ public static class NameMap
         ["Tracker Ruby Raider"] = "tracker-ruby-raider",
         ["Mawler"] = "mawler",
         ["Vine Shambler"] = "vine-shambler",
+        ["Bygone Effigy"] = "bygone-effigy",
     };
 }

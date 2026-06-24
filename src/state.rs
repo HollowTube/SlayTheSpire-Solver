@@ -242,6 +242,10 @@ pub struct CombatState {
     pub(crate) draw_pile: Vec<CardInstance>,
     pub(crate) discard_pile: Vec<CardInstance>,
     pub(crate) exhaust_pile: Vec<CardInstance>,
+    // Number of cards the player has played since their turn began —
+    // resets to 0 at the start of each player turn (e.g. Bygone Effigy's
+    // Status::Slow damage scaling).
+    pub(crate) cards_played_this_turn: i32,
     // Number of Attack cards the player has played since their turn began —
     // resets to 0 at the start of each player turn (e.g. Conflagration).
     pub(crate) attacks_played_this_turn: i32,
@@ -316,6 +320,7 @@ impl CombatState {
             draw_pile,
             discard_pile,
             exhaust_pile,
+            cards_played_this_turn: 0,
             attacks_played_this_turn: 0,
             player_times_damaged_this_combat: 0,
             player_hp_lost_this_turn: false,

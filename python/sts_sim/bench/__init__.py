@@ -19,7 +19,9 @@ from typing import cast
 from ..scenarios import (
     PLAYER_STARTING_HP,
     CardName,
+    ironclad_starter_deck_vs_bygone_effigy,
     ironclad_starter_deck_vs_byrdonis,
+    ironclad_starter_deck_vs_crossbow_ruby_raider,
     ironclad_starter_deck_vs_fuzzy_wurm_crawler,
     ironclad_starter_deck_vs_gremlin_nob,
     ironclad_starter_deck_vs_inklet,
@@ -67,6 +69,7 @@ class Encounter(str, Enum):
     TRACKER_RUBY_RAIDER = "tracker-ruby-raider"
     MAWLER = "mawler"
     VINE_SHAMBLER = "vine-shambler"
+    BYGONE_EFFIGY = "bygone-effigy"
 
 
 _SCENARIOS = {
@@ -88,6 +91,7 @@ _SCENARIOS = {
     Encounter.TRACKER_RUBY_RAIDER: ironclad_starter_deck_vs_tracker_ruby_raider,
     Encounter.MAWLER: ironclad_starter_deck_vs_mawler,
     Encounter.VINE_SHAMBLER: ironclad_starter_deck_vs_vine_shambler,
+    Encounter.BYGONE_EFFIGY: ironclad_starter_deck_vs_bygone_effigy,
 }
 
 # Act 1 "easy pool" encounters — every non-elite, non-boss scenario (i.e.

@@ -201,7 +201,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     Some(name) => {
                         if let Some(intent) = next.monsters[i].intent.clone() {
                             if let Some(effects) = monster_move(&name, &intent) {
-                                run_effect_ops(&mut next, &effects, Actor::Monster(i), &[Actor::Player]);
+                                run_effect_ops(&mut next, &effects, Actor::Monster(i), &[Actor::Player], false);
                             }
                             let streak = if next.monsters[i].last_move.as_deref() == Some(intent.as_str()) {
                                 next.monsters[i].move_streak + 1
@@ -270,6 +270,9 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             // Attack-played count resets at the start of each player turn
             // (e.g. Conflagration).
             next.attacks_played_this_turn = 0;
+            // Cards-played count resets at the start of each player turn
+            // (e.g. Bygone Effigy's Status::Slow).
+            next.cards_played_this_turn = 0;
             // Draw the next turn's opening hand (reshuffling the discard
             // pile back in if the draw pile runs dry mid-draw).
             draw_cards(&mut next, HAND_SIZE);
@@ -294,7 +297,8 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                 }
                 let mut next = state.clone();
                 let data = card_data(&card.name, card.upgrade_level).expect("pending card is always known");
-                run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)]);
+                let is_attack = matches!(data.card_type, CardType::Attack);
+                run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)], is_attack);
                 match data.card_type {
                     CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
                     CardType::Attack => {
@@ -304,7 +308,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                         // resolves a second time, then the power is consumed.
                         if let Some(pos) = next.player.statuses.iter().position(|s| *s == Status::OneTwoPunch) {
                             next.player.statuses.remove(pos);
-                            run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)]);
+                            run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)], is_attack);
                             next.attacks_played_this_turn += 1;
                             fire_event(&mut next, GameEvent::AttackPlayed);
                         }
@@ -354,6 +358,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     next.discard_pile.push(played);
                 }
                 next.player_energy -= cost;
+                next.cards_played_this_turn += 1;
                 // Unrelenting's FreeAttack: consumed by the next Attack
                 // played, regardless of whether it was actually free
                 // (mirrors OneTwoPunch's one-shot consumption).
@@ -362,6 +367,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                         next.player.statuses.remove(pos);
                     }
                 }
+                let is_attack = matches!(data.card_type, CardType::Attack);
                 if data.targeted {
                     next.pending = Some(PendingDecision::SelectTarget { card: instance });
                 } else {
@@ -374,7 +380,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                         .into_iter()
                         .map(Actor::Monster)
                         .collect();
-                    run_effect_ops(&mut next, &data.effects, Actor::Player, &targets);
+                                run_effect_ops(&mut next, &data.effects, Actor::Player, &targets, is_attack);
                     match data.card_type {
                         CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
                         CardType::Attack => {
@@ -385,7 +391,7 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                             // consumed.
                             if let Some(pos) = next.player.statuses.iter().position(|s| *s == Status::OneTwoPunch) {
                                 next.player.statuses.remove(pos);
-                                run_effect_ops(&mut next, &data.effects, Actor::Player, &targets);
+                    run_effect_ops(&mut next, &data.effects, Actor::Player, &targets, is_attack);
                                 next.attacks_played_this_turn += 1;
                                 fire_event(&mut next, GameEvent::AttackPlayed);
                             }
