@@ -12,6 +12,17 @@ pub(crate) enum CardType {
     Status,
 }
 
+/// Rarity tier of a card, matching STS2's `EntityRarity` enum. Used by
+/// run-level reward logic to weight card-reward draws.
+#[derive(Clone, PartialEq)]
+pub(crate) enum CardRarity {
+    Starter,
+    Common,
+    Uncommon,
+    Rare,
+    Special,
+}
+
 /// Boolean-ish per-card flags, mirroring STS2's `CardModel.Keywords:
 /// IReadOnlySet<CardKeyword>`. Kept as a set (rather than separate bools) so
 /// upgrades can add/remove individual keywords without new `CardData` fields.
@@ -48,6 +59,7 @@ pub(crate) struct CardData {
     pub(crate) card_type: CardType,
     pub(crate) effects: Vec<EffectOp>,
     pub(crate) keywords: HashSet<CardKeyword>,
+    pub(crate) rarity: CardRarity,
 }
 
 /// How a card's `CardData` changes at `upgrade_level >= 1`, mirroring STS2's
@@ -199,6 +211,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(6)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Starter,
         }),
         "Defend" => Some(CardData {
             cost: 1,
@@ -206,6 +219,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::GainBlock(5)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Starter,
         }),
         // Per the Slay the Spire wiki, base Bash deals 8 damage and applies
         // 2 Vulnerable stacks (not 1).
@@ -219,6 +233,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Starter,
         }),
         "Iron Wave" => Some(CardData {
             cost: 1,
@@ -226,6 +241,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(5), EffectOp::GainBlock(5)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         "Inflame" => Some(CardData {
             cost: 1,
@@ -233,6 +249,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // 3 hits of 3 damage each to a random enemy (always the same target
         // in single-enemy fights). Targeted so SelectTarget resolves first.
@@ -246,6 +263,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::DealDamage(3),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Hits all enemies for 4 and applies 1 Vulnerable to each.
         // Not targeted — resolves immediately against all enemies (single
@@ -259,6 +277,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Installs the Rage status: gain 2 Block each time you play an Attack.
         "Rage" => Some(CardData {
@@ -267,6 +286,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Rage)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Installs the Demon Form status: gain 2 Strength at the start of
         // each turn (including the turn it's played, per the wiki — but the
@@ -278,6 +298,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::DemonForm)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         // Installs the Crimson Mantle status: at the start of each turn,
         // gain 8 Block and lose HP equal to a counter that starts at 1 and
@@ -288,6 +309,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::CrimsonMantle(1))],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         // Installs the Inferno status: at the start of each turn, lose 1 HP
         // (unblockable); whenever the holder loses HP on their turn, deal 6
@@ -298,6 +320,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Inferno)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Installs the Aggression status: at the start of each turn, return
         // a random Attack from the discard pile to hand.
@@ -307,6 +330,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Aggression)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         // Installs the Dark Embrace status: whenever a card is Exhausted,
         // draw 1 card.
@@ -316,6 +340,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::DarkEmbrace)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         // Installs the Feel No Pain status: whenever a card is Exhausted,
         // gain 3 Block.
@@ -325,6 +350,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::FeelNoPain)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Installs the Barricade status: Block is no longer removed at the
         // start of your turn.
@@ -334,6 +360,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Barricade)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         // Installs the Juggernaut status: whenever you gain Block, deal 5
         // damage to a random enemy.
@@ -343,6 +370,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Juggernaut(5))],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         // Gain 12 Block. Whenever you are attacked this turn, deal 4 damage
         // back to the attacker.
@@ -355,6 +383,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToSelf(Status::FlameBarrier),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Colossus costs 1, gains 5 Block, and installs the Colossus status
         // for this turn only: incoming damage from attackers with
@@ -368,6 +397,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToSelf(Status::Colossus(1)),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         // Installs the Corruption status: Skills cost 0 and Exhaust when
         // played.
@@ -377,6 +407,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Corruption)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Special,
         }),
         // Installs the Cruelty status: damage dealt to Vulnerable targets is
         // amplified by 1.75x instead of 1.5x.
@@ -386,6 +417,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Cruelty)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         // Deal 15 damage. Apply -10 Strength to the target for the rest of
         // combat.
@@ -398,6 +430,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Strength(-10)),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         // Installs the One Two Punch status: the next Attack played this
         // turn is played a second time.
@@ -407,6 +440,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::OneTwoPunch)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         "Pommel Strike" => Some(CardData {
             cost: 1,
@@ -414,6 +448,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(9), EffectOp::DrawCards(1)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the wiki, Bloodletting costs 0, deals 3 unblockable damage to
         // the player, and grants 2 Energy.
@@ -423,6 +458,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::LoseHp(3), EffectOp::GainEnergy(2)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the wiki, BloodWall costs 2, deals 2 unblockable damage to the
         // player, and grants 16 Block.
@@ -432,6 +468,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::LoseHp(2), EffectOp::GainBlock(16)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the wiki, Hemokinesis costs 1, deals 2 unblockable damage to
         // the player, and deals 15 damage to a chosen enemy.
@@ -441,6 +478,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::LoseHp(2), EffectOp::DealDamage(15)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, Offering costs 0, deals 6 unblockable damage to the
         // player, grants 2 Energy, draws 3 cards, and Exhausts.
@@ -454,6 +492,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::DrawCards(3),
             ],
             keywords: HashSet::from([CardKeyword::Exhaust]),
+            rarity: CardRarity::Rare,
         }),
         // Per the wiki, Tremble costs 1, applies 3 Vulnerable to a chosen
         // enemy, and Exhausts.
@@ -467,6 +506,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
             keywords: HashSet::from([CardKeyword::Exhaust]),
+            rarity: CardRarity::Common,
         }),
         // Per the wiki, Impervious costs 2, grants 30 Block, and Exhausts.
         "Impervious" => Some(CardData {
@@ -475,6 +515,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::GainBlock(30)],
             keywords: HashSet::from([CardKeyword::Exhaust]),
+            rarity: CardRarity::Rare,
         }),
         // Per the wiki, NotYet costs 2, heals 10 HP (capped at max HP), and
         // Exhausts.
@@ -484,6 +525,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::Heal(10)],
             keywords: HashSet::from([CardKeyword::Exhaust]),
+            rarity: CardRarity::Common,
         }),
         // The slime monsters' Goop/StickyShot moves stick this into the
         // player's discard pile. Per the wiki: 1 energy, draws 1 card,
@@ -494,6 +536,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Status,
             effects: vec![EffectOp::DrawCards(1)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Vantom's Dismember sticks these into the player's discard pile.
         // Per the wiki, Wound is identical to "Slimed": 1 energy, draws 1
@@ -504,6 +547,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Status,
             effects: vec![EffectOp::DrawCards(1)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Phrog Parasite's Infect sticks these into the player's discard pile.
         // Same stats as Wound: 1 energy, draws 1 card, exhausts on play.
@@ -513,6 +557,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Status,
             effects: vec![EffectOp::DrawCards(1)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the wiki: Dazed is Unplayable and Ethereal, and does nothing —
         // a junk card the Defect's orbs and some monsters stick into the
@@ -523,6 +568,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Status,
             effects: vec![],
             keywords: HashSet::from([CardKeyword::Ethereal, CardKeyword::Unplayable]),
+            rarity: CardRarity::Common,
         }),
         // Per the decompiled source, Cinder costs 2, deals 18 damage to a
         // chosen enemy, then exhausts a random card from hand.
@@ -535,6 +581,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ExhaustRandomFromHand(HandFilter::Any),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the decompiled source, base (non-upgraded) TrueGrit costs 1,
         // gains 7 block, and exhausts a random card from hand (upgraded lets
@@ -548,6 +595,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ExhaustRandomFromHand(HandFilter::Any),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the decompiled source, BurningPact costs 1; the player chooses
         // 1 card from hand to exhaust (modeled as random — see TrueGrit) and
@@ -561,6 +609,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::DrawCards(2),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the decompiled source, Thrash costs 1, deals 4 damage twice (8
         // total) to a chosen enemy, then exhausts a random Attack card from
@@ -578,6 +627,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ExhaustRandomFromHand(HandFilter::Attack),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         // Per the decompiled source, SecondWind costs 1; for each non-Attack
         // card in hand, exhaust it and gain 5 block (total = 5 * count).
@@ -590,6 +640,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 gain_block_per_card: 5,
             }],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the decompiled source, Headbutt costs 1, deals 9 damage to a
         // chosen enemy, then the player picks a card from the discard pile to
@@ -604,6 +655,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(9), EffectOp::PutRandomDiscardOnTopOfDraw],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the decompiled source, FiendFire costs 2 and Exhausts. It deals
         // 7 damage to a chosen enemy once per card remaining in hand
@@ -625,6 +677,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 },
             ],
             keywords: HashSet::from([CardKeyword::Exhaust]),
+            rarity: CardRarity::Rare,
         }),
         // Per the decompiled source, InfernalBlade costs 1 and Exhausts. It
         // adds a random Attack card to hand from the Ironclad's full
@@ -648,6 +701,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 "FiendFire".to_string(),
             ])],
             keywords: HashSet::from([CardKeyword::Exhaust]),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, Bludgeon costs 3 and deals 32 damage.
         "Bludgeon" => Some(CardData {
@@ -656,6 +710,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(32)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, TwinStrike costs 1 and deals 5 damage twice (10
         // total).
@@ -665,6 +720,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(5), EffectOp::DealDamage(5)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the wiki, Break costs 1, deals 20 damage, and applies 5
         // Vulnerable to the chosen enemy.
@@ -681,6 +737,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Special,
         }),
         // Per the wiki, ShrugItOff costs 1, gains 8 block, and draws 1 card.
         "ShrugItOff" => Some(CardData {
@@ -689,6 +746,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Skill,
             effects: vec![EffectOp::GainBlock(8), EffectOp::DrawCards(1)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the wiki, Taunt costs 1, gains 7 block, and applies Vulnerable
         // to the chosen enemy.
@@ -701,6 +759,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, Uppercut costs 2, deals 13 damage, and applies 1 Weak
         // and 1 Vulnerable to the chosen enemy.
@@ -714,6 +773,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, BodySlam costs 1 and deals damage equal to the
         // player's current Block.
@@ -727,6 +787,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 source: ScaleSource::CurrentBlock,
             }],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the wiki, PerfectedStrike costs 2 and deals 6 damage plus 2 for
         // every card named "Strike" in the player's deck (counted across all
@@ -741,6 +802,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 source: ScaleSource::StrikeCardsInDeck,
             }],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the wiki, AshenStrike costs 1 and deals 6 damage plus 3 for
         // every card in the player's exhaust pile.
@@ -754,6 +816,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 source: ScaleSource::ExhaustPileSize,
             }],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, Bully costs 0 and deals 4 damage plus 2 for every
         // stack of Vulnerable on the target.
@@ -767,6 +830,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 source: ScaleSource::VulnerableStacksOnTarget,
             }],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, Conflagration costs 1 and deals 8 damage to ALL
         // enemies, plus 2 for each Attack played earlier this turn.
@@ -780,6 +844,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 source: ScaleSource::AttacksPlayedThisTurn,
             }],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         // Per the wiki, TearAsunder costs 2 and deals 5 damage, hitting one
         // extra time for every time the player has been damaged this combat.
@@ -794,6 +859,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 hits_source: ScaleSource::DamageTakenThisCombat,
             }],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         // Per the wiki, Spite costs 0 and deals 5 damage, hitting twice if the
         // player has lost HP this turn.
@@ -808,6 +874,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 hits_source: ScaleSource::HpLostThisTurn,
             }],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per HOL-16, Dismantle costs 1 and deals 8 damage, hitting twice if
         // the target has Vulnerable.
@@ -822,6 +889,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 hits_source: ScaleSource::TargetHasVulnerable,
             }],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, MoltenFist costs 1, doubles the target's existing
         // Vulnerable stacks, deals 10 damage, and Exhausts.
@@ -831,6 +899,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DoubleVulnerableOnTarget, EffectOp::DealDamage(10)],
             keywords: HashSet::from([CardKeyword::Exhaust]),
+            rarity: CardRarity::Common,
         }),
         // Per HOL-16, Dominate costs 1, applies Vulnerable to the target,
         // then gains Strength equal to the target's resulting Vulnerable
@@ -844,6 +913,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::GainStrengthEqualToTargetVulnerable,
             ],
             keywords: HashSet::from([CardKeyword::Exhaust]),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, FightMe! costs 1, deals 5 damage twice, grants 3
         // Strength to the player, and 1 Strength to the targeted enemy.
@@ -858,6 +928,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToTarget(Status::Strength(1)),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, Breakthrough costs 1, makes the player Lose 1 HP,
         // and deals 9 damage to ALL enemies (non-targeted, like Thunderclap).
@@ -867,6 +938,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::LoseHp(1), EffectOp::DealDamageToAllEnemies(9)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the wiki, Setup Strike costs 1, deals 7 damage, and grants the
         // player 2 Strength for this turn only.
@@ -876,6 +948,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(7), EffectOp::ApplyStatusToSelf(Status::StrengthThisTurn(2))],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the wiki, Unrelenting costs 1, deals 12 damage, and makes the
         // next Attack the player plays cost 0 Energy.
@@ -885,6 +958,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(12), EffectOp::ApplyStatusToSelf(Status::FreeAttack)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, Evil Eye costs 1, grants 8 Block, and grants another
         // 8 Block (16 total) if the player has Exhausted a card this turn.
@@ -898,6 +972,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 source: ScaleSource::ExhaustedCardThisTurn,
             }],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, Forgotten Ritual costs 0, Exhausts, and grants 3
         // Energy if the player has Exhausted a card this turn — its own
@@ -913,6 +988,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 source: ScaleSource::ExhaustedCardThisTurn,
             }],
             keywords: HashSet::from([CardKeyword::Exhaust]),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, Pyre (Power) costs 1. At the start of each turn, gain
         // 1 Energy — identical shape to DemonForm's TurnStart->Strength.
@@ -922,6 +998,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Pyre)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
         }),
         // Per the wiki, Anger costs 0, deals 6 damage, and adds a copy of
         // itself to the player's discard pile.
@@ -931,6 +1008,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamage(6), EffectOp::AddCardToDiscard("Anger".to_string())],
             keywords: HashSet::new(),
+            rarity: CardRarity::Common,
         }),
         // Per the wiki, DrumOfBattle (Power) costs 1. On play, draw 2 cards.
         // At the start of each turn, Exhaust the top card of the draw pile.
@@ -943,6 +1021,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
                 EffectOp::ApplyStatusToSelf(Status::BattleDrum),
             ],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         // Per the wiki, Stomp costs 2 (base, minus 1 per Attack played this
         // turn) and deals 12 damage to ALL enemies.
@@ -952,6 +1031,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamageToAllEnemies(12)],
             keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
         }),
         _ => None,
     }
