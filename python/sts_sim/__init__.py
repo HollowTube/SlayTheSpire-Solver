@@ -1,6 +1,7 @@
 from ._sts_sim import (
     CombatState,
     Monster,
+    RunState,
     apply,
     evaluate,
     fight_outcomes_per_fight,
@@ -13,12 +14,18 @@ from ._sts_sim import (
     random_rollout,
     redeterminized,
     reward,
+    run_apply,
+    run_is_terminal,
+    run_legal_actions,
     simulate_hp_lost,
+    simulate_run_outcome,
+    simulate_run_outcomes,
 )
 
 __all__ = [
     "CombatState",
     "Monster",
+    "RunState",
     "apply",
     "evaluate",
     "fight_outcomes_per_fight",
@@ -31,5 +38,10 @@ __all__ = [
     "random_rollout",
     "redeterminized",
     "reward",
+    "run_apply",
+    "run_is_terminal",
+    "run_legal_actions",
     "simulate_hp_lost",
+    "simulate_run_outcome",
+    "simulate_run_outcomes",
 ]
