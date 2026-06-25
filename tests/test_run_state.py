@@ -22,17 +22,20 @@ def test_legal_actions_offers_resolve_combat_at_a_fresh_combat_node():
 
 
 def test_resolving_the_only_combat_node_ends_the_run_as_a_win():
-    """A starter deck at full HP vs. a single weak Nibbit should win, leaving
-    no further nodes — the run becomes terminal with player HP intact."""
+    """A starter deck at full HP vs. a single weak Nibbit should win. With a
+    card-reward decision now pending (HOL-64), the run is not yet terminal
+    until that decision is resolved — Skip leaves no further nodes."""
     run = RunState(
         seed=1,
         deck=["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
         hp=80,
         path=[("Nibbit", 24)],
     )
-    after = run_apply(run, "ResolveCombat")
-    assert run_is_terminal(after)
-    assert after.hp > 0
+    after_combat = run_apply(run, "ResolveCombat")
+    assert not run_is_terminal(after_combat)
+    after_reward = run_apply(after_combat, "Skip")
+    assert run_is_terminal(after_reward)
+    assert after_reward.hp > 0
 
 
 def test_hp_carries_into_the_combat_node_rather_than_resetting_to_max_hp():
@@ -102,13 +105,87 @@ def test_simulate_run_outcome_plays_a_multi_node_path_to_completion():
     assert final_hp > 0
 
 
-def test_deck_carries_into_the_combat_node_unchanged_with_no_rewards_yet():
-    """No card-reward node exists yet (HOL-64) — the persistent deck must
-    pass through a resolved combat node completely unchanged."""
+def test_deck_is_unchanged_immediately_after_combat_before_any_reward_choice():
+    """Resolving combat alone (before the pending reward decision is acted
+    on) must not itself mutate the deck — only `Take:<name>` does."""
     deck = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
     run = RunState(seed=1, deck=deck, hp=80, path=[("Nibbit", 24)])
     after = run_apply(run, "ResolveCombat")
     assert sorted(after.deck) == sorted(deck)
+
+
+def test_a_won_combat_offers_a_card_reward_choice():
+    """After winning, `legal_actions` must offer exactly 3 distinct cards to
+    take plus Skip — before the run's path position has moved on."""
+    run = RunState(
+        seed=1,
+        deck=["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
+        hp=80,
+        path=[("Nibbit", 24)],
+    )
+    after = run_apply(run, "ResolveCombat")
+    actions = run_legal_actions(after)
+    assert "Skip" in actions
+    take_actions = [a for a in actions if a.startswith("Take:")]
+    assert len(take_actions) == 3
+    assert len(set(take_actions)) == 3
+
+
+def test_status_cards_are_never_offered_as_rewards():
+    """Dazed/Wound/Slimed/Infection are monster-inflicted junk cards, not
+    legitimate rewards — `card_data`'s `CardType::Status` excludes them from
+    the reward pool regardless of seed."""
+    excluded = {"Dazed", "Wound", "Slimed", "Infection"}
+    for seed in range(20):
+        run = RunState(
+            seed=seed,
+            deck=["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
+            hp=80,
+            path=[("Nibbit", 24)],
+        )
+        after = run_apply(run, "ResolveCombat")
+        offered = {
+            a.removeprefix("Take:")
+            for a in run_legal_actions(after)
+            if a.startswith("Take:")
+        }
+        assert offered.isdisjoint(excluded)
+
+
+def test_skip_leaves_the_deck_unchanged_and_advances_the_run():
+    deck = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
+    run = RunState(seed=1, deck=deck, hp=80, path=[("Nibbit", 24)])
+    after_combat = run_apply(run, "ResolveCombat")
+    after_skip = run_apply(after_combat, "Skip")
+    assert sorted(after_skip.deck) == sorted(deck)
+    assert run_is_terminal(after_skip)
+
+
+def test_take_adds_the_chosen_card_to_the_deck_unupgraded():
+    deck = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
+    run = RunState(seed=1, deck=deck, hp=80, path=[("Nibbit", 24)])
+    after_combat = run_apply(run, "ResolveCombat")
+    take_action = next(
+        a for a in run_legal_actions(after_combat) if a.startswith("Take:")
+    )
+    chosen = take_action.removeprefix("Take:")
+    after_take = run_apply(after_combat, take_action)
+    assert sorted(after_take.deck) == sorted(deck + [chosen])
+    assert run_is_terminal(after_take)
+
+
+def test_card_reward_offering_is_deterministic_given_the_same_seed():
+    def offer():
+        run = RunState(
+            seed=9,
+            deck=["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
+            hp=80,
+            path=[("Nibbit", 24)],
+        )
+        after = run_apply(run, "ResolveCombat")
+        return sorted(run_legal_actions(after))
+
+    assert offer() == offer()
 
 
 def test_run_win_rate_reports_a_win_rate_over_many_seeded_runs():
