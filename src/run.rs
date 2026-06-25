@@ -24,12 +24,26 @@ const RESOLVE_COMBAT_ITERATIONS: u32 = 200;
 /// How many distinct cards a reward decision offers, before `Skip`.
 const REWARD_CHOICE_COUNT: usize = 3;
 
-/// One stop on a run's path. Only combat nodes exist for now (HOL-59) — rest
-/// sites are a separate follow-up issue (HOL-63) that adds a variant here
-/// without changing `RunState`'s core loop.
+/// One stop on a run's path. `Combat` and `Elite` are resolved identically
+/// (opaque embedded `CombatState`, same MCTS-driven resolution) — the
+/// distinction exists only to record provenance (which pool a monster came
+/// from), since HOL-65's skeleton assembly needs to know where it placed
+/// elites. Rest sites are a separate follow-up issue (HOL-63) that adds
+/// another variant here without changing `RunState`'s core loop.
 #[derive(Clone, PartialEq)]
 pub(crate) enum NodeKind {
     Combat { monster_name: String, monster_hp: i32 },
+    Elite { monster_name: String, monster_hp: i32 },
+}
+
+impl NodeKind {
+    fn monster(&self) -> (&str, i32) {
+        match self {
+            NodeKind::Combat { monster_name, monster_hp } | NodeKind::Elite { monster_name, monster_hp } => {
+                (monster_name.as_str(), *monster_hp)
+            }
+        }
+    }
 }
 
 #[pyclass]
@@ -51,13 +65,27 @@ pub(crate) struct RunState {
 #[pymethods]
 impl RunState {
     #[new]
-    #[pyo3(signature = (seed, deck, hp, path, max_hp=None))]
-    fn new(seed: u64, deck: Vec<String>, hp: i32, path: Vec<(String, i32)>, max_hp: Option<i32>) -> Self {
+    #[pyo3(signature = (seed, deck, hp, path, max_hp=None, elite_indices=Vec::new()))]
+    fn new(
+        seed: u64,
+        deck: Vec<String>,
+        hp: i32,
+        path: Vec<(String, i32)>,
+        max_hp: Option<i32>,
+        elite_indices: Vec<usize>,
+    ) -> Self {
         RunState {
             seed,
             path: path
                 .into_iter()
-                .map(|(monster_name, monster_hp)| NodeKind::Combat { monster_name, monster_hp })
+                .enumerate()
+                .map(|(i, (monster_name, monster_hp))| {
+                    if elite_indices.contains(&i) {
+                        NodeKind::Elite { monster_name, monster_hp }
+                    } else {
+                        NodeKind::Combat { monster_name, monster_hp }
+                    }
+                })
                 .collect(),
             position: 0,
             deck: deck.iter().map(|s| CardInstance::parse(s)).collect(),
@@ -88,9 +116,7 @@ pub(crate) fn run_legal_actions(state: &RunState) -> Vec<String> {
     if state.position >= state.path.len() || state.hp <= 0 {
         return Vec::new();
     }
-    match &state.path[state.position] {
-        NodeKind::Combat { .. } => vec!["ResolveCombat".to_string()],
-    }
+    vec!["ResolveCombat".to_string()]
 }
 
 #[pyfunction]
@@ -123,16 +149,17 @@ fn draw_reward_cards(seed: u64) -> Vec<String> {
 /// not (the run is terminal either way once `position` is exhausted or HP
 /// hits 0 — see `run_is_terminal`).
 fn resolve_combat(state: &RunState, iterations: u32) -> PyResult<RunState> {
-    let NodeKind::Combat { monster_name, monster_hp } = state
+    let (monster_name, monster_hp) = state
         .path
         .get(state.position)
-        .ok_or_else(|| PyValueError::new_err("ResolveCombat at a terminal run"))?;
+        .ok_or_else(|| PyValueError::new_err("ResolveCombat at a terminal run"))?
+        .monster();
 
     let monster = Monster::new(
-        *monster_hp,
+        monster_hp,
         0,
         None,
-        Some(monster_name.clone()),
+        Some(monster_name.to_string()),
         0,
         Vec::new(),
         None,

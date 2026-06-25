@@ -42,6 +42,15 @@ pub(crate) const OVERGROWTH_NORMAL_POOL: &[&str] = &[
     "Vine Shambler",
 ];
 
+/// Overgrowth's elite pool — distinct from the weak/normal monster pools,
+/// drawn uniform-random-with-seed (no anti-repeat/cycling: HOL-62's scope
+/// is one elite per draw, not a sequence). Every `sts_sim` implements with
+/// a true `RoomType.Elite` encounter in the real game (verified directly
+/// against `Overgrowth.cs` — several monsters informally called "elite" in
+/// older issue text, e.g. Cubex Construct, are actually `RoomType.Monster`
+/// and belong in `OVERGROWTH_NORMAL_POOL` instead, not here).
+pub(crate) const OVERGROWTH_ELITE_POOL: &[&str] = &["Byrdonis", "Phrog Parasite", "Bygone Effigy"];
+
 /// How many of the leading monster-node slots draw from the weak pool
 /// before falling through to the normal pool — matches the real game's
 /// `Overgrowth.NumberOfWeakEncounters`. A plain constant for now; a future
@@ -104,6 +113,13 @@ pub(crate) fn draw_overgrowth_monster_sequence(seed: u64, slots: usize) -> Vec<S
         slots,
         seed,
     )
+}
+
+/// Draws one elite name from `OVERGROWTH_ELITE_POOL`, seeded.
+#[pyfunction]
+pub(crate) fn draw_overgrowth_elite(seed: u64) -> String {
+    let mut rng = Pcg32::seed_from_u64(seed);
+    OVERGROWTH_ELITE_POOL.choose(&mut rng).expect("elite pool is never empty").to_string()
 }
 
 #[cfg(test)]
