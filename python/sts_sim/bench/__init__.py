@@ -394,6 +394,19 @@ def compare(
     return results
 
 
+def run_win_rate(runs: list, iterations: int = 200) -> float:
+    """Win rate over a batch of seeded `RunState`s (HOL-59) — the run-level
+    analog of `BenchResult.win_rate`, one granularity up from a single
+    fight. Each run is played to completion with the default seeded
+    random-legal policy via `simulate_run_outcomes`."""
+    from .. import simulate_run_outcomes
+
+    if not runs:
+        return 0.0
+    outcomes = simulate_run_outcomes(runs, iterations)
+    return sum(1 for won, _, _ in outcomes if won) / len(outcomes)
+
+
 def compare_decks(
     decks: dict[str, list[str] | None],
     encounters: list[Encounter | str],

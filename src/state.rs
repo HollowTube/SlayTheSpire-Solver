@@ -146,7 +146,7 @@ impl Monster {
     #[new]
     #[pyo3(signature = (hp, attack=0, max_hp=None, name=None, block=0, statuses=Vec::new(), intent=None, last_move=None, move_streak=0, moves_used=Vec::new()))]
     #[allow(clippy::too_many_arguments)]
-    fn new(
+    pub(crate) fn new(
         hp: i32,
         attack: i32,
         max_hp: Option<i32>,
@@ -270,7 +270,7 @@ pub struct CombatState {
 impl CombatState {
     #[new]
     #[pyo3(signature = (player_hp, player_energy, monsters, seed, hand=Vec::new(), deck=None, player_max_hp=None, player_max_energy=None, player_block=0, player_statuses=Vec::new(), turn=0, draw_pile=Vec::new(), discard_pile=Vec::new(), exhaust_pile=Vec::new()))]
-    fn new(
+    pub(crate) fn new(
         player_hp: i32,
         player_energy: i32,
         monsters: Vec<Monster>,

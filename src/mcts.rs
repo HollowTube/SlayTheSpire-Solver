@@ -203,7 +203,7 @@ pub(crate) fn mcts_search(
 /// `fight_outcomes_per_fight`: plays `state` to terminal via `search_impl`
 /// at every decision and returns `(hp lost, turns taken)`. See
 /// `simulate_hp_lost` for the `max_actions` stalemate caveat.
-fn simulate_fight_outcome(
+pub(crate) fn simulate_fight_outcome(
     state: &CombatState,
     iterations: u32,
     seed: u64,
