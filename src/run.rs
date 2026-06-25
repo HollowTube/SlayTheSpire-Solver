@@ -24,24 +24,32 @@ const RESOLVE_COMBAT_ITERATIONS: u32 = 200;
 /// How many distinct cards a reward decision offers, before `Skip`.
 const REWARD_CHOICE_COUNT: usize = 3;
 
+/// Fraction of max HP a Rest Site's Heal option restores — matches the real
+/// game's rest-site heal percentage (30%, rounded down).
+const REST_SITE_HEAL_FRACTION: f64 = 0.3;
+
 /// One stop on a run's path. `Combat` and `Elite` are resolved identically
 /// (opaque embedded `CombatState`, same MCTS-driven resolution) — the
 /// distinction exists only to record provenance (which pool a monster came
 /// from), since HOL-65's skeleton assembly needs to know where it placed
-/// elites. Rest sites are a separate follow-up issue (HOL-63) that adds
-/// another variant here without changing `RunState`'s core loop.
+/// elites. `RestSite` is a real player decision (Heal vs. Upgrade) resolved
+/// directly against `RunState`, with no embedded `CombatState` involved.
 #[derive(Clone, PartialEq)]
 pub(crate) enum NodeKind {
     Combat { monster_name: String, monster_hp: i32 },
     Elite { monster_name: String, monster_hp: i32 },
+    RestSite,
 }
 
 impl NodeKind {
+    /// Only ever called for `Combat`/`Elite` — `resolve()` dispatches on
+    /// node kind before reaching this, so `RestSite` never gets here.
     fn monster(&self) -> (&str, i32) {
         match self {
             NodeKind::Combat { monster_name, monster_hp } | NodeKind::Elite { monster_name, monster_hp } => {
                 (monster_name.as_str(), *monster_hp)
             }
+            NodeKind::RestSite => unreachable!("RestSite has no monster; resolve() dispatches before this"),
         }
     }
 }
@@ -65,7 +73,7 @@ pub(crate) struct RunState {
 #[pymethods]
 impl RunState {
     #[new]
-    #[pyo3(signature = (seed, deck, hp, path, max_hp=None, elite_indices=Vec::new()))]
+    #[pyo3(signature = (seed, deck, hp, path, max_hp=None, elite_indices=Vec::new(), rest_site_indices=Vec::new()))]
     fn new(
         seed: u64,
         deck: Vec<String>,
@@ -73,6 +81,7 @@ impl RunState {
         path: Vec<(String, i32)>,
         max_hp: Option<i32>,
         elite_indices: Vec<usize>,
+        rest_site_indices: Vec<usize>,
     ) -> Self {
         RunState {
             seed,
@@ -80,7 +89,9 @@ impl RunState {
                 .into_iter()
                 .enumerate()
                 .map(|(i, (monster_name, monster_hp))| {
-                    if elite_indices.contains(&i) {
+                    if rest_site_indices.contains(&i) {
+                        NodeKind::RestSite
+                    } else if elite_indices.contains(&i) {
                         NodeKind::Elite { monster_name, monster_hp }
                     } else {
                         NodeKind::Combat { monster_name, monster_hp }
@@ -116,7 +127,18 @@ pub(crate) fn run_legal_actions(state: &RunState) -> Vec<String> {
     if state.position >= state.path.len() || state.hp <= 0 {
         return Vec::new();
     }
-    vec!["ResolveCombat".to_string()]
+    match &state.path[state.position] {
+        NodeKind::Combat { .. } | NodeKind::Elite { .. } => vec!["ResolveCombat".to_string()],
+        NodeKind::RestSite => {
+            let mut actions = vec!["Heal".to_string()];
+            for (i, card) in state.deck.iter().enumerate() {
+                if card.upgrade_level == 0 {
+                    actions.push(format!("Upgrade:{i}"));
+                }
+            }
+            actions
+        }
+    }
 }
 
 #[pyfunction]
@@ -221,13 +243,50 @@ fn resolve_reward(state: &RunState, action: &str) -> PyResult<RunState> {
     Ok(next)
 }
 
+/// Resolves a Rest Site's `Heal`/`Upgrade:<index>` decision: `Heal` restores
+/// `REST_SITE_HEAL_FRACTION` of max HP (capped at max HP, never overheals);
+/// `Upgrade:<index>` increments that card's `upgrade_level` in the
+/// persistent deck (refused if it's already upgraded — `run_legal_actions`
+/// never offers it, but `apply` validates directly rather than trusting the
+/// caller). Either way, advances `position` — no combat, no reward.
+fn resolve_rest_site(state: &RunState, action: &str) -> PyResult<RunState> {
+    let mut next = state.clone();
+    if action == "Heal" {
+        let healed = (state.max_hp as f64 * REST_SITE_HEAL_FRACTION).floor() as i32;
+        next.hp = (state.hp + healed).min(state.max_hp);
+    } else if let Some(index_str) = action.strip_prefix("Upgrade:") {
+        let index: usize = index_str
+            .parse()
+            .map_err(|_| PyValueError::new_err(format!("invalid upgrade index: {action}")))?;
+        let card = next
+            .deck
+            .get_mut(index)
+            .ok_or_else(|| PyValueError::new_err(format!("no card at index {index}")))?;
+        if card.upgrade_level >= 1 {
+            return Err(PyValueError::new_err(format!("card at index {index} is already upgraded")));
+        }
+        card.upgrade_level += 1;
+    } else {
+        return Err(PyValueError::new_err(format!("unknown run action: {action}")));
+    }
+    next.position += 1;
+    Ok(next)
+}
+
 fn resolve(state: &RunState, action: &str, iterations: u32) -> PyResult<RunState> {
     if !state.pending_reward.is_empty() {
-        resolve_reward(state, action)
-    } else if action == "ResolveCombat" {
-        resolve_combat(state, iterations)
-    } else {
-        Err(PyValueError::new_err(format!("unknown run action: {action}")))
+        return resolve_reward(state, action);
+    }
+    match state.path.get(state.position) {
+        Some(NodeKind::RestSite) => resolve_rest_site(state, action),
+        Some(NodeKind::Combat { .. }) | Some(NodeKind::Elite { .. }) => {
+            if action == "ResolveCombat" {
+                resolve_combat(state, iterations)
+            } else {
+                Err(PyValueError::new_err(format!("unknown run action: {action}")))
+            }
+        }
+        None => Err(PyValueError::new_err(format!("{action} at a terminal run"))),
     }
 }
 
@@ -239,10 +298,11 @@ pub(crate) fn run_apply(state: &RunState, action: &str) -> PyResult<RunState> {
 /// Drives `run` to completion with the default run-level policy — uniform
 /// random choice among `run_legal_actions` at every decision, seeded so the
 /// whole run (path traversal and every embedded combat's MCTS) is
-/// reproducible from one seed. Today every combat node has exactly one
-/// legal action, so this is a forced walk; the random-choice seam exists so
-/// future node kinds (rest sites, card rewards — HOL-63/HOL-64) with real
-/// choices need no changes here. Returns `(won, final_hp, nodes_completed)`.
+/// reproducible from one seed. A combat node has exactly one legal action
+/// (forced), but reward (HOL-64) and Rest Site (HOL-63) decisions offer
+/// several — this is where that choice actually gets made, with no changes
+/// needed here as further node kinds gain their own real choices. Returns
+/// `(won, final_hp, nodes_completed)`.
 #[pyfunction]
 #[pyo3(signature = (state, iterations=200, seed=0))]
 pub(crate) fn simulate_run_outcome(state: &RunState, iterations: u32, seed: u64) -> PyResult<(bool, i32, u32)> {
