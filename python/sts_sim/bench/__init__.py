@@ -442,6 +442,93 @@ def run_overgrowth_win_rate(
     return run_win_rate(runs, iterations)
 
 
+# The Overgrowth v1 run skeleton (HOL-65): a fixed, hand-picked node order
+# exercising every node kind HOL-61/HOL-62/HOL-63 established at least once,
+# ending in the Vantom boss (the only Overgrowth boss sts_sim implements).
+# Not derived from any placement algorithm — counts/ordering are a judgment
+# call, matching the issue's own example shape. "weak"/"normal" entries are
+# placeholders filled in from the seeded pool draw; "elite" entries are
+# filled in from the seeded elite draw; "rest" entries become RestSite
+# nodes (monster_name/hp ignored for those).
+_OVERGROWTH_SKELETON = [
+    "weak",
+    "weak",
+    "weak",
+    "normal",
+    "normal",
+    "elite",
+    "normal",
+    "normal",
+    "rest",
+    "elite",
+    "rest",
+    "boss",
+]
+
+
+def build_overgrowth_run(seed: int, deck: list | None = None, hp: int | None = None):
+    """Assembles the fixed Overgrowth v1 skeleton into a `RunState` for
+    `seed`: monster/elite selection still goes through the seeded pool
+    draws (HOL-61/HOL-62) — only the *node-kind sequence itself* is fixed.
+    None of HOL-61/62/63/64 needed to hand-edit anything for this; it's
+    pure composition on top of their already-isolated mechanisms."""
+    from .. import RunState, draw_overgrowth_elite, draw_overgrowth_monster_sequence
+    from ..scenarios import (
+        IRONCLAD_STARTING_DECK,
+        MONSTER_STARTING_HP,
+        PLAYER_STARTING_HP,
+    )
+
+    monster_slots = sum(
+        1 for kind in _OVERGROWTH_SKELETON if kind in ("weak", "normal")
+    )
+    monster_names = iter(
+        draw_overgrowth_monster_sequence(seed=seed, slots=monster_slots)
+    )
+    elite_names = iter(
+        [
+            draw_overgrowth_elite(seed=seed + i)
+            for i in range(_OVERGROWTH_SKELETON.count("elite"))
+        ]
+    )
+
+    path: list[tuple[str, int]] = []
+    elite_indices: list[int] = []
+    rest_site_indices: list[int] = []
+    for kind in _OVERGROWTH_SKELETON:
+        if kind in ("weak", "normal"):
+            name = next(monster_names)
+            path.append((name, MONSTER_STARTING_HP[name]))
+        elif kind == "elite":
+            elite_indices.append(len(path))
+            name = next(elite_names)
+            path.append((name, MONSTER_STARTING_HP[name]))
+        elif kind == "rest":
+            rest_site_indices.append(len(path))
+            path.append(("", 0))
+        elif kind == "boss":
+            path.append(("Vantom", MONSTER_STARTING_HP["Vantom"]))
+
+    return RunState(
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+        hp=hp if hp is not None else PLAYER_STARTING_HP,
+        path=path,
+        elite_indices=elite_indices,
+        rest_site_indices=rest_site_indices,
+    )
+
+
+def run_overgrowth_skeleton_win_rate(
+    seeds: int = 50, iterations: int = 200, deck: list | None = None
+) -> float:
+    """Win rate over `seeds` full Overgrowth v1 skeleton runs (HOL-65) — the
+    run-level analog of `run_deck`'s convenience, one level up from
+    `run_overgrowth_win_rate`'s monsters-only slice."""
+    runs = [build_overgrowth_run(seed, deck) for seed in range(seeds)]
+    return run_win_rate(runs, iterations)
+
+
 def compare_decks(
     decks: dict[str, list[str] | None],
     encounters: list[Encounter | str],
