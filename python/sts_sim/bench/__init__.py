@@ -407,6 +407,41 @@ def run_win_rate(runs: list, iterations: int = 200) -> float:
     return sum(1 for won, _, _ in outcomes if won) / len(outcomes)
 
 
+def build_overgrowth_monster_only_run(seed: int, slots: int, deck: list | None = None):
+    """A monsters-and-card-rewards-only run (HOL-59/HOL-61/HOL-64 composed,
+    no elites/rest sites/skeleton-assembly): draw `slots` monster names from
+    the Overgrowth weak/normal pools and look up each one's canonical
+    starting HP."""
+    from .. import RunState, draw_overgrowth_monster_sequence
+    from ..scenarios import (
+        IRONCLAD_STARTING_DECK,
+        MONSTER_STARTING_HP,
+        PLAYER_STARTING_HP,
+    )
+
+    names = draw_overgrowth_monster_sequence(seed=seed, slots=slots)
+    path = [(name, MONSTER_STARTING_HP[name]) for name in names]
+    return RunState(
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+        hp=PLAYER_STARTING_HP,
+        path=path,
+    )
+
+
+def run_overgrowth_win_rate(
+    seeds: int = 50, slots: int = 4, iterations: int = 200, deck: list | None = None
+) -> float:
+    """Win rate over `seeds` independently-drawn Overgrowth monsters-and-
+    rewards runs — the run-level analog of `run_deck`'s convenience for a
+    single scenario, built on `build_overgrowth_monster_only_run` and
+    `run_win_rate`."""
+    runs = [
+        build_overgrowth_monster_only_run(seed, slots, deck) for seed in range(seeds)
+    ]
+    return run_win_rate(runs, iterations)
+
+
 def compare_decks(
     decks: dict[str, list[str] | None],
     encounters: list[Encounter | str],
