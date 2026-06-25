@@ -1037,6 +1037,97 @@ fn card_data_base(name: &str) -> Option<CardData> {
     }
 }
 
+/// Every card name `card_data_base` recognizes — there's no way to
+/// enumerate a `match`'s patterns programmatically, so this is a
+/// hand-maintained mirror (same tradeoff `bridge_mod`'s `NameMap.cs` already
+/// accepts for its own translation tables). Kept immediately below
+/// `card_data_base` so the two are easy to diff against each other when one
+/// changes; a test asserts every entry here resolves via `card_data`,
+/// catching typos/removed cards (the reverse direction — a `card_data_base`
+/// entry missing from this list — isn't mechanically checkable here).
+pub(crate) const ALL_CARD_NAMES: &[&str] = &[
+    "Aggression",
+    "Anger",
+    "AshenStrike",
+    "Barricade",
+    "Bash",
+    "Bloodletting",
+    "BloodWall",
+    "Bludgeon",
+    "BodySlam",
+    "Break",
+    "Breakthrough",
+    "Bully",
+    "BurningPact",
+    "Cinder",
+    "Colossus",
+    "Conflagration",
+    "Corruption",
+    "CrimsonMantle",
+    "Cruelty",
+    "DarkEmbrace",
+    "Dazed",
+    "Defend",
+    "DemonForm",
+    "Dismantle",
+    "Dominate",
+    "DrumOfBattle",
+    "Evil Eye",
+    "FeelNoPain",
+    "FiendFire",
+    "FightMe!",
+    "FlameBarrier",
+    "Forgotten Ritual",
+    "Headbutt",
+    "Hemokinesis",
+    "Impervious",
+    "Infection",
+    "InfernalBlade",
+    "Inferno",
+    "Inflame",
+    "Iron Wave",
+    "Juggernaut",
+    "Mangle",
+    "MoltenFist",
+    "NotYet",
+    "Offering",
+    "OneTwoPunch",
+    "PerfectedStrike",
+    "Pommel Strike",
+    "Pyre",
+    "Rage",
+    "SecondWind",
+    "Setup Strike",
+    "ShrugItOff",
+    "Slimed",
+    "Spite",
+    "Stomp",
+    "Strike",
+    "Sword Boomerang",
+    "Taunt",
+    "TearAsunder",
+    "Thrash",
+    "Thunderclap",
+    "Tremble",
+    "TrueGrit",
+    "TwinStrike",
+    "Unrelenting",
+    "Uppercut",
+    "Wound",
+];
+
+#[cfg(test)]
+mod card_data_tests {
+    use super::*;
+
+    #[test]
+    fn every_name_in_all_card_names_resolves() {
+        for name in ALL_CARD_NAMES {
+            assert!(card_data(name, 0).is_some(), "{name} has no card_data entry");
+        }
+    }
+}
+
 // ============================================================================
 // Reference: STS2 Ironclad cards not yet implemented in `card_data`.
 //
