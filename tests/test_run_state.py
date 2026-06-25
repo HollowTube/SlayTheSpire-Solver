@@ -2,7 +2,13 @@
 driving a fixed sequence of combat nodes, with combat resolved opaquely via
 the existing MCTS engine and a pluggable run-level policy."""
 
-from sts_sim import RunState, run_apply, run_is_terminal, run_legal_actions, simulate_run_outcome
+from sts_sim import (
+    RunState,
+    run_apply,
+    run_is_terminal,
+    run_legal_actions,
+    simulate_run_outcome,
+)
 
 
 def test_legal_actions_offers_resolve_combat_at_a_fresh_combat_node():
