@@ -49,7 +49,7 @@ pub(crate) const OVERGROWTH_NORMAL_POOL: &[&str] = &[
 /// against `Overgrowth.cs` — several monsters informally called "elite" in
 /// older issue text, e.g. Cubex Construct, are actually `RoomType.Monster`
 /// and belong in `OVERGROWTH_NORMAL_POOL` instead, not here).
-pub(crate) const OVERGROWTH_ELITE_POOL: &[&str] = &["Byrdonis", "Phrog Parasite", "Bygone Effigy"];
+pub(crate) const OVERGROWTH_ELITE_POOL: &[&str] = &["Byrdonis", "Phrog Parasite", "Bygone Effigy", "Flyconid"];
 
 /// How many of the leading monster-node slots draw from the weak pool
 /// before falling through to the normal pool — matches the real game's

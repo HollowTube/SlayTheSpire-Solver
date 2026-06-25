@@ -215,6 +215,11 @@ impl Monster {
     }
 
     #[getter]
+    fn last_move(&self) -> Option<String> {
+        self.last_move.clone()
+    }
+
+    #[getter]
     fn is_alive(&self) -> bool {
         self.fighter.hp > 0
     }
