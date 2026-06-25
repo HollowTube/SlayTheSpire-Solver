@@ -1,3 +1,4 @@
+mod act;
 mod cards;
 mod engine;
 mod mcts;
@@ -5,6 +6,7 @@ mod monsters;
 mod run;
 mod state;
 
+use act::draw_overgrowth_monster_sequence;
 use cards::{card_data, CardData, CardKeyword, CardType};
 use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
 use mcts::{
@@ -616,6 +618,7 @@ fn _sts_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(run_is_terminal, m)?)?;
     m.add_function(wrap_pyfunction!(simulate_run_outcome, m)?)?;
     m.add_function(wrap_pyfunction!(simulate_run_outcomes, m)?)?;
+    m.add_function(wrap_pyfunction!(draw_overgrowth_monster_sequence, m)?)?;
     m.add_function(wrap_pyfunction!(legal_actions, m)?)?;
     m.add_function(wrap_pyfunction!(apply, m)?)?;
     m.add_function(wrap_pyfunction!(is_terminal, m)?)?;
