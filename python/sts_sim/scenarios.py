@@ -111,6 +111,7 @@ class MonsterName(str, Enum):
     MAWLER = "Mawler"
     VINE_SHAMBLER = "Vine Shambler"
     BYGONE_EFFIGY = "Bygone Effigy"
+    FLYCONID = "Flyconid"
 
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
@@ -215,6 +216,9 @@ VINE_SHAMBLER_STARTING_HP = 64
 # Bygone Effigy (elite) HP: 127 normal, 132 at A8. 132 used as canonical (max).
 BYGONE_EFFIGY_STARTING_HP = 132
 
+# Per the Overgrowth wiki, Flyconid is an elite with 47-49 HP.
+FLYCONID_STARTING_HP = 49
+
 # Canonical starting HP keyed by MonsterName value. Used by the server's
 # deck_baseline handler to construct a "fresh start" scenario from a named
 # monster list, so the benchmark uses canonical HP regardless of what the
@@ -247,6 +251,7 @@ MONSTER_STARTING_HP: dict[str, int] = {
     MonsterName.MAWLER: MAWLER_STARTING_HP,
     MonsterName.VINE_SHAMBLER: VINE_SHAMBLER_STARTING_HP,
     MonsterName.BYGONE_EFFIGY: BYGONE_EFFIGY_STARTING_HP,
+    MonsterName.FLYCONID: FLYCONID_STARTING_HP,
 }
 
 
@@ -827,6 +832,24 @@ def ironclad_starter_deck_vs_bygone_effigy(seed, deck=None):
                 hp=BYGONE_EFFIGY_STARTING_HP,
                 name=MonsterName.BYGONE_EFFIGY,
                 statuses=[("Slow", 1)],
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_flyconid(seed, deck=None):
+    """Ironclad's starting loadout against Flyconid (Overgrowth elite).
+    Weighted-random AI: Vulnerable Spores (2/6), Frail Spores (2/6),
+    Smash (1/6), never repeats consecutively."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=FLYCONID_STARTING_HP,
+                name=MonsterName.FLYCONID,
             )
         ],
         seed=seed,

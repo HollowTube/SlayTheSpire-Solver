@@ -61,6 +61,8 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         "Vine Shambler" => Some("Swipe".to_string()),
         // Bygone Effigy (elite): opens with Sleep (no-op).
         "Bygone Effigy" => Some("Sleep".to_string()),
+        // Flyconid (elite): opens with Frail Spores.
+        "Flyconid" => Some("Frail Spores".to_string()),
         _ => None,
     }
 }
@@ -306,6 +308,18 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
             EffectOp::ApplyStatusToSelf(Status::Strength(10)),
         ]),
         ("Bygone Effigy", "Slashes") => Some(vec![EffectOp::DealDamage(13)]),
+        // Flyconid (elite): Frail Spores (8 damage + 2 Frail), Vulnerable
+        // Spores (2 Vulnerable, no damage), Smash (11 damage).
+        ("Flyconid", "Frail Spores") => Some(vec![
+            EffectOp::DealDamage(8),
+            EffectOp::ApplyStatusToTarget(Status::Frail(1)),
+            EffectOp::ApplyStatusToTarget(Status::Frail(1)),
+        ]),
+        ("Flyconid", "Vulnerable Spores") => Some(vec![
+            EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+            EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+        ]),
+        ("Flyconid", "Smash") => Some(vec![EffectOp::DealDamage(11)]),
         _ => None,
     }
 }
@@ -330,6 +344,10 @@ fn max_streak(monster_name: &str, move_name: &str) -> u32 {
         // moves_used, not max_streak. Streak limit here is 1 to prevent
         // consecutive repeats if moved out of moves_used somehow.
         ("Mawler", "Roar") => 1,
+        // Flyconid (elite): none of its moves can repeat consecutively.
+        ("Flyconid", "Vulnerable Spores") => 1,
+        ("Flyconid", "Frail Spores") => 1,
+        ("Flyconid", "Smash") => 1,
         _ => u32::MAX,
     }
 }
@@ -577,6 +595,27 @@ pub(crate) fn select_next_intent(
         "Bygone Effigy" => match last_move.as_deref() {
             Some("Sleep") => Some("Wake".to_string()),
             _ => Some("Slashes".to_string()),
+        },
+        // Flyconid (elite): post-opening weighted random. All moves have
+        // max_streak=1 (cannot repeat consecutively). Weights: Vulnerable
+        // Spores 3, Frail Spores 2, Smash 1 (total 6).
+        "Flyconid" => loop {
+            let roll = rng.gen_range(0..6);
+            let candidate = if roll < 3 {
+                "Vulnerable Spores"
+            } else if roll < 5 {
+                "Frail Spores"
+            } else {
+                "Smash"
+            };
+            let resulting_streak = if last_move.as_deref() == Some(candidate) {
+                streak + 1
+            } else {
+                1
+            };
+            if resulting_streak <= max_streak(monster_name, candidate) {
+                return Some(candidate.to_string());
+            }
         },
         _ => None,
     }

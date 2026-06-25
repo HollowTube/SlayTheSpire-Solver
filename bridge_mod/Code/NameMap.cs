@@ -342,5 +342,6 @@ public static class NameMap
         ["Mawler"] = "mawler",
         ["Vine Shambler"] = "vine-shambler",
         ["Bygone Effigy"] = "bygone-effigy",
+        ["Flyconid"] = "flyconid",
     };
 }

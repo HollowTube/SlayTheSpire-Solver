@@ -3,7 +3,7 @@ pool from the weak/normal monster pools, drawn uniform-random-with-seed."""
 
 from sts_sim import draw_overgrowth_elite
 
-ELITE_POOL = {"Byrdonis", "Phrog Parasite", "Bygone Effigy"}
+ELITE_POOL = {"Byrdonis", "Phrog Parasite", "Bygone Effigy", "Flyconid"}
 
 
 def test_draw_returns_a_name_from_the_elite_pool():
