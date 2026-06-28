@@ -96,7 +96,12 @@ def format_action(action):
         return f"Play {action.card}"
     if isinstance(action, SelectTargetAction):
         return f"Target Monster:{action.monster_index}"
-    return str(action)
+    s = str(action)
+    if s.startswith("PlayCard:"):
+        return f"Play {s.removeprefix('PlayCard:')}"
+    if s.startswith("SelectTarget:"):
+        return f"Target {s.removeprefix('SelectTarget:')}"
+    return s
 
 
 def _format_statuses(statuses):
