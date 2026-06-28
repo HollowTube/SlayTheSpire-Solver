@@ -16,7 +16,7 @@ use mcts::{
     simulate_hp_lost,
 };
 use monsters::{monster_move, opening_intent, select_next_intent, is_one_time_move};
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use rand::{Rng, RngCore};
 use run::{
@@ -25,6 +25,14 @@ use run::{
 };
 use std::collections::HashMap;
 use state::{draw_cards, CardInstance, CombatState, Fighter, Monster, PendingDecision, HAND_SIZE};
+
+/// Crate-internal typed action representation — avoids string round-trips
+/// in Rust-only hot paths (random_rollout, optimal_value_rec, mcts.rs).
+pub(crate) enum ActionKind {
+    EndTurn,
+    PlayCard(String),
+    SelectTarget(usize),
+}
 
 /// The Energy cost to play `data`, accounting for Corruption (Skills cost 0
 /// while the player holds it) and Stomp (costs 1 less per Attack played).
@@ -94,6 +102,35 @@ pub(crate) fn legal_actions_str(state: &CombatState) -> Vec<String> {
     }
 }
 
+/// Typed variant of `legal_actions_str` — used by Rust-only hot paths that
+/// dispatch through `apply_action` without any string round-trip.
+pub(crate) fn legal_actions_typed(state: &CombatState) -> Vec<ActionKind> {
+    match &state.pending {
+        Some(PendingDecision::SelectTarget { .. }) => state
+            .living_monster_indices()
+            .into_iter()
+            .map(ActionKind::SelectTarget)
+            .collect(),
+        None => {
+            let mut actions: Vec<ActionKind> = state
+                .hand
+                .iter()
+                .filter(|card| {
+                    card_data(&card.name, card.upgrade_level)
+                        .map(|data| {
+                            !data.keywords.contains(&CardKeyword::Unplayable)
+                                && effective_cost(state, &data) <= state.player_energy
+                        })
+                        .unwrap_or(false)
+                })
+                .map(|card| ActionKind::PlayCard(card.as_str().to_string()))
+                .collect();
+            actions.push(ActionKind::EndTurn);
+            actions
+        }
+    }
+}
+
 /// Python-facing wrapper: converts each string action into a typed Action object.
 #[pyfunction]
 fn legal_actions(py: Python<'_>, state: &CombatState) -> Vec<PyObject> {
@@ -118,10 +155,13 @@ fn str_to_action(py: Python<'_>, s: &str) -> PyObject {
     unreachable!("legal_actions_str only produces well-formed action strings")
 }
 
-#[pyfunction]
-fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
+/// Core typed dispatch — accepts a crate-internal `ActionKind` and applies it
+/// to `state` without any string parsing. Used by both the Python-facing
+/// `apply` (after it converts the incoming `PyObject`) and the Rust-only hot
+/// paths (`random_rollout`, `optimal_value_rec`).
+pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult<CombatState> {
     match action {
-        "EndTurn" => {
+        ActionKind::EndTurn => {
             let mut next = state.clone();
             next.turn += 1;
 
@@ -319,15 +359,13 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
             fire_event(&mut next, GameEvent::TurnStart);
             Ok(next)
         }
-        other if other.starts_with("SelectTarget:Monster:") => match &state.pending {
+        ActionKind::SelectTarget(idx) => match &state.pending {
             Some(PendingDecision::SelectTarget { card }) => {
-                let idx: usize = other
-                    .strip_prefix("SelectTarget:Monster:")
-                    .unwrap()
-                    .parse()
-                    .map_err(|_| PyValueError::new_err(format!("unknown action: {other}")))?;
+                let idx = *idx;
                 if idx >= state.monsters.len() {
-                    return Err(PyValueError::new_err(format!("unknown action: {other}")));
+                    return Err(PyValueError::new_err(format!(
+                        "unknown action: SelectTarget:Monster:{idx}"
+                    )));
                 }
                 let mut next = state.clone();
                 let data = card_data(&card.name, card.upgrade_level).expect("pending card is always known");
@@ -352,11 +390,13 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                 next.pending = None;
                 Ok(next)
             }
-            None => Err(PyValueError::new_err(format!("unknown action: {other}"))),
+            None => Err(PyValueError::new_err(format!(
+                "unknown action: SelectTarget:Monster:{idx}"
+            ))),
         },
-        other => match other.strip_prefix("PlayCard:") {
-            Some(card_name) => {
-                let instance = CardInstance::parse(card_name);
+        ActionKind::PlayCard(card_name) => {
+            let card_name = card_name.as_str();
+            let instance = CardInstance::parse(card_name);
                 let data = card_data(&instance.name, instance.upgrade_level)
                     .ok_or_else(|| PyValueError::new_err(format!("unknown card: {}", instance.name)))?;
                 let mut next = state.clone();
@@ -434,10 +474,58 @@ fn apply(state: &CombatState, action: &str) -> PyResult<CombatState> {
                     }
                 }
                 Ok(next)
-            }
-            None => Err(PyValueError::new_err(format!("unknown action: {other}"))),
-        },
+        }
     }
+}
+
+/// Rust-internal helper: parse a well-formed action string (as produced by
+/// `legal_actions_str`) into `ActionKind` and apply it. Used by `mcts.rs`
+/// which still routes through strings in its tree nodes.
+pub(crate) fn apply_str(state: &CombatState, action: &str) -> PyResult<CombatState> {
+    let kind = if action == "EndTurn" {
+        ActionKind::EndTurn
+    } else if let Some(card) = action.strip_prefix("PlayCard:") {
+        ActionKind::PlayCard(card.to_string())
+    } else if let Some(idx_str) = action.strip_prefix("SelectTarget:Monster:") {
+        let idx = idx_str
+            .parse::<usize>()
+            .map_err(|_| PyValueError::new_err(format!("unknown action: {action}")))?;
+        ActionKind::SelectTarget(idx)
+    } else {
+        return Err(PyValueError::new_err(format!("unknown action: {action}")));
+    };
+    apply_action(state, &kind)
+}
+
+/// Python-facing `apply`: accepts typed Action objects or plain strings.
+/// Converts to `ActionKind` then delegates to `apply_action`.
+#[pyfunction]
+fn apply(state: &CombatState, action: &Bound<'_, PyAny>) -> PyResult<CombatState> {
+    let kind = if action.is_instance_of::<EndTurnAction>() {
+        ActionKind::EndTurn
+    } else if let Ok(a) = action.extract::<PyRef<PlayCardAction>>() {
+        ActionKind::PlayCard(a.card.clone())
+    } else if let Ok(a) = action.extract::<PyRef<SelectTargetAction>>() {
+        ActionKind::SelectTarget(a.monster_index)
+    } else if let Ok(s) = action.extract::<String>() {
+        if s == "EndTurn" {
+            ActionKind::EndTurn
+        } else if let Some(card) = s.strip_prefix("PlayCard:") {
+            ActionKind::PlayCard(card.to_string())
+        } else if let Some(idx_str) = s.strip_prefix("SelectTarget:Monster:") {
+            let idx = idx_str
+                .parse::<usize>()
+                .map_err(|_| PyValueError::new_err(format!("unknown action: {s}")))?;
+            ActionKind::SelectTarget(idx)
+        } else {
+            return Err(PyValueError::new_err(format!("unknown action: {s}")));
+        }
+    } else {
+        return Err(PyTypeError::new_err(
+            "action must be a PlayCardAction, SelectTargetAction, EndTurnAction, or str",
+        ));
+    };
+    apply_action(state, &kind)
 }
 
 #[pyfunction]
@@ -502,9 +590,9 @@ fn redeterminized(state: &CombatState, seed: u64) -> CombatState {
 fn random_rollout(state: &CombatState, seed: u64) -> f64 {
     let mut s = state.reseeded(seed);
     while !is_terminal(&s) {
-        let actions = legal_actions_str(&s);
+        let actions = legal_actions_typed(&s);
         let idx = s.rng.gen_range(0..actions.len());
-        s = apply(&s, &actions[idx]).expect("legal action is always valid");
+        s = apply_action(&s, &actions[idx]).expect("legal action is always valid");
     }
     reward(&s)
 }
@@ -606,10 +694,10 @@ fn optimal_value_rec(state: &CombatState, best: &mut f64, memo: &mut HashMap<Sta
         }
         return cached;
     }
-    let mut children: Vec<(f64, CombatState)> = legal_actions_str(state)
+    let mut children: Vec<(f64, CombatState)> = legal_actions_typed(state)
         .into_iter()
         .map(|action| {
-            let next = apply(state, &action).expect("legal action is always valid");
+            let next = apply_action(state, &action).expect("legal action is always valid");
             (evaluate(&next), next)
         })
         .collect();

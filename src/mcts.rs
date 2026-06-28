@@ -5,7 +5,7 @@
 //! like "how does adding this card to my deck change my average HP lost over
 //! the next N fights" run live at a card-reward screen.
 use crate::state::CombatState;
-use crate::{apply, is_terminal, legal_actions_str, random_rollout, reward};
+use crate::{apply_str, is_terminal, legal_actions_str, random_rollout, reward};
 use pyo3::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
@@ -75,7 +75,7 @@ fn build_tree(state: &CombatState, iterations: u32, rng: &mut Pcg32) -> Vec<Node
         if !arena[idx].untried_actions.is_empty() {
             let pos = rng.gen_range(0..arena[idx].untried_actions.len());
             let action = arena[idx].untried_actions.remove(pos);
-            let next_state = apply(&arena[idx].state, &action).expect("legal action is always valid");
+            let next_state = apply_str(&arena[idx].state, &action).expect("legal action is always valid");
             let child = Node::new(next_state, Some(idx), Some(action));
             let child_idx = arena.len();
             arena.push(child);
@@ -219,7 +219,7 @@ pub(crate) fn simulate_fight_outcome(
             break;
         }
         let action = search_impl(&s, iterations, &mut rng, determinize, determinizations);
-        s = apply(&s, &action).expect("legal action is always valid");
+        s = apply_str(&s, &action).expect("legal action is always valid");
     }
     (starting_hp - s.player.hp.max(0), s.turn)
 }

@@ -5,7 +5,7 @@ from ._sts_sim import (
     CombatState,
     Monster,
     RunState,
-    apply as _apply_rust,
+    apply,
     draw_overgrowth_elite,
     draw_overgrowth_monster_sequence,
     evaluate,
@@ -26,12 +26,6 @@ from ._sts_sim import (
     simulate_run_outcome,
     simulate_run_outcomes,
 )
-
-
-def apply(state, action):
-    """Apply an action to a CombatState. Accepts both Action objects and strings."""
-    return _apply_rust(state, str(action))
-
 
 __all__ = [
     "EndTurnAction",
