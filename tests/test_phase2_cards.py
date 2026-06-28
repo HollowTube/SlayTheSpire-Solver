@@ -2,7 +2,7 @@
 (exhaust-from-hand, draw, discard-to-draw-pile, hand-size-scaled damage, and
 adding generated cards to hand)."""
 
-from sts_sim import CombatState, Monster, apply
+from sts_sim import CombatState, Monster, PlayCardAction, SelectTargetAction, apply
 
 
 def make_state(hand=("Strike",), draw_pile=(), discard_pile=(), seed=42):
@@ -25,10 +25,10 @@ def test_cinder_deals_18_damage_and_exhausts_a_random_hand_card():
     # enemy, then exhausts a random card from hand.
     state = make_state(hand=["Cinder", "Defend"])
 
-    awaiting_target = apply(state, "PlayCard:Cinder")
+    awaiting_target = apply(state, PlayCardAction("Cinder"))
     assert awaiting_target.pending == "SelectTarget"
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 18
     # Cinder itself goes to discard (not Exhaust); "Defend" is the only other
@@ -46,7 +46,7 @@ def test_true_grit_gains_7_block_and_exhausts_a_random_hand_card():
     # 7 block, and exhausts a random card from hand.
     state = make_state(hand=["TrueGrit", "Defend"])
 
-    resolved = apply(state, "PlayCard:TrueGrit")
+    resolved = apply(state, PlayCardAction("TrueGrit"))
 
     assert resolved.player_block == state.player_block + 7
     assert resolved.hand == []
@@ -65,7 +65,7 @@ def test_burning_pact_exhausts_a_random_hand_card_and_draws_2():
         draw_pile=["Strike", "Strike"],
     )
 
-    resolved = apply(state, "PlayCard:BurningPact")
+    resolved = apply(state, PlayCardAction("BurningPact"))
 
     assert "Defend" in resolved.exhaust_pile
     assert "BurningPact" in resolved.discard_pile
@@ -82,10 +82,10 @@ def test_thrash_deals_8_damage_and_exhausts_a_random_attack_from_hand():
     # state, not modeled) and document it as a simplification.
     state = make_state(hand=["Thrash", "Strike", "Defend"])
 
-    awaiting_target = apply(state, "PlayCard:Thrash")
+    awaiting_target = apply(state, PlayCardAction("Thrash"))
     assert awaiting_target.pending == "SelectTarget"
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 8
     # Only "Strike" (an Attack) is eligible to be exhausted; "Defend" (a
@@ -104,7 +104,7 @@ def test_second_wind_exhausts_non_attacks_and_gains_5_block_each():
     # remain in hand.
     state = make_state(hand=["SecondWind", "Defend", "Rage", "Strike"])
 
-    resolved = apply(state, "PlayCard:SecondWind")
+    resolved = apply(state, PlayCardAction("SecondWind"))
 
     assert resolved.player_block == state.player_block + 10
     assert "Defend" in resolved.exhaust_pile
@@ -129,10 +129,10 @@ def test_headbutt_deals_9_damage_and_returns_a_discarded_card_to_top_of_draw():
         discard_pile=["Iron Wave"],
     )
 
-    awaiting_target = apply(state, "PlayCard:Headbutt")
+    awaiting_target = apply(state, PlayCardAction("Headbutt"))
     assert awaiting_target.pending == "SelectTarget"
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 9
     # One card moved from discard pile to the top of draw pile; the other
@@ -157,10 +157,10 @@ def test_fiend_fire_deals_7_per_card_in_hand_and_exhausts_hand_then_itself():
     # other card in hand.
     state = make_state(hand=["FiendFire", "Strike", "Defend"])
 
-    awaiting_target = apply(state, "PlayCard:FiendFire")
+    awaiting_target = apply(state, PlayCardAction("FiendFire"))
     assert awaiting_target.pending == "SelectTarget"
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     # 2 cards remaining in hand (Strike, Defend) -> 2 * 7 = 14 damage.
     assert state.monsters[0].hp - resolved.monsters[0].hp == 14
@@ -182,7 +182,7 @@ def test_infernal_blade_adds_a_random_attack_to_hand_and_exhausts():
     # don't model).
     state = make_state(hand=["InfernalBlade"])
 
-    resolved = apply(state, "PlayCard:InfernalBlade")
+    resolved = apply(state, PlayCardAction("InfernalBlade"))
 
     assert len(resolved.hand) == 1
     assert "InfernalBlade" in resolved.exhaust_pile

@@ -1,7 +1,15 @@
 import random
 from collections import Counter
 
-from sts_sim import PlayCardAction, apply, is_terminal, legal_actions, reward
+from sts_sim import (
+    EndTurnAction,
+    PlayCardAction,
+    SelectTargetAction,
+    apply,
+    is_terminal,
+    legal_actions,
+    reward,
+)
 from sts_sim.scenarios import (
     INKLET_STARTING_HP,
     IRONCLAD_STARTING_DECK,
@@ -50,8 +58,8 @@ def test_the_canonical_scenario_is_playable_through_the_existing_interface():
     assert "PlayCard:Strike" in legal_actions(state)
     assert "EndTurn" in legal_actions(state)
 
-    awaiting_target = apply(state, "PlayCard:Strike")
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    awaiting_target = apply(state, PlayCardAction("Strike"))
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert resolved.monsters[0].hp == state.monsters[0].hp - 6
 
@@ -86,14 +94,14 @@ def test_a_full_playthrough_plays_every_starting_card_in_some_sequence():
     while not played_counts >= deck_counts:
         playable = [a for a in legal_actions(state) if isinstance(a, PlayCardAction)]
         if not playable:
-            state = apply(state, "EndTurn")
+            state = apply(state, EndTurnAction())
             assert not is_terminal(state)
             continue
         action = playable[0]
         played_counts[action.card] += 1
         state = apply(state, action)
         if state.pending == "SelectTarget":
-            state = apply(state, "SelectTarget:Monster:0")
+            state = apply(state, SelectTargetAction(0))
 
     # Pinned to seed=42, where the greedy line doesn't end the fight early —
     # in principle an unlucky seed could roll enough Jaw Worm damage to kill

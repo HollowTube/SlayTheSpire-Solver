@@ -1,7 +1,14 @@
 """Behavioural tests for the remaining Act 1 "easy pool" monsters: the
 Shrinker Beetle and the four Slime variants (Twig Slime S/M, Leaf Slime S/M)."""
 
-from sts_sim import CombatState, Monster, apply
+from sts_sim import (
+    CombatState,
+    EndTurnAction,
+    Monster,
+    PlayCardAction,
+    SelectTargetAction,
+    apply,
+)
 
 
 def _twig_slime_s(seed=0, hand=None, deck=None):
@@ -69,15 +76,15 @@ def test_twig_slime_s_opens_with_tackle():
 
 def test_twig_slime_s_tackle_deals_4_damage():
     state = _twig_slime_s()
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert state.player_hp - after.player_hp == 4
 
 
 def test_twig_slime_s_repeats_tackle_forever():
     state = _twig_slime_s()
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert after.monsters[0].intent == "Tackle"
-    after2 = apply(after, "EndTurn")
+    after2 = apply(after, EndTurnAction())
     assert after2.monsters[0].intent == "Tackle"
 
 
@@ -91,7 +98,7 @@ def test_shrinker_beetle_opens_with_shrink():
 
 def test_shrinker_beetle_shrink_applies_shrink_to_the_player_without_damage():
     state = _shrinker_beetle()
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert after.player_hp == state.player_hp
     assert "Shrink" in after.player_statuses
 
@@ -100,21 +107,21 @@ def test_shrinker_beetle_shrink_reduces_the_players_subsequent_attack_damage():
     # Shrink reduces the player's outgoing damage by 30%, rounded down:
     # floor(6 * 0.7) = 4.
     state = _shrinker_beetle(hand=["Strike"])
-    after_shrink = apply(state, "EndTurn")
+    after_shrink = apply(state, EndTurnAction())
     assert "Shrink" in after_shrink.player_statuses
 
-    awaiting_target = apply(after_shrink, "PlayCard:Strike")
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    awaiting_target = apply(after_shrink, PlayCardAction("Strike"))
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert after_shrink.monsters[0].hp - resolved.monsters[0].hp == 4
 
 
 def test_shrinker_beetle_shrink_does_not_decay():
     state = _shrinker_beetle(hand=["Strike"] * 5)
-    after_shrink = apply(state, "EndTurn")
+    after_shrink = apply(state, EndTurnAction())
     assert "Shrink" in after_shrink.player_statuses
 
-    after_another_turn = apply(after_shrink, "EndTurn")
+    after_another_turn = apply(after_shrink, EndTurnAction())
     assert "Shrink" in after_another_turn.player_statuses
 
 
@@ -122,28 +129,28 @@ def test_shrinker_beetle_alternates_chomp_and_stomp_after_shrink():
     state = _shrinker_beetle()
     assert state.monsters[0].intent == "Shrink"
 
-    after_shrink = apply(state, "EndTurn")
+    after_shrink = apply(state, EndTurnAction())
     assert after_shrink.monsters[0].intent == "Chomp"
 
-    after_chomp = apply(after_shrink, "EndTurn")
+    after_chomp = apply(after_shrink, EndTurnAction())
     assert after_chomp.monsters[0].intent == "Stomp"
 
-    after_stomp = apply(after_chomp, "EndTurn")
+    after_stomp = apply(after_chomp, EndTurnAction())
     assert after_stomp.monsters[0].intent == "Chomp"
 
 
 def test_shrinker_beetle_chomp_deals_7_and_stomp_deals_13():
     state = _shrinker_beetle()
-    after_shrink = apply(state, "EndTurn")
+    after_shrink = apply(state, EndTurnAction())
     assert after_shrink.monsters[0].intent == "Chomp"
 
     hp_before_chomp = after_shrink.player_hp
-    after_chomp = apply(after_shrink, "EndTurn")
+    after_chomp = apply(after_shrink, EndTurnAction())
     assert hp_before_chomp - after_chomp.player_hp == 7
 
     assert after_chomp.monsters[0].intent == "Stomp"
     hp_before_stomp = after_chomp.player_hp
-    after_stomp = apply(after_chomp, "EndTurn")
+    after_stomp = apply(after_chomp, EndTurnAction())
     assert hp_before_stomp - after_stomp.player_hp == 13
 
 
@@ -157,7 +164,7 @@ def test_leaf_slime_s_opens_with_tackle():
 
 def test_leaf_slime_s_tackle_deals_3_damage():
     state = _leaf_slime_s()
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert state.player_hp - after.player_hp == 3
 
 
@@ -165,23 +172,23 @@ def test_leaf_slime_s_alternates_tackle_and_goop_forever():
     state = _leaf_slime_s()
     assert state.monsters[0].intent == "Tackle"
 
-    after_tackle = apply(state, "EndTurn")
+    after_tackle = apply(state, EndTurnAction())
     assert after_tackle.monsters[0].intent == "Goop"
 
-    after_goop = apply(after_tackle, "EndTurn")
+    after_goop = apply(after_tackle, EndTurnAction())
     assert after_goop.monsters[0].intent == "Tackle"
 
-    after_tackle2 = apply(after_goop, "EndTurn")
+    after_tackle2 = apply(after_goop, EndTurnAction())
     assert after_tackle2.monsters[0].intent == "Goop"
 
 
 def test_leaf_slime_s_goop_deals_no_damage_and_gives_player_a_slimed_card():
     state = _leaf_slime_s()
-    after_tackle = apply(state, "EndTurn")
+    after_tackle = apply(state, EndTurnAction())
     assert after_tackle.monsters[0].intent == "Goop"
 
     hp_before = after_tackle.player_hp
-    after_goop = apply(after_tackle, "EndTurn")
+    after_goop = apply(after_tackle, EndTurnAction())
 
     assert after_goop.player_hp == hp_before
     # Goop sticks a "Slimed" card into the player's discard pile; with both
@@ -203,7 +210,7 @@ def test_leaf_slime_m_sticky_shot_deals_no_damage_and_gives_player_two_slimed_ca
     state = _leaf_slime_m()
     hp_before = state.player_hp
 
-    after_sticky = apply(state, "EndTurn")
+    after_sticky = apply(state, EndTurnAction())
 
     assert after_sticky.player_hp == hp_before
     # Two "Slimed" cards land in discard, then both get reshuffled and drawn
@@ -215,23 +222,23 @@ def test_leaf_slime_m_alternates_sticky_shot_and_clump_shot_forever():
     state = _leaf_slime_m()
     assert state.monsters[0].intent == "StickyShot"
 
-    after_sticky = apply(state, "EndTurn")
+    after_sticky = apply(state, EndTurnAction())
     assert after_sticky.monsters[0].intent == "ClumpShot"
 
-    after_clump = apply(after_sticky, "EndTurn")
+    after_clump = apply(after_sticky, EndTurnAction())
     assert after_clump.monsters[0].intent == "StickyShot"
 
-    after_sticky2 = apply(after_clump, "EndTurn")
+    after_sticky2 = apply(after_clump, EndTurnAction())
     assert after_sticky2.monsters[0].intent == "ClumpShot"
 
 
 def test_leaf_slime_m_clump_shot_deals_8_damage():
     state = _leaf_slime_m()
-    after_sticky = apply(state, "EndTurn")
+    after_sticky = apply(state, EndTurnAction())
     assert after_sticky.monsters[0].intent == "ClumpShot"
 
     hp_before = after_sticky.player_hp
-    after_clump = apply(after_sticky, "EndTurn")
+    after_clump = apply(after_sticky, EndTurnAction())
 
     assert hp_before - after_clump.player_hp == 8
 
@@ -248,7 +255,7 @@ def test_twig_slime_m_sticky_shot_deals_no_damage_and_gives_player_one_slimed_ca
     state = _twig_slime_m()
     hp_before = state.player_hp
 
-    after_sticky = apply(state, "EndTurn")
+    after_sticky = apply(state, EndTurnAction())
 
     assert after_sticky.player_hp == hp_before
     assert after_sticky.hand.count("Slimed") == 1
@@ -258,11 +265,11 @@ def test_twig_slime_m_turn_2_is_forced_clump_shot_for_11_damage():
     # StickyShot can never repeat, so the turn after the opener is forced
     # to be ClumpShot regardless of the RNG roll.
     state = _twig_slime_m()
-    after_sticky = apply(state, "EndTurn")
+    after_sticky = apply(state, EndTurnAction())
     assert after_sticky.monsters[0].intent == "ClumpShot"
 
     hp_before = after_sticky.player_hp
-    after_clump = apply(after_sticky, "EndTurn")
+    after_clump = apply(after_sticky, EndTurnAction())
 
     assert hp_before - after_clump.player_hp == 11
 
@@ -283,7 +290,7 @@ def test_twig_slime_m_intent_sequence_follows_its_documented_pattern_and_constra
 
     intents = [state.monsters[0].intent]
     for _ in range(200):
-        state = apply(state, "EndTurn")
+        state = apply(state, EndTurnAction())
         intents.append(state.monsters[0].intent)
 
     assert intents[0] == "StickyShot"

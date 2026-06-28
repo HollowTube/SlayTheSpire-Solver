@@ -64,7 +64,7 @@ def test_actions_sortable():
     actions = [EndTurnAction(), PlayCardAction("Strike"), SelectTargetAction(0)]
     result = sorted(actions)
     assert [str(a) for a in result] == sorted(
-        ["EndTurn", "PlayCard:Strike", "SelectTarget:Monster:0"]
+        ["EndTurn", "PlayCard:Strike", SelectTargetAction(0)]
     )
 
 
@@ -137,7 +137,7 @@ def test_legal_actions_backward_compat_play_card_string():
 def test_legal_actions_targeting_state_returns_select_target_actions():
     state = _strike_in_hand_state()
     # Strike is targeted — playing it produces a PendingDecision
-    pending = apply(state, "PlayCard:Strike")
+    pending = apply(state, PlayCardAction("Strike"))
     actions = legal_actions(pending)
     assert len(actions) == 1
     assert isinstance(actions[0], SelectTargetAction)

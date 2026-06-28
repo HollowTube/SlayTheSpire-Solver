@@ -2,7 +2,7 @@
 Ethereal cards exhaust (rather than discard) if still in hand at end of
 turn, and Dazed is additionally Unplayable."""
 
-from sts_sim import CombatState, Monster, apply, legal_actions
+from sts_sim import CombatState, EndTurnAction, Monster, apply, legal_actions
 
 
 def make_state(hand=("Strike",)):
@@ -28,7 +28,7 @@ def test_dazed_is_never_a_legal_action_even_with_full_energy():
 def test_ethereal_card_exhausts_at_end_of_turn_if_still_in_hand():
     state = make_state(hand=["Dazed", "Strike"])
 
-    after_turn = apply(state, "EndTurn")
+    after_turn = apply(state, EndTurnAction())
 
     assert "Dazed" in after_turn.exhaust_pile
     assert "Dazed" not in after_turn.discard_pile
@@ -37,7 +37,7 @@ def test_ethereal_card_exhausts_at_end_of_turn_if_still_in_hand():
 def test_non_ethereal_card_left_in_hand_is_discarded_not_exhausted():
     state = make_state(hand=["Dazed", "Strike"])
 
-    after_turn = apply(state, "EndTurn")
+    after_turn = apply(state, EndTurnAction())
 
     assert "Strike" in after_turn.discard_pile
     assert "Strike" not in after_turn.exhaust_pile

@@ -1,7 +1,7 @@
 """Behavioural tests for Slithering Strangler (Overgrowth elite) and
 Status::Constrict (persistent end-of-turn unblockable self-damage)."""
 
-from sts_sim import CombatState, Monster, apply
+from sts_sim import CombatState, EndTurnAction, Monster, apply
 
 
 # ── Status::Constrict ─────────────────────────────────────────────────────────
@@ -17,7 +17,7 @@ def test_constrict_deals_unblockable_end_of_turn_damage():
         hand=[],
         player_statuses=[("Constrict", 3)],
     )
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert state.player_hp - after.player_hp == 3
 
 
@@ -32,7 +32,7 @@ def test_constrict_damage_ignores_block():
         player_block=50,
         player_statuses=[("Constrict", 5)],
     )
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     # 5 Constrict damage, bypassing 50 block
     assert state.player_hp - after.player_hp == 5
     # Block from Defend should still be there (or be gone from EndTurn reset)
@@ -49,12 +49,12 @@ def test_constrict_does_not_decay():
         hand=[],
         player_statuses=[("Constrict", 3)],
     )
-    a1 = apply(state, "EndTurn")
+    a1 = apply(state, EndTurnAction())
     # Constrict deals damage but doesn't decay
     assert a1.player_hp == 77
     assert "Constrict" in a1.player_statuses
 
-    a2 = apply(a1, "EndTurn")
+    a2 = apply(a1, EndTurnAction())
     assert a2.player_hp == 74
     assert "Constrict" in a2.player_statuses
 
@@ -69,7 +69,7 @@ def test_constrict_stacks_accumulate():
         hand=[],
         player_statuses=[("Constrict", 3), ("Constrict", 2)],
     )
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert state.player_hp - after.player_hp == 5  # 3 + 2 = 5
 
 
@@ -82,7 +82,7 @@ def test_no_constrict_no_damage():
         seed=42,
         hand=[],
     )
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert after.player_hp == 80  # no constrict, no damage
 
 
@@ -106,7 +106,7 @@ def test_strangler_opens_with_constrict():
 
 def test_constrict_applies_3_stacks_to_player():
     state = _strangler()
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     # EndTurn deals damage from Constrict immediately (after monster turn).
     # 3 + 0 = 3 damage from Constrict at end of turn.
     assert state.player_hp - after.player_hp == 3
@@ -115,7 +115,7 @@ def test_constrict_applies_3_stacks_to_player():
 def test_strangler_after_constrict_random_branch():
     """After Constrict, the next move is Thwack or Lash (random)."""
     state = _strangler()
-    a1 = apply(state, "EndTurn")  # Constrict
+    a1 = apply(state, EndTurnAction())  # Constrict
     assert a1.monsters[0].intent in {"Thwack", "Lash"}
 
 
@@ -129,9 +129,9 @@ def test_thwack_deals_7_damage_and_grants_5_block():
         seed=1,
         hand=[],
     )
-    a1 = apply(state, "EndTurn")  # Constrict
+    a1 = apply(state, EndTurnAction())  # Constrict
     assert a1.monsters[0].intent == "Thwack"
-    after = apply(a1, "EndTurn")
+    after = apply(a1, EndTurnAction())
     # Thwack deals 7 + Constrict 3 end-of-turn = 10
     assert a1.player_hp - after.player_hp == 10
     assert after.monsters[0].block >= 5
@@ -147,9 +147,9 @@ def test_lash_deals_12_damage():
         seed=0,
         hand=[],
     )
-    a1 = apply(state, "EndTurn")  # Constrict
+    a1 = apply(state, EndTurnAction())  # Constrict
     assert a1.monsters[0].intent == "Lash"
-    after = apply(a1, "EndTurn")
+    after = apply(a1, EndTurnAction())
     # Lash deals 12 + Constrict 3 = 15
     assert a1.player_hp - after.player_hp == 15
 
@@ -157,6 +157,6 @@ def test_lash_deals_12_damage():
 def test_cycle_returns_to_constrict():
     """Both Thwack and Lash lead back to Constrict."""
     state = _strangler()
-    a1 = apply(state, "EndTurn")  # Constrict
-    a2 = apply(a1, "EndTurn")  # Thwack or Lash → back to Constrict
+    a1 = apply(state, EndTurnAction())  # Constrict
+    a2 = apply(a1, EndTurnAction())  # Thwack or Lash → back to Constrict
     assert a2.monsters[0].intent == "Constrict"

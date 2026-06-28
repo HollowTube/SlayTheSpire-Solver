@@ -1,7 +1,15 @@
 import pytest
 import copy
 
-from sts_sim import CombatState, Monster, apply, legal_actions
+from sts_sim import (
+    CombatState,
+    EndTurnAction,
+    Monster,
+    PlayCardAction,
+    SelectTargetAction,
+    apply,
+    legal_actions,
+)
 
 
 def make_state(hand=("Strike",)):
@@ -23,7 +31,7 @@ def test_a_fresh_state_offers_to_play_each_card_in_hand():
 def test_playing_strike_asks_the_player_to_select_a_target():
     state = make_state(hand=["Strike"])
 
-    next_state = apply(state, "PlayCard:Strike")
+    next_state = apply(state, PlayCardAction("Strike"))
 
     assert next_state.pending == "SelectTarget"
 
@@ -31,16 +39,16 @@ def test_playing_strike_asks_the_player_to_select_a_target():
 def test_while_selecting_a_target_the_only_legal_actions_are_valid_targets():
     state = make_state(hand=["Strike"])
 
-    awaiting_target = apply(state, "PlayCard:Strike")
+    awaiting_target = apply(state, PlayCardAction("Strike"))
 
     assert legal_actions(awaiting_target) == ["SelectTarget:Monster:0"]
 
 
 def test_selecting_the_monster_resolves_strike_dealing_damage_and_clearing_the_pending_decision():
     state = make_state(hand=["Strike"])
-    awaiting_target = apply(state, "PlayCard:Strike")
+    awaiting_target = apply(state, PlayCardAction("Strike"))
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert resolved.monsters[0].hp == state.monsters[0].hp - 6
     assert resolved.pending is None
@@ -49,7 +57,7 @@ def test_selecting_the_monster_resolves_strike_dealing_damage_and_clearing_the_p
 def test_playing_strike_spends_its_energy_cost_and_leaves_the_players_hand():
     state = make_state(hand=["Strike"])
 
-    awaiting_target = apply(state, "PlayCard:Strike")
+    awaiting_target = apply(state, PlayCardAction("Strike"))
 
     assert awaiting_target.player_energy == state.player_energy - 1
     assert awaiting_target.hand == []
@@ -58,7 +66,7 @@ def test_playing_strike_spends_its_energy_cost_and_leaves_the_players_hand():
 def test_playing_a_card_moves_it_from_hand_to_the_discard_pile_rather_than_vanishing():
     state = make_state(hand=["Strike"])
 
-    awaiting_target = apply(state, "PlayCard:Strike")
+    awaiting_target = apply(state, PlayCardAction("Strike"))
 
     assert awaiting_target.discard_pile == ["Strike"]
 
@@ -70,8 +78,8 @@ STRIKE_DAMAGE = 6
 def test_playing_strike_against_the_monster_deals_the_wiki_documented_damage():
     state = make_state(hand=["Strike"])
 
-    awaiting_target = apply(state, "PlayCard:Strike")
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    awaiting_target = apply(state, PlayCardAction("Strike"))
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert resolved.monsters[0].hp == state.monsters[0].hp - STRIKE_DAMAGE
 
@@ -80,7 +88,7 @@ def test_playing_a_card_does_not_mutate_its_input():
     state = make_state(hand=["Strike"])
     clone = copy.deepcopy(state)
 
-    apply(state, "PlayCard:Strike")
+    apply(state, PlayCardAction("Strike"))
 
     assert state == clone
 
@@ -88,7 +96,7 @@ def test_playing_a_card_does_not_mutate_its_input():
 def test_legal_actions_never_offers_play_card_or_end_turn_mid_target_selection():
     state = make_state(hand=["Strike"])
 
-    awaiting_target = apply(state, "PlayCard:Strike")
+    awaiting_target = apply(state, PlayCardAction("Strike"))
     actions = legal_actions(awaiting_target)
 
     assert "PlayCard:Strike" not in actions
@@ -121,7 +129,7 @@ def test_playing_a_card_the_player_cannot_afford_is_rejected():
     )
 
     with pytest.raises(ValueError):
-        apply(state, "PlayCard:Bash")
+        apply(state, PlayCardAction("Bash"))
 
 
 def test_playing_a_power_card_moves_it_to_the_exhaust_pile_not_discard():
@@ -129,7 +137,7 @@ def test_playing_a_power_card_moves_it_to_the_exhaust_pile_not_discard():
     # exhaust pile, not discard, so they can never be redrawn.
     state = make_state(hand=["Inflame"])
 
-    resolved = apply(state, "PlayCard:Inflame")
+    resolved = apply(state, PlayCardAction("Inflame"))
 
     assert "Inflame" not in resolved.discard_pile
     assert "Inflame" in resolved.exhaust_pile
@@ -146,9 +154,9 @@ def test_exhausted_power_is_not_available_in_subsequent_turns():
         deck=["Inflame"],
     )
     # Play Inflame from the opening hand.
-    after_inflame = apply(state, "PlayCard:Inflame")
+    after_inflame = apply(state, PlayCardAction("Inflame"))
     # End the turn — discard reshuffles, new hand drawn.
-    after_turn = apply(after_inflame, "EndTurn")
+    after_turn = apply(after_inflame, EndTurnAction())
 
     assert "Inflame" not in after_turn.hand
     assert "Inflame" not in after_turn.draw_pile
@@ -176,7 +184,9 @@ def test_sword_boomerang_deals_three_hits_of_three_damage_each():
     # Sword Boomerang hits a random enemy 3 times for 3 each = 9 total.
     # Against a single monster the hits always land on the same target.
     state = make_state(hand=["Sword Boomerang"])
-    resolved = apply(apply(state, "PlayCard:Sword Boomerang"), "SelectTarget:Monster:0")
+    resolved = apply(
+        apply(state, PlayCardAction("Sword Boomerang")), SelectTargetAction(0)
+    )
     assert resolved.monsters[0].hp == state.monsters[0].hp - 9
 
 
@@ -184,7 +194,7 @@ def test_thunderclap_deals_damage_and_applies_vulnerable_without_selecting_a_tar
     # Thunderclap hits all enemies for 4 and applies 1 Vulnerable to each —
     # it resolves immediately (no SelectTarget step).
     state = make_state(hand=["Thunderclap"])
-    resolved = apply(state, "PlayCard:Thunderclap")
+    resolved = apply(state, PlayCardAction("Thunderclap"))
     assert resolved.pending is None
     assert resolved.monsters[0].hp == state.monsters[0].hp - 4
     assert "Vulnerable" in resolved.monsters[0].statuses
@@ -194,18 +204,20 @@ def test_rage_grants_block_when_an_attack_is_played_afterward():
     # Playing Rage (a Skill) installs the Rage status. Each subsequent
     # Attack played should grant 3 Block to the player.
     state = make_state(hand=["Rage", "Strike"])
-    after_rage = apply(state, "PlayCard:Rage")
+    after_rage = apply(state, PlayCardAction("Rage"))
     assert "Rage" in after_rage.player_statuses
 
-    after_strike = apply(apply(after_rage, "PlayCard:Strike"), "SelectTarget:Monster:0")
+    after_strike = apply(
+        apply(after_rage, PlayCardAction("Strike")), SelectTargetAction(0)
+    )
     assert after_strike.player_block == 3
 
 
 def test_rage_does_not_grant_block_for_skills():
     # Only Attacks trigger Rage — playing another Skill must not give block.
     state = make_state(hand=["Rage", "Defend"])
-    after_rage = apply(state, "PlayCard:Rage")
-    after_defend = apply(after_rage, "PlayCard:Defend")
+    after_rage = apply(state, PlayCardAction("Rage"))
+    after_defend = apply(after_rage, PlayCardAction("Defend"))
     # Block comes from Defend (5), not Rage — Rage adds nothing for Skills.
     assert after_defend.player_block == 5
 
@@ -220,8 +232,8 @@ def test_pommel_strike_deals_9_damage_and_draws_1_card():
         hand=["Pommel Strike", "Defend", "Defend", "Defend", "Defend"],
     )
     hand_size_before = len(state.hand)
-    awaiting = apply(state, "PlayCard:Pommel Strike")
-    resolved = apply(awaiting, "SelectTarget:Monster:0")
+    awaiting = apply(state, PlayCardAction("Pommel Strike"))
+    resolved = apply(awaiting, SelectTargetAction(0))
 
     assert resolved.monsters[0].hp == state.monsters[0].hp - 9
     assert len(resolved.hand) == hand_size_before - 1 + 1  # spent Pommel Strike, drew 1
@@ -239,7 +251,7 @@ def test_slimed_costs_1_draws_a_card_and_exhausts():
         hand=["Slimed", "Defend"],
     )
 
-    resolved = apply(state, "PlayCard:Slimed")
+    resolved = apply(state, PlayCardAction("Slimed"))
 
     assert resolved.player_energy == 2
     assert "Defend" in resolved.hand

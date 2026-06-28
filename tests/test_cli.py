@@ -1,4 +1,11 @@
-from sts_sim import Monster, is_terminal, legal_actions, reward
+from sts_sim import (
+    Monster,
+    PlayCardAction,
+    SelectTargetAction,
+    is_terminal,
+    legal_actions,
+    reward,
+)
 from sts_sim.cli import (
     format_action,
     intent_description,
@@ -43,7 +50,7 @@ def test_render_state_shows_status_effects_by_name_and_stack_count():
         seed=42,
         hand=["Bash"],
     )
-    struck = apply(apply(state, "PlayCard:Bash"), "SelectTarget:Monster:0")
+    struck = apply(apply(state, PlayCardAction("Bash")), SelectTargetAction(0))
 
     text = render_state(struck)
 
@@ -117,10 +124,10 @@ def test_replay_history_reconstructs_state_by_reapplying_each_action_from_the_se
 
     seed = 42
     state = ironclad_starter_deck_vs_jaw_worm(seed=seed)
-    awaiting_target = apply(state, "PlayCard:Strike")
-    expected = apply(awaiting_target, "SelectTarget:Monster:0")
+    awaiting_target = apply(state, PlayCardAction("Strike"))
+    expected = apply(awaiting_target, SelectTargetAction(0))
 
-    replayed = replay_history(seed, ["PlayCard:Strike", "SelectTarget:Monster:0"])
+    replayed = replay_history(seed, ["PlayCard:Strike", SelectTargetAction(0)])
 
     assert replayed == expected
 

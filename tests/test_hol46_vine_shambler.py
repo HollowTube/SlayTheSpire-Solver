@@ -1,7 +1,14 @@
 """Behavioural tests for HOL-46: Vine Shambler (elite) — Status::Tangled
 (increases Attack card costs, removed at end of player's turn)."""
 
-from sts_sim import CombatState, Monster, apply, legal_actions
+from sts_sim import (
+    CombatState,
+    EndTurnAction,
+    Monster,
+    PlayCardAction,
+    apply,
+    legal_actions,
+)
 
 
 # ── Status::Tangled ──────────────────────────────────────────────────────────
@@ -77,8 +84,8 @@ def test_tangled_removed_at_end_of_player_turn():
         player_statuses=[("Tangled", 1)],
     )
     assert "Tangled" in state.player_statuses
-    after = apply(state, "PlayCard:Defend")
-    after_turn = apply(after, "EndTurn")
+    after = apply(state, PlayCardAction("Defend"))
+    after_turn = apply(after, EndTurnAction())
     assert "Tangled" not in after_turn.player_statuses
 
 
@@ -93,7 +100,7 @@ def test_tangled_not_removed_before_player_plays():
         player_statuses=[("Tangled", 1)],
     )
     # Tangled still present after a PlayCard action
-    after = apply(state, "PlayCard:Strike")
+    after = apply(state, PlayCardAction("Strike"))
     assert "Tangled" in after.player_statuses
 
 
@@ -118,55 +125,55 @@ def test_vine_shambler_opens_with_swipe():
 def test_swipe_deals_12_damage():
     """Swipe is 2 hits of 6 (12 total)."""
     state = _shambler()
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert state.player_hp - after.player_hp == 12
 
 
 def test_swipe_to_grasping_vines():
     state = _shambler()
-    a1 = apply(state, "EndTurn")
+    a1 = apply(state, EndTurnAction())
     assert a1.monsters[0].intent == "Grasping Vines"
 
 
 def test_grasping_vines_deals_8_damage_and_applies_tangled():
     state = _shambler()
-    a1 = apply(state, "EndTurn")  # Swipe
-    a2 = apply(a1, "EndTurn")  # Grasping Vines
+    a1 = apply(state, EndTurnAction())  # Swipe
+    a2 = apply(a1, EndTurnAction())  # Grasping Vines
     assert a1.player_hp - a2.player_hp == 8
     assert "Tangled" in a2.player_statuses
 
 
 def test_grasping_vines_to_chomp():
     state = _shambler()
-    a1 = apply(state, "EndTurn")  # Swipe
-    a2 = apply(a1, "EndTurn")  # Grasping Vines
+    a1 = apply(state, EndTurnAction())  # Swipe
+    a2 = apply(a1, EndTurnAction())  # Grasping Vines
     assert a2.monsters[0].intent == "Chomp"
 
 
 def test_chomp_deals_16_damage():
     state = _shambler()
-    a1 = apply(state, "EndTurn")  # Swipe
-    a2 = apply(a1, "EndTurn")  # Grasping Vines
-    a3 = apply(a2, "EndTurn")  # Chomp
+    a1 = apply(state, EndTurnAction())  # Swipe
+    a2 = apply(a1, EndTurnAction())  # Grasping Vines
+    a3 = apply(a2, EndTurnAction())  # Chomp
     assert a2.player_hp - a3.player_hp == 16
 
 
 def test_chomp_back_to_swipe():
     state = _shambler()
-    a1 = apply(state, "EndTurn")
-    a2 = apply(a1, "EndTurn")
-    a3 = apply(a2, "EndTurn")
+    a1 = apply(state, EndTurnAction())
+    a2 = apply(a1, EndTurnAction())
+    a3 = apply(a2, EndTurnAction())
     assert a3.monsters[0].intent == "Swipe"
 
 
 def test_cycle_repeats():
     state = _shambler()
-    a1 = apply(state, "EndTurn")  # Swipe
-    a2 = apply(a1, "EndTurn")  # Grasping Vines
-    a3 = apply(a2, "EndTurn")  # Chomp
-    a4 = apply(a3, "EndTurn")  # Swipe
-    a5 = apply(a4, "EndTurn")  # Grasping Vines
-    a6 = apply(a5, "EndTurn")  # Chomp
+    a1 = apply(state, EndTurnAction())  # Swipe
+    a2 = apply(a1, EndTurnAction())  # Grasping Vines
+    a3 = apply(a2, EndTurnAction())  # Chomp
+    a4 = apply(a3, EndTurnAction())  # Swipe
+    a5 = apply(a4, EndTurnAction())  # Grasping Vines
+    a6 = apply(a5, EndTurnAction())  # Chomp
     assert a4.monsters[0].intent == "Grasping Vines"
     assert a5.monsters[0].intent == "Chomp"
     assert a6.monsters[0].intent == "Swipe"
@@ -176,13 +183,13 @@ def test_tangled_persists_through_player_turn():
     """After Grasping Vines applies Tangled, it persists through the player's
     card-play phase and is only removed at the next EndTurn call."""
     state = _shambler(hand=["Defend"])
-    a1 = apply(state, "EndTurn")  # Swipe
-    a2 = apply(a1, "EndTurn")  # Grasping Vines (+Tangled)
+    a1 = apply(state, EndTurnAction())  # Swipe
+    a2 = apply(a1, EndTurnAction())  # Grasping Vines (+Tangled)
     # Tangled should be present after EndTurn (player's new turn)
     assert "Tangled" in a2.player_statuses
     # Playing a card should not remove Tangled
-    a3 = apply(a2, "PlayCard:Defend")
+    a3 = apply(a2, PlayCardAction("Defend"))
     assert "Tangled" in a3.player_statuses
     # EndTurn removes Tangled
-    a4 = apply(a3, "EndTurn")
+    a4 = apply(a3, EndTurnAction())
     assert "Tangled" not in a4.player_statuses

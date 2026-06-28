@@ -1,7 +1,7 @@
 """Behavioural tests for Phase 4 Wave 1 Ironclad cards: GameEvent::TurnStart
 and the persistent powers that react to it."""
 
-from sts_sim import CombatState, Monster, apply
+from sts_sim import CombatState, EndTurnAction, Monster, PlayCardAction, apply
 
 
 def make_state(hand=("Strike",), seed=42, **kwargs):
@@ -21,13 +21,13 @@ def make_state(hand=("Strike",), seed=42, **kwargs):
 def test_demon_form_grants_2_strength_at_start_of_each_turn():
     state = make_state(hand=["DemonForm"])
 
-    after_play = apply(state, "PlayCard:DemonForm")
+    after_play = apply(state, PlayCardAction("DemonForm"))
     assert after_play.player_strength == 0
 
-    after_turn_1 = apply(after_play, "EndTurn")
+    after_turn_1 = apply(after_play, EndTurnAction())
     assert after_turn_1.player_strength == 2
 
-    after_turn_2 = apply(after_turn_1, "EndTurn")
+    after_turn_2 = apply(after_turn_1, EndTurnAction())
     assert after_turn_2.player_strength == 4
 
 
@@ -45,13 +45,13 @@ def test_crimson_mantle_gains_block_and_increasing_self_damage_each_turn():
         hand=["CrimsonMantle"],
     )
 
-    after_play = apply(state, "PlayCard:CrimsonMantle")
+    after_play = apply(state, PlayCardAction("CrimsonMantle"))
 
-    after_turn_1 = apply(after_play, "EndTurn")
+    after_turn_1 = apply(after_play, EndTurnAction())
     assert after_play.player_hp - after_turn_1.player_hp == 1
     assert after_turn_1.player_block == 8
 
-    after_turn_2 = apply(after_turn_1, "EndTurn")
+    after_turn_2 = apply(after_turn_1, EndTurnAction())
     assert after_turn_1.player_hp - after_turn_2.player_hp == 2
     assert after_turn_2.player_block == 8
 
@@ -71,15 +71,15 @@ def test_inferno_self_damage_at_turn_start_triggers_aoe_retaliation():
         hand=["Inferno"],
     )
 
-    after_play = apply(state, "PlayCard:Inferno")
+    after_play = apply(state, PlayCardAction("Inferno"))
 
-    after_turn_1 = apply(after_play, "EndTurn")
+    after_turn_1 = apply(after_play, EndTurnAction())
     assert after_play.player_hp - after_turn_1.player_hp == 1
     assert after_play.monsters[0].hp - after_turn_1.monsters[0].hp == 6
     assert after_play.monsters[1].hp - after_turn_1.monsters[1].hp == 6
 
     # The effect repeats identically every turn (no escalation).
-    after_turn_2 = apply(after_turn_1, "EndTurn")
+    after_turn_2 = apply(after_turn_1, EndTurnAction())
     assert after_turn_1.player_hp - after_turn_2.player_hp == 1
     assert after_turn_1.monsters[0].hp - after_turn_2.monsters[0].hp == 6
 
@@ -103,8 +103,8 @@ def test_aggression_returns_a_discarded_attack_to_hand_at_turn_start():
         discard_pile=["Strike", "Defend"],
     )
 
-    after_play = apply(state, "PlayCard:Aggression")
-    after_turn = apply(after_play, "EndTurn")
+    after_play = apply(state, PlayCardAction("Aggression"))
+    after_turn = apply(after_play, EndTurnAction())
 
     assert "Strike" in after_turn.hand
     assert "Defend" in after_turn.discard_pile

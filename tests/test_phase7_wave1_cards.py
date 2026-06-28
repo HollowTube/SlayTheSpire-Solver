@@ -1,4 +1,4 @@
-from sts_sim import CombatState, Monster, apply
+from sts_sim import CombatState, Monster, PlayCardAction, apply
 
 
 def make_state(hand, monsters=None):
@@ -16,7 +16,7 @@ def test_breakthrough_costs_1_hp_and_hits_all_enemies_for_9_without_a_target():
         hand=["Breakthrough"],
         monsters=[Monster(hp=44, attack=6), Monster(hp=30, attack=5)],
     )
-    resolved = apply(state, "PlayCard:Breakthrough")
+    resolved = apply(state, PlayCardAction("Breakthrough"))
     assert resolved.pending is None
     assert resolved.player_hp == state.player_hp - 1
     assert resolved.monsters[0].hp == state.monsters[0].hp - 9
