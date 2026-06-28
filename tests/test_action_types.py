@@ -1,5 +1,5 @@
 """HOL-68: typed Action classes at the combat seam."""
-from sts_sim import EndTurnAction, PlayCardAction, SelectTargetAction
+from sts_sim import CombatState, EndTurnAction, Monster, PlayCardAction, SelectTargetAction, apply, legal_actions
 
 
 def test_end_turn_action_str():
@@ -59,8 +59,6 @@ def test_actions_sortable():
 
 # --- legal_actions integration ---
 
-from sts_sim import CombatState, Monster, legal_actions
-
 
 def _empty_hand_state():
     """State with no playable cards — only EndTurn is legal. No deck so no opening draw."""
@@ -117,7 +115,6 @@ def test_legal_actions_backward_compat_play_card_string():
 
 
 def test_legal_actions_targeting_state_returns_select_target_actions():
-    from sts_sim import apply
     state = _strike_in_hand_state()
     # Strike is targeted — playing it produces a PendingDecision
     pending = apply(state, "PlayCard:Strike")
