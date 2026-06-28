@@ -4,7 +4,7 @@ Breakthrough, Bully, BurningPact, Cinder, Colossus, and Conflagration. Each
 test confirms the `"+"`-suffixed card resolves the upgraded value via `apply`,
 matching STS2's `OnUpgrade()`."""
 
-from sts_sim import CombatState, Monster, apply
+from sts_sim import CombatState, Monster, PlayCardAction, SelectTargetAction, apply
 
 
 def make_state(hand, seed=42, player_energy=3, monsters=None, **kwargs):
@@ -24,7 +24,7 @@ def make_state(hand, seed=42, player_energy=3, monsters=None, **kwargs):
 def test_aggression_plus_still_installs_aggression_status():
     state = make_state(hand=["Aggression+"], player_energy=1)
 
-    resolved = apply(state, "PlayCard:Aggression+")
+    resolved = apply(state, PlayCardAction("Aggression+"))
 
     assert "Aggression" in resolved.player_statuses
     # Powers exhaust on play regardless of keywords.
@@ -38,8 +38,8 @@ def test_ashen_strike_plus_deals_6_plus_4_per_card_in_exhaust_pile():
     # 2 cards already in exhaust pile -> 6 + 4*2 = 14 damage.
     state = make_state(hand=["AshenStrike+"], exhaust_pile=["Tremble", "Impervious"])
 
-    after_play = apply(state, "PlayCard:AshenStrike+")
-    resolved = apply(after_play, "SelectTarget:Monster:0")
+    after_play = apply(state, PlayCardAction("AshenStrike+"))
+    resolved = apply(after_play, SelectTargetAction(0))
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 14
 
@@ -50,7 +50,7 @@ def test_ashen_strike_plus_deals_6_plus_4_per_card_in_exhaust_pile():
 def test_bloodletting_plus_gains_3_energy():
     state = make_state(hand=["Bloodletting+"], player_energy=1)
 
-    resolved = apply(state, "PlayCard:Bloodletting+")
+    resolved = apply(state, PlayCardAction("Bloodletting+"))
 
     assert resolved.player_energy == 1 + 3
     assert resolved.player_hp == state.player_hp - 3
@@ -62,7 +62,7 @@ def test_bloodletting_plus_gains_3_energy():
 def test_blood_wall_plus_grants_20_block():
     state = make_state(hand=["BloodWall+"], player_energy=2)
 
-    resolved = apply(state, "PlayCard:BloodWall+")
+    resolved = apply(state, PlayCardAction("BloodWall+"))
 
     assert resolved.player_block == 20
     assert resolved.player_hp == state.player_hp - 2
@@ -74,8 +74,8 @@ def test_blood_wall_plus_grants_20_block():
 def test_bludgeon_plus_deals_42_damage():
     state = make_state(hand=["Bludgeon+"], player_energy=3)
 
-    after_play = apply(state, "PlayCard:Bludgeon+")
-    resolved = apply(after_play, "SelectTarget:Monster:0")
+    after_play = apply(state, PlayCardAction("Bludgeon+"))
+    resolved = apply(after_play, SelectTargetAction(0))
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 42
 
@@ -86,8 +86,8 @@ def test_bludgeon_plus_deals_42_damage():
 def test_body_slam_plus_costs_0_energy():
     state = make_state(hand=["BodySlam+"], player_energy=1, player_block=12)
 
-    after_play = apply(state, "PlayCard:BodySlam+")
-    resolved = apply(after_play, "SelectTarget:Monster:0")
+    after_play = apply(state, PlayCardAction("BodySlam+"))
+    resolved = apply(after_play, SelectTargetAction(0))
 
     # BodySlam+ costs 0 energy, so the player's energy is unchanged.
     assert resolved.player_energy == 1
@@ -100,8 +100,8 @@ def test_body_slam_plus_costs_0_energy():
 def test_break_plus_deals_30_damage_and_applies_7_vulnerable():
     state = make_state(hand=["Break+"])
 
-    after_play = apply(state, "PlayCard:Break+")
-    resolved = apply(after_play, "SelectTarget:Monster:0")
+    after_play = apply(state, PlayCardAction("Break+"))
+    resolved = apply(after_play, SelectTargetAction(0))
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 30
     assert resolved.monsters[0].statuses.count("Vulnerable") == 7
@@ -116,7 +116,7 @@ def test_breakthrough_plus_deals_13_damage_to_all_enemies():
         monsters=[Monster(hp=99, attack=0), Monster(hp=99, attack=0)],
     )
 
-    resolved = apply(state, "PlayCard:Breakthrough+")
+    resolved = apply(state, PlayCardAction("Breakthrough+"))
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 13
     assert state.monsters[1].hp - resolved.monsters[1].hp == 13
@@ -134,8 +134,8 @@ def test_bully_plus_deals_4_plus_3_per_vulnerable_stack_on_target():
         player_energy=0,
     )
 
-    after_play = apply(state, "PlayCard:Bully+")
-    resolved = apply(after_play, "SelectTarget:Monster:0")
+    after_play = apply(state, PlayCardAction("Bully+"))
+    resolved = apply(after_play, SelectTargetAction(0))
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 19
 
@@ -150,7 +150,7 @@ def test_burning_pact_plus_exhausts_a_card_and_draws_3():
         player_energy=1,
     )
 
-    resolved = apply(state, "PlayCard:BurningPact+")
+    resolved = apply(state, PlayCardAction("BurningPact+"))
 
     # BurningPact+ exhausts a random card from hand, then draws 3.
     assert len(resolved.exhaust_pile) == 1
@@ -163,8 +163,8 @@ def test_burning_pact_plus_exhausts_a_card_and_draws_3():
 def test_cinder_plus_deals_24_damage():
     state = make_state(hand=["Cinder+"], player_energy=2)
 
-    after_play = apply(state, "PlayCard:Cinder+")
-    resolved = apply(after_play, "SelectTarget:Monster:0")
+    after_play = apply(state, PlayCardAction("Cinder+"))
+    resolved = apply(after_play, SelectTargetAction(0))
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 24
 
@@ -175,7 +175,7 @@ def test_cinder_plus_deals_24_damage():
 def test_colossus_plus_grants_8_block():
     state = make_state(hand=["Colossus+"], player_energy=1)
 
-    resolved = apply(state, "PlayCard:Colossus+")
+    resolved = apply(state, PlayCardAction("Colossus+"))
 
     assert resolved.player_block == 8
 
@@ -190,12 +190,14 @@ def test_conflagration_plus_deals_9_plus_3_per_attack_played_this_turn():
         player_energy=3,
     )
 
-    after_strike_1 = apply(apply(state, "PlayCard:Strike"), "SelectTarget:Monster:0")
+    after_strike_1 = apply(
+        apply(state, PlayCardAction("Strike")), SelectTargetAction(0)
+    )
     after_strike_2 = apply(
-        apply(after_strike_1, "PlayCard:Strike"), "SelectTarget:Monster:0"
+        apply(after_strike_1, PlayCardAction("Strike")), SelectTargetAction(0)
     )
 
-    resolved = apply(after_strike_2, "PlayCard:Conflagration+")
+    resolved = apply(after_strike_2, PlayCardAction("Conflagration+"))
 
     # 9 + 3*2 = 15 damage to each enemy.
     assert after_strike_2.monsters[0].hp - resolved.monsters[0].hp == 15

@@ -1,7 +1,7 @@
 """Behavioural tests for HOL-47: Flyconid (elite) — weighted-random elite
 monster with Vulnerable Spores, Frail Spores, and Smash."""
 
-from sts_sim import CombatState, Monster, apply
+from sts_sim import CombatState, EndTurnAction, Monster, apply
 
 
 def _flyconid(seed=42, hand=None):
@@ -21,7 +21,7 @@ def test_opens_with_frail_spores():
 
 def test_frail_spores_deals_8_damage_and_applies_frail():
     state = _flyconid()
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert state.player_hp - after.player_hp == 8, "expected 8 damage from Frail Spores"
     assert "Frail" in after.player_statuses, "expected Frail to be applied"
 
@@ -29,9 +29,9 @@ def test_frail_spores_deals_8_damage_and_applies_frail():
 def test_smash_deals_11_damage():
     state = _flyconid()
     for _ in range(10):
-        current = apply(state, "EndTurn")
+        current = apply(state, EndTurnAction())
         if current.monsters[0].intent == "Smash":
-            after = apply(current, "EndTurn")
+            after = apply(current, EndTurnAction())
             expected = 16 if "Vulnerable" in current.player_statuses else 11
             assert current.player_hp - after.player_hp == expected, (
                 f"expected {expected} damage from Smash"
@@ -44,9 +44,9 @@ def test_smash_deals_11_damage():
 def test_vulnerable_spores_applies_vulnerable():
     state = _flyconid()
     for _ in range(10):
-        current = apply(state, "EndTurn")
+        current = apply(state, EndTurnAction())
         if current.monsters[0].intent == "Vulnerable Spores":
-            after = apply(current, "EndTurn")
+            after = apply(current, EndTurnAction())
             assert after.player_statuses.count("Vulnerable") >= 1, (
                 "expected Vulnerable to be applied"
             )
@@ -62,7 +62,7 @@ def test_no_move_repeats_consecutively():
     state = _flyconid()
     moves = []
     for _ in range(15):
-        after = apply(state, "EndTurn")
+        after = apply(state, EndTurnAction())
         moves.append(after.monsters[0].last_move)
         state = after
     for i in range(1, len(moves)):

@@ -1,7 +1,7 @@
 """Behavioural tests for Phase 1 Ironclad cards: self-damage, energy, heal,
 and exhausting non-Power cards."""
 
-from sts_sim import CombatState, Monster, apply
+from sts_sim import CombatState, Monster, PlayCardAction, SelectTargetAction, apply
 
 
 def make_state(hand=("Strike",)):
@@ -22,7 +22,7 @@ def test_bloodletting_loses_3_hp_and_gains_2_energy():
     # and grants 2 Energy.
     state = make_state(hand=["Bloodletting"])
 
-    resolved = apply(state, "PlayCard:Bloodletting")
+    resolved = apply(state, PlayCardAction("Bloodletting"))
 
     assert state.player_hp - resolved.player_hp == 3
     assert resolved.player_energy == state.player_energy + 2
@@ -36,7 +36,7 @@ def test_blood_wall_loses_2_hp_and_gains_16_block():
     # grants 16 Block.
     state = make_state(hand=["BloodWall"])
 
-    resolved = apply(state, "PlayCard:BloodWall")
+    resolved = apply(state, PlayCardAction("BloodWall"))
 
     assert state.player_hp - resolved.player_hp == 2
     assert resolved.player_block == state.player_block + 16
@@ -50,10 +50,10 @@ def test_hemokinesis_loses_2_hp_and_deals_15_damage():
     # deals 15 damage to a chosen enemy.
     state = make_state(hand=["Hemokinesis"])
 
-    awaiting_target = apply(state, "PlayCard:Hemokinesis")
+    awaiting_target = apply(state, PlayCardAction("Hemokinesis"))
     assert awaiting_target.pending == "SelectTarget"
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert state.player_hp - resolved.player_hp == 2
     assert state.monsters[0].hp - resolved.monsters[0].hp == 15
@@ -74,7 +74,7 @@ def test_offering_loses_6_hp_gains_2_energy_draws_3_and_exhausts():
         draw_pile=["Strike", "Strike", "Strike", "Strike"],
     )
 
-    resolved = apply(state, "PlayCard:Offering")
+    resolved = apply(state, PlayCardAction("Offering"))
 
     assert state.player_hp - resolved.player_hp == 6
     assert resolved.player_energy == state.player_energy + 2
@@ -91,10 +91,10 @@ def test_tremble_applies_3_vulnerable_and_exhausts():
     # chosen enemy, and Exhausts.
     state = make_state(hand=["Tremble"])
 
-    awaiting_target = apply(state, "PlayCard:Tremble")
+    awaiting_target = apply(state, PlayCardAction("Tremble"))
     assert awaiting_target.pending == "SelectTarget"
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert resolved.monsters[0].statuses.count("Vulnerable") == 3
     assert "Tremble" not in resolved.discard_pile
@@ -108,7 +108,7 @@ def test_impervious_grants_30_block_and_exhausts():
     # Per the wiki, Impervious costs 2, grants 30 Block, and Exhausts.
     state = make_state(hand=["Impervious"])
 
-    resolved = apply(state, "PlayCard:Impervious")
+    resolved = apply(state, PlayCardAction("Impervious"))
 
     assert resolved.player_block == state.player_block + 30
     assert "Impervious" not in resolved.discard_pile
@@ -129,7 +129,7 @@ def test_not_yet_heals_10_and_exhausts():
         hand=["NotYet"],
     )
 
-    resolved = apply(state, "PlayCard:NotYet")
+    resolved = apply(state, PlayCardAction("NotYet"))
 
     assert resolved.player_hp == state.player_hp + 10
     assert "NotYet" not in resolved.discard_pile
@@ -146,6 +146,6 @@ def test_not_yet_heal_caps_at_max_hp():
         hand=["NotYet"],
     )
 
-    resolved = apply(state, "PlayCard:NotYet")
+    resolved = apply(state, PlayCardAction("NotYet"))
 
     assert resolved.player_hp == 80

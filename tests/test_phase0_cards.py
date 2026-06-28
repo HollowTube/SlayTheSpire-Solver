@@ -1,7 +1,7 @@
 """Behavioural tests for Phase 0 Ironclad cards: trivial drop-ins composed
 entirely of existing EffectOps (no engine changes)."""
 
-from sts_sim import CombatState, Monster, apply
+from sts_sim import CombatState, Monster, PlayCardAction, SelectTargetAction, apply
 
 
 def make_state(hand=("Strike",), seed=42):
@@ -20,10 +20,10 @@ def make_state(hand=("Strike",), seed=42):
 def test_bludgeon_deals_32_damage():
     state = make_state(hand=["Bludgeon"])
 
-    awaiting_target = apply(state, "PlayCard:Bludgeon")
+    awaiting_target = apply(state, PlayCardAction("Bludgeon"))
     assert awaiting_target.pending == "SelectTarget"
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 32
 
@@ -34,10 +34,10 @@ def test_bludgeon_deals_32_damage():
 def test_twin_strike_deals_5_damage_twice():
     state = make_state(hand=["TwinStrike"])
 
-    awaiting_target = apply(state, "PlayCard:TwinStrike")
+    awaiting_target = apply(state, PlayCardAction("TwinStrike"))
     assert awaiting_target.pending == "SelectTarget"
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 10
 
@@ -48,10 +48,10 @@ def test_twin_strike_deals_5_damage_twice():
 def test_break_deals_20_damage_and_applies_5_vulnerable():
     state = make_state(hand=["Break"])
 
-    awaiting_target = apply(state, "PlayCard:Break")
+    awaiting_target = apply(state, PlayCardAction("Break"))
     assert awaiting_target.pending == "SelectTarget"
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 20
     assert resolved.monsters[0].statuses.count("Vulnerable") == 5
@@ -70,7 +70,7 @@ def test_shrug_it_off_gains_8_block_and_draws_1():
         draw_pile=["Strike"],
     )
 
-    resolved = apply(state, "PlayCard:ShrugItOff")
+    resolved = apply(state, PlayCardAction("ShrugItOff"))
 
     assert resolved.player_block == state.player_block + 8
     assert "Strike" in resolved.hand
@@ -82,10 +82,10 @@ def test_shrug_it_off_gains_8_block_and_draws_1():
 def test_taunt_gains_7_block_and_applies_vulnerable_to_target():
     state = make_state(hand=["Taunt"])
 
-    awaiting_target = apply(state, "PlayCard:Taunt")
+    awaiting_target = apply(state, PlayCardAction("Taunt"))
     assert awaiting_target.pending == "SelectTarget"
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert resolved.player_block == state.player_block + 7
     assert "Vulnerable" in resolved.monsters[0].statuses
@@ -97,10 +97,10 @@ def test_taunt_gains_7_block_and_applies_vulnerable_to_target():
 def test_uppercut_deals_13_damage_and_applies_weak_and_vulnerable():
     state = make_state(hand=["Uppercut"])
 
-    awaiting_target = apply(state, "PlayCard:Uppercut")
+    awaiting_target = apply(state, PlayCardAction("Uppercut"))
     assert awaiting_target.pending == "SelectTarget"
 
-    resolved = apply(awaiting_target, "SelectTarget:Monster:0")
+    resolved = apply(awaiting_target, SelectTargetAction(0))
 
     assert state.monsters[0].hp - resolved.monsters[0].hp == 13
     assert "Weak" in resolved.monsters[0].statuses

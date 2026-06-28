@@ -1,7 +1,7 @@
 """Behavioural tests for The Kin (Overgrowth boss: Kin Priest + 2x Kin Follower),
 including Status::Frail (-25% Block) and Status::Minion (flee-on-leader-death)."""
 
-from sts_sim import CombatState, Monster, apply
+from sts_sim import CombatState, EndTurnAction, Monster, PlayCardAction, apply
 
 
 # ── Status::Frail ─────────────────────────────────────────────────────────────
@@ -17,7 +17,7 @@ def test_frail_reduces_block_gained_by_25_percent():
         hand=["Defend"],
         player_statuses=[("Frail", 1)],
     )
-    after = apply(state, "PlayCard:Defend")
+    after = apply(state, PlayCardAction("Defend"))
     assert after.player_block == 3
 
 
@@ -31,7 +31,7 @@ def test_frail_reduces_block_gained_on_gain_block_scaled_too():
         hand=["Evil Eye"],
         player_statuses=[("Frail", 1)],
     )
-    after = apply(state, "PlayCard:Evil Eye")
+    after = apply(state, PlayCardAction("Evil Eye"))
     assert after.player_block == 6  # 8 * 0.75 = 6.0, floor = 6
 
 
@@ -45,7 +45,7 @@ def test_frail_is_binary_debuff_multiple_stacks_dont_compound():
         hand=["Defend"],
         player_statuses=[("Frail", 3)],
     )
-    after = apply(state, "PlayCard:Defend")
+    after = apply(state, PlayCardAction("Defend"))
     assert after.player_block == 3  # still 3, not 5 * 0.75^3
 
 
@@ -59,7 +59,7 @@ def test_frail_decays_at_end_of_monster_turn():
         hand=[],
     )
     assert "Frail" in state.monsters[0].statuses
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert "Frail" not in after.monsters[0].statuses
 
 
@@ -74,7 +74,7 @@ def test_frail_on_player_decays_at_end_of_player_turn():
         player_statuses=[("Frail", 1)],
     )
     assert "Frail" in state.player_statuses
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert "Frail" not in after.player_statuses
 
 
@@ -105,7 +105,7 @@ def test_minion_acts_normally_when_leader_is_alive():
         hand=[],
     )
     assert state.monsters[1].intent == "Quick Slash"
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert state.player_hp - after.player_hp >= 5
 
 
@@ -132,7 +132,7 @@ def test_minion_skips_turn_when_leader_is_dead():
         seed=42,
         hand=[],
     )
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     # Both followers should have skipped since priest is dead: no damage.
     assert after.player_hp == state.player_hp == 80
 
@@ -160,7 +160,7 @@ def test_only_specific_leader_death_triggers_minion_flee():
         seed=42,
         hand=[],
     )
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     # Follower 2 is alive, leader is alive, so at least some damage happened.
     assert after.player_hp < state.player_hp
 
@@ -185,44 +185,44 @@ def test_kin_priest_opens_with_orb_of_frailty():
 
 def test_orb_of_frailty_deals_8_damage():
     state = _kin_priest()
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert state.player_hp - after.player_hp == 8
 
 
 def test_orb_of_weakness_deals_8_damage():
     state = _kin_priest()
-    a1 = apply(state, "EndTurn")  # Orb of Frailty
+    a1 = apply(state, EndTurnAction())  # Orb of Frailty
     assert a1.monsters[0].intent == "Orb of Weakness"
-    a2 = apply(a1, "EndTurn")
+    a2 = apply(a1, EndTurnAction())
     assert a1.player_hp - a2.player_hp == 8
 
 
 def test_soul_beam_deals_3_damage_three_times():
     state = _kin_priest()
-    a1 = apply(state, "EndTurn")  # Orb of Frailty
-    a2 = apply(a1, "EndTurn")  # Orb of Weakness
+    a1 = apply(state, EndTurnAction())  # Orb of Frailty
+    a2 = apply(a1, EndTurnAction())  # Orb of Weakness
     assert a2.monsters[0].intent == "Soul Beam"
-    a3 = apply(a2, "EndTurn")
+    a3 = apply(a2, EndTurnAction())
     assert a2.player_hp - a3.player_hp == 9
 
 
 def test_dark_ritual_grants_2_strength():
     state = _kin_priest()
-    a1 = apply(state, "EndTurn")  # Orb of Frailty
-    a2 = apply(a1, "EndTurn")  # Orb of Weakness
-    a3 = apply(a2, "EndTurn")  # Soul Beam
+    a1 = apply(state, EndTurnAction())  # Orb of Frailty
+    a2 = apply(a1, EndTurnAction())  # Orb of Weakness
+    a3 = apply(a2, EndTurnAction())  # Soul Beam
     assert a3.monsters[0].intent == "Dark Ritual"
-    a4 = apply(a3, "EndTurn")
+    a4 = apply(a3, EndTurnAction())
     assert a4.monsters[0].strength == 2
 
 
 def test_kin_priest_cycle_repeats():
     """After Dark Ritual, the cycle returns to Orb of Frailty."""
     state = _kin_priest()
-    a1 = apply(state, "EndTurn")  # Orb of Frailty
-    a2 = apply(a1, "EndTurn")  # Orb of Weakness
-    a3 = apply(a2, "EndTurn")  # Soul Beam
-    a4 = apply(a3, "EndTurn")  # Dark Ritual
+    a1 = apply(state, EndTurnAction())  # Orb of Frailty
+    a2 = apply(a1, EndTurnAction())  # Orb of Weakness
+    a3 = apply(a2, EndTurnAction())  # Soul Beam
+    a4 = apply(a3, EndTurnAction())  # Dark Ritual
     assert a4.monsters[0].intent == "Orb of Frailty"
 
 
@@ -246,31 +246,31 @@ def test_kin_follower_opens_with_quick_slash():
 
 def test_quick_slash_deals_5_damage():
     state = _kin_follower()
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert state.player_hp - after.player_hp == 5
 
 
 def test_boomerang_deals_2_damage_twice():
     state = _kin_follower()
-    a1 = apply(state, "EndTurn")  # Quick Slash
+    a1 = apply(state, EndTurnAction())  # Quick Slash
     assert a1.monsters[0].intent == "Boomerang"
-    a2 = apply(a1, "EndTurn")
+    a2 = apply(a1, EndTurnAction())
     assert a1.player_hp - a2.player_hp == 4
 
 
 def test_power_dance_grants_2_strength():
     state = _kin_follower()
-    a1 = apply(state, "EndTurn")  # Quick Slash
-    a2 = apply(a1, "EndTurn")  # Boomerang
+    a1 = apply(state, EndTurnAction())  # Quick Slash
+    a2 = apply(a1, EndTurnAction())  # Boomerang
     assert a2.monsters[0].intent == "Power Dance"
-    a3 = apply(a2, "EndTurn")
+    a3 = apply(a2, EndTurnAction())
     assert a3.monsters[0].strength == 2
 
 
 def test_kin_follower_cycle_repeats():
     """After Power Dance, the cycle returns to Quick Slash."""
     state = _kin_follower()
-    a1 = apply(state, "EndTurn")  # Quick Slash
-    a2 = apply(a1, "EndTurn")  # Boomerang
-    a3 = apply(a2, "EndTurn")  # Power Dance
+    a1 = apply(state, EndTurnAction())  # Quick Slash
+    a2 = apply(a1, EndTurnAction())  # Boomerang
+    a3 = apply(a2, EndTurnAction())  # Power Dance
     assert a3.monsters[0].intent == "Quick Slash"

@@ -497,7 +497,7 @@ pub(crate) fn apply_str(state: &CombatState, action: &str) -> PyResult<CombatSta
     apply_action(state, &kind)
 }
 
-/// Python-facing `apply`: accepts typed Action objects or plain strings.
+/// Python-facing `apply`: accepts typed Action objects only.
 /// Converts to `ActionKind` then delegates to `apply_action`.
 #[pyfunction]
 fn apply(state: &CombatState, action: &Bound<'_, PyAny>) -> PyResult<CombatState> {
@@ -507,22 +507,9 @@ fn apply(state: &CombatState, action: &Bound<'_, PyAny>) -> PyResult<CombatState
         ActionKind::PlayCard(a.card.clone())
     } else if let Ok(a) = action.extract::<PyRef<SelectTargetAction>>() {
         ActionKind::SelectTarget(a.monster_index)
-    } else if let Ok(s) = action.extract::<String>() {
-        if s == "EndTurn" {
-            ActionKind::EndTurn
-        } else if let Some(card) = s.strip_prefix("PlayCard:") {
-            ActionKind::PlayCard(card.to_string())
-        } else if let Some(idx_str) = s.strip_prefix("SelectTarget:Monster:") {
-            let idx = idx_str
-                .parse::<usize>()
-                .map_err(|_| PyValueError::new_err(format!("unknown action: {s}")))?;
-            ActionKind::SelectTarget(idx)
-        } else {
-            return Err(PyValueError::new_err(format!("unknown action: {s}")));
-        }
     } else {
         return Err(PyTypeError::new_err(
-            "action must be a PlayCardAction, SelectTargetAction, EndTurnAction, or str",
+            "action must be a PlayCardAction, SelectTargetAction, or EndTurnAction",
         ));
     };
     apply_action(state, &kind)

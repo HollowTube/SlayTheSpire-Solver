@@ -1,7 +1,7 @@
 """Behavioural tests for HOL-43: Tracker Ruby Raider (Status::Frail x2) and
 Mawler (once-per-combat Roar constraint)."""
 
-from sts_sim import CombatState, Monster, apply
+from sts_sim import CombatState, EndTurnAction, Monster, PlayCardAction, apply
 
 
 # ── Tracker Ruby Raider ──────────────────────────────────────────────────────
@@ -24,30 +24,30 @@ def test_tracker_opens_with_track():
 
 def test_track_applies_2_frail_no_damage():
     state = _tracker()
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert state.player_hp == after.player_hp
     assert "Frail" in after.player_statuses
 
 
 def test_track_to_hounds_transition():
     state = _tracker()
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert after.monsters[0].intent == "Hounds"
 
 
 def test_hounds_deals_8_damage():
     state = _tracker()
-    after_track = apply(state, "EndTurn")
-    after_hounds = apply(after_track, "EndTurn")
+    after_track = apply(state, EndTurnAction())
+    after_hounds = apply(after_track, EndTurnAction())
     assert after_track.player_hp - after_hounds.player_hp == 8
 
 
 def test_tracker_repeats_hounds_forever():
     state = _tracker()
-    a1 = apply(state, "EndTurn")  # Track
-    a2 = apply(a1, "EndTurn")  # Hounds
-    a3 = apply(a2, "EndTurn")  # Hounds
-    a4 = apply(a3, "EndTurn")  # Hounds
+    a1 = apply(state, EndTurnAction())  # Track
+    a2 = apply(a1, EndTurnAction())  # Hounds
+    a3 = apply(a2, EndTurnAction())  # Hounds
+    a4 = apply(a3, EndTurnAction())  # Hounds
     assert a2.monsters[0].intent == "Hounds"
     assert a3.monsters[0].intent == "Hounds"
     assert a4.monsters[0].intent == "Hounds"
@@ -56,8 +56,8 @@ def test_tracker_repeats_hounds_forever():
 def test_track_frail_reduces_block():
     """After Track's 2 Frail, a Defend (5 block) should gain only 3 block."""
     state = _tracker(hand=["Defend"])
-    after_track = apply(state, "EndTurn")  # Track applies Frail(2)
-    after_defend = apply(after_track, "PlayCard:Defend")
+    after_track = apply(state, EndTurnAction())  # Track applies Frail(2)
+    after_defend = apply(after_track, PlayCardAction("Defend"))
     assert after_defend.player_block == 3
 
 
@@ -81,14 +81,14 @@ def test_mawler_opens_with_claw():
 
 def test_claw_deals_8_damage():
     state = _mawler()
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert state.player_hp - after.player_hp == 8
 
 
 def test_mawler_next_intent_after_claw():
     """After opening Claw, the next intent is one of three valid moves."""
     state = _mawler()
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
     assert after.monsters[0].intent in ("Rip and Tear", "Roar", "Claw")
 
 
@@ -98,7 +98,7 @@ def test_mawler_roar_used_only_once():
     roars_seen = 0
     s = state
     for _ in range(20):
-        s = apply(s, "EndTurn")
+        s = apply(s, EndTurnAction())
         if s.monsters[0].intent == "Roar":
             roars_seen += 1
     assert roars_seen <= 1
@@ -107,20 +107,20 @@ def test_mawler_roar_used_only_once():
 def test_mawler_roar_applies_vulnerable():
     """After Roar, the player should have Vulnerable in their status list."""
     state = _mawler(seed=1)
-    s = apply(state, "EndTurn")  # Claw
+    s = apply(state, EndTurnAction())  # Claw
     while s.monsters[0].intent != "Roar":
-        s = apply(s, "EndTurn")
-    after_roar = apply(s, "EndTurn")
+        s = apply(s, EndTurnAction())
+    after_roar = apply(s, EndTurnAction())
     assert "Vulnerable" in after_roar.player_statuses
 
 
 def test_mawler_rip_and_tear_may_appear():
     """Rip and Tear should be a possible intent (equal-weight random)."""
     state = _mawler(seed=2)
-    s = apply(state, "EndTurn")  # Claw
+    s = apply(state, EndTurnAction())  # Claw
     seen_rip = s.monsters[0].intent == "Rip and Tear"
     for _ in range(15):
-        s = apply(s, "EndTurn")
+        s = apply(s, EndTurnAction())
         if s.monsters[0].intent == "Rip and Tear":
             seen_rip = True
             break
@@ -132,10 +132,10 @@ def test_mawler_never_repeats_same_intent():
     Check by looking at intent (the telegraphed next move), not last_move
     (which is not exposed to Python)."""
     state = _mawler(seed=3)
-    s = apply(state, "EndTurn")  # Claw (opening)
+    s = apply(state, EndTurnAction())  # Claw (opening)
     prev_intent = None
     for _ in range(30):
-        s = apply(s, "EndTurn")
+        s = apply(s, EndTurnAction())
         if prev_intent == s.monsters[0].intent:
             if s.monsters[0].intent in ("Claw", "Rip and Tear"):
                 assert False, f"{s.monsters[0].intent} repeated consecutively"

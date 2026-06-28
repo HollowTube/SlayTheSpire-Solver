@@ -1,6 +1,6 @@
 import random
 
-from sts_sim import apply, is_terminal, legal_actions, redeterminized
+from sts_sim import PlayCardAction, apply, is_terminal, legal_actions, redeterminized
 from sts_sim.scenarios import ironclad_starter_deck_vs_jaw_worm
 from sts_sim import mcts
 
@@ -19,7 +19,7 @@ def test_search_returns_a_legal_action_mid_target_selection():
     # Strike that's already been committed to" — not just the top-level
     # play-card-or-end-turn menu.
     state = ironclad_starter_deck_vs_jaw_worm(seed=42)
-    awaiting_target = apply(state, "PlayCard:Strike")
+    awaiting_target = apply(state, PlayCardAction("Strike"))
     assert awaiting_target.pending == "SelectTarget"
 
     action = mcts.search(awaiting_target)

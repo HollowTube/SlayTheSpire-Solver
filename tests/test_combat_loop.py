@@ -2,7 +2,10 @@ import copy
 
 from sts_sim import (
     CombatState,
+    EndTurnAction,
     Monster,
+    PlayCardAction,
+    SelectTargetAction,
     apply,
     evaluate,
     is_terminal,
@@ -74,7 +77,7 @@ def test_end_turn_discards_the_remaining_hand_then_draws_a_fresh_one_from_the_dr
     )
     discarded_hand = list(state.hand)
 
-    next_state = apply(state, "EndTurn")
+    next_state = apply(state, EndTurnAction())
 
     assert sorted(next_state.discard_pile) == sorted(discarded_hand)
     assert len(next_state.hand) == HAND_SIZE
@@ -99,10 +102,10 @@ def test_drawing_reshuffles_the_discard_pile_into_the_draw_pile_once_it_empties(
         deck=list(deck),
     )
 
-    state = apply(state, "EndTurn")
+    state = apply(state, EndTurnAction())
     assert state.draw_pile == []
 
-    state = apply(state, "EndTurn")
+    state = apply(state, EndTurnAction())
 
     assert len(state.hand) == HAND_SIZE
     assert sorted(state.hand + state.draw_pile + state.discard_pile) == sorted(deck)
@@ -111,7 +114,7 @@ def test_drawing_reshuffles_the_discard_pile_into_the_draw_pile_once_it_empties(
 def test_end_turn_advances_the_turn_counter():
     state = make_state()
 
-    next_state = apply(state, "EndTurn")
+    next_state = apply(state, EndTurnAction())
 
     assert next_state.turn == state.turn + 1
 
@@ -119,7 +122,7 @@ def test_end_turn_advances_the_turn_counter():
 def test_end_turn_applies_the_monsters_fixed_attack_to_the_player():
     state = make_state()
 
-    next_state = apply(state, "EndTurn")
+    next_state = apply(state, EndTurnAction())
 
     assert next_state.player_hp == state.player_hp - state.monsters[0].attack
 
@@ -138,10 +141,10 @@ def test_end_turn_refreshes_player_energy_to_its_starting_amount():
         seed=42,
         hand=["Strike"],
     )
-    spent = apply(apply(state, "PlayCard:Strike"), "SelectTarget:Monster:0")
+    spent = apply(apply(state, PlayCardAction("Strike")), SelectTargetAction(0))
     assert spent.player_energy < state.player_energy
 
-    next_state = apply(spent, "EndTurn")
+    next_state = apply(spent, EndTurnAction())
 
     assert next_state.player_energy == state.player_energy
 
@@ -160,7 +163,7 @@ def test_state_is_terminal_once_player_hp_reaches_zero():
         seed=42,
     )
 
-    next_state = apply(state, "EndTurn")
+    next_state = apply(state, EndTurnAction())
 
     assert next_state.player_hp <= 0
     assert is_terminal(next_state) is True
@@ -255,8 +258,8 @@ def test_reward_matches_the_shaped_formula_for_a_loss_with_the_monster_at_partia
         seed=42,
         hand=["Strike"],
     )
-    chipped = apply(apply(weak_player, "PlayCard:Strike"), "SelectTarget:Monster:0")
-    lost = apply(chipped, "EndTurn")
+    chipped = apply(apply(weak_player, PlayCardAction("Strike")), SelectTargetAction(0))
+    lost = apply(chipped, EndTurnAction())
 
     assert is_terminal(lost) and lost.player_hp <= 0 and lost.monsters[0].hp > 0
     assert reward(lost) == -1 * (lost.monsters[0].hp / MONSTER_STARTING_HP)
@@ -273,18 +276,18 @@ def test_evaluate_favours_the_side_with_relatively_more_remaining_hp():
 
     # Deal Strike damage to the monster within a single turn, taking no return
     # damage — the monster ends up relatively worse off than the player.
-    monster_hurt = apply(apply(armed, "PlayCard:Strike"), "SelectTarget:Monster:0")
+    monster_hurt = apply(apply(armed, PlayCardAction("Strike")), SelectTargetAction(0))
 
     # Take repeated attacks without retaliating — the player ends up relatively
     # worse off than the monster.
-    player_hurt = apply(apply(armed, "EndTurn"), "EndTurn")
+    player_hurt = apply(apply(armed, EndTurnAction()), EndTurnAction())
 
     assert evaluate(monster_hurt) > evaluate(player_hurt)
 
 
 def play_out(state, num_turns):
     for _ in range(num_turns):
-        state = apply(state, "EndTurn")
+        state = apply(state, EndTurnAction())
     return state
 
 
@@ -323,7 +326,7 @@ def test_apply_does_not_mutate_its_input():
     state = make_state()
     clone = copy.deepcopy(state)
 
-    apply(state, "EndTurn")
+    apply(state, EndTurnAction())
 
     assert state == clone
 
@@ -333,7 +336,7 @@ def test_a_full_toy_fight_of_nothing_but_end_turn_reaches_a_terminal_state():
 
     while not is_terminal(state):
         assert legal_actions(state) == ["EndTurn"]
-        state = apply(state, "EndTurn")
+        state = apply(state, EndTurnAction())
 
     assert is_terminal(state)
     assert state.player_hp <= 0 or state.monsters[0].hp <= 0
@@ -357,13 +360,13 @@ def test_a_scripted_fight_with_strike_and_defend_runs_the_whole_stack_to_a_termi
         hand=["Strike", "Defend"],
     )
 
-    awaiting_target = apply(state, "PlayCard:Strike")
-    struck = apply(awaiting_target, "SelectTarget:Monster:0")
-    opening = apply(struck, "PlayCard:Defend")
+    awaiting_target = apply(state, PlayCardAction("Strike"))
+    struck = apply(awaiting_target, SelectTargetAction(0))
+    opening = apply(struck, PlayCardAction("Defend"))
 
     final_state = opening
     while not is_terminal(final_state):
-        final_state = apply(final_state, "EndTurn")
+        final_state = apply(final_state, EndTurnAction())
 
     assert final_state.player_hp <= 0
     assert final_state.monsters[0].hp == struck.monsters[0].hp
@@ -391,7 +394,7 @@ def test_with_rng_seed_produces_different_draws_for_different_seeds():
     hands = set()
     for seed in range(20):
         reseeded = state.with_rng_seed(seed)
-        after = apply(reseeded, "EndTurn")
+        after = apply(reseeded, EndTurnAction())
         # Don't sort — we're checking that draw *order* differs, not just content.
         hands.add(tuple(after.hand))
 
@@ -407,13 +410,13 @@ def test_strike_targeting_one_of_two_monsters_only_damages_that_monster():
         hand=["Strike"],
     )
 
-    awaiting_target = apply(state, "PlayCard:Strike")
+    awaiting_target = apply(state, PlayCardAction("Strike"))
     assert legal_actions(awaiting_target) == [
         "SelectTarget:Monster:0",
         "SelectTarget:Monster:1",
     ]
 
-    struck = apply(awaiting_target, "SelectTarget:Monster:1")
+    struck = apply(awaiting_target, SelectTargetAction(1))
 
     assert struck.monsters[0].hp == 20
     assert struck.monsters[1].hp == 24

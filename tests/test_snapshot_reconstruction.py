@@ -3,7 +3,7 @@ constituent parts (HP/block/statuses/piles/turn/monster move-history) — the
 foundation an external analysis server needs to reconstruct a snapshot of a
 real, in-progress fight rather than only ever a fresh turn-0 combat."""
 
-from sts_sim import CombatState, Monster, apply, legal_actions
+from sts_sim import CombatState, EndTurnAction, Monster, apply, legal_actions
 
 
 def test_reconstructing_player_block_and_statuses():
@@ -59,7 +59,7 @@ def test_reconstructing_a_monster_mid_cycle_continues_its_real_ai_cycle():
 
     assert state.monsters[0].intent == "Hiss"
 
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
 
     assert after.monsters[0].intent == "Butt"
 
@@ -85,6 +85,6 @@ def test_reconstructing_a_monster_with_strength_affects_its_next_attack():
 
     assert state.monsters[0].strength == 5
 
-    after = apply(state, "EndTurn")
+    after = apply(state, EndTurnAction())
 
     assert state.player_hp - after.player_hp == 16
