@@ -1,6 +1,8 @@
-import pytest
 import copy
 
+import pytest
+
+from conftest import make_state
 from sts_sim import (
     CombatState,
     EndTurnAction,
@@ -10,16 +12,6 @@ from sts_sim import (
     apply,
     legal_actions,
 )
-
-
-def make_state(hand=("Strike",)):
-    return CombatState(
-        player_hp=80,
-        player_energy=3,
-        monsters=[Monster(hp=44, attack=6)],
-        seed=42,
-        hand=list(hand),
-    )
 
 
 def test_a_fresh_state_offers_to_play_each_card_in_hand():

@@ -1,17 +1,8 @@
 """Behavioural tests for Phase 0 Ironclad cards: trivial drop-ins composed
 entirely of existing EffectOps (no engine changes)."""
 
+from conftest import make_state
 from sts_sim import CombatState, Monster, PlayCardAction, SelectTargetAction, apply
-
-
-def make_state(hand=("Strike",), seed=42):
-    return CombatState(
-        player_hp=80,
-        player_energy=3,
-        monsters=[Monster(hp=44, attack=6)],
-        seed=seed,
-        hand=list(hand),
-    )
 
 
 # ── Bludgeon ─────────────────────────────────────────────────────────────────
