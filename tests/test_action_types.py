@@ -1,5 +1,14 @@
 """HOL-68: typed Action classes at the combat seam."""
-from sts_sim import CombatState, EndTurnAction, Monster, PlayCardAction, SelectTargetAction, apply, legal_actions
+
+from sts_sim import (
+    CombatState,
+    EndTurnAction,
+    Monster,
+    PlayCardAction,
+    SelectTargetAction,
+    apply,
+    legal_actions,
+)
 
 
 def test_end_turn_action_str():
@@ -54,7 +63,9 @@ def test_actions_are_hashable():
 def test_actions_sortable():
     actions = [EndTurnAction(), PlayCardAction("Strike"), SelectTargetAction(0)]
     result = sorted(actions)
-    assert [str(a) for a in result] == sorted(["EndTurn", "PlayCard:Strike", "SelectTarget:Monster:0"])
+    assert [str(a) for a in result] == sorted(
+        ["EndTurn", "PlayCard:Strike", "SelectTarget:Monster:0"]
+    )
 
 
 # --- legal_actions integration ---
@@ -63,23 +74,32 @@ def test_actions_sortable():
 def _empty_hand_state():
     """State with no playable cards — only EndTurn is legal. No deck so no opening draw."""
     return CombatState(
-        player_hp=70, player_energy=3, monsters=[Monster(hp=44, name="Jaw Worm")],
-        seed=42, hand=[],
+        player_hp=70,
+        player_energy=3,
+        monsters=[Monster(hp=44, name="Jaw Worm")],
+        seed=42,
+        hand=[],
     )
 
 
 def _strike_in_hand_state():
     """State with Strike in hand, scripted directly (no deck)."""
     return CombatState(
-        player_hp=70, player_energy=3, monsters=[Monster(hp=44, name="Jaw Worm")],
-        seed=42, hand=["Strike"],
+        player_hp=70,
+        player_energy=3,
+        monsters=[Monster(hp=44, name="Jaw Worm")],
+        seed=42,
+        hand=["Strike"],
     )
 
 
 def test_legal_actions_returns_action_objects():
     state = _empty_hand_state()
     actions = legal_actions(state)
-    assert all(isinstance(a, (EndTurnAction, PlayCardAction, SelectTargetAction)) for a in actions)
+    assert all(
+        isinstance(a, (EndTurnAction, PlayCardAction, SelectTargetAction))
+        for a in actions
+    )
 
 
 def test_legal_actions_empty_hand_returns_end_turn_action():

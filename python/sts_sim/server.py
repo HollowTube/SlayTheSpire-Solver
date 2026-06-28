@@ -232,6 +232,7 @@ def handle_request(payload):
         # evaluate() (one-step greedy) rather than another MCTS pass — the
         # ranking across targets is what matters, not calibrated HP estimates.
         from . import PlayCardAction, SelectTargetAction
+
         target_values = {}
         if len(state.monsters) > 1:
             for action in actions:
@@ -260,8 +261,7 @@ def handle_request(payload):
                 state, iterations, seed, playouts
             ),
             "action_hp_lost": {
-                str(a): _expected_hp_lost(v, state)
-                for a, v in values.items()
+                str(a): _expected_hp_lost(v, state) for a, v in values.items()
             },
             "target_values": target_values,
         }
