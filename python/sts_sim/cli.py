@@ -87,14 +87,21 @@ def effective_intent_description(state):
 
 
 def format_action(action):
-    """Translate one `legal_actions` string into a human-readable label."""
+    """Translate one `legal_actions` action into a human-readable label."""
     if action in _ACTION_LABELS:
         return _ACTION_LABELS[action]
-    if action.startswith("PlayCard:"):
-        return f"Play {action.removeprefix('PlayCard:')}"
-    if action.startswith("SelectTarget:"):
-        return f"Target {action.removeprefix('SelectTarget:')}"
-    return action
+    from . import PlayCardAction, SelectTargetAction
+
+    if isinstance(action, PlayCardAction):
+        return f"Play {action.card}"
+    if isinstance(action, SelectTargetAction):
+        return f"Target Monster:{action.monster_index}"
+    s = str(action)
+    if s.startswith("PlayCard:"):
+        return f"Play {s.removeprefix('PlayCard:')}"
+    if s.startswith("SelectTarget:"):
+        return f"Target {s.removeprefix('SelectTarget:')}"
+    return s
 
 
 def _format_statuses(statuses):

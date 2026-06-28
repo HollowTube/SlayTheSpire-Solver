@@ -5,7 +5,7 @@
 //! like "how does adding this card to my deck change my average HP lost over
 //! the next N fights" run live at a card-reward screen.
 use crate::state::CombatState;
-use crate::{apply, is_terminal, legal_actions, random_rollout, reward};
+use crate::{apply, is_terminal, legal_actions_str, random_rollout, reward};
 use pyo3::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
@@ -33,7 +33,7 @@ impl Node {
         let untried_actions = if is_terminal(&state) {
             Vec::new()
         } else {
-            legal_actions(&state)
+            legal_actions_str(&state)
         };
         Node {
             state,
