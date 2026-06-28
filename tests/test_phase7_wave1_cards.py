@@ -1,14 +1,5 @@
+from conftest import make_state
 from sts_sim import CombatState, Monster, PlayCardAction, apply
-
-
-def make_state(hand, monsters=None):
-    return CombatState(
-        player_hp=80,
-        player_energy=3,
-        monsters=monsters or [Monster(hp=44, attack=6)],
-        seed=42,
-        hand=list(hand),
-    )
 
 
 def test_breakthrough_costs_1_hp_and_hits_all_enemies_for_9_without_a_target():

@@ -1,18 +1,8 @@
 """Behavioural tests for Phase 4 Wave 1 Ironclad cards: GameEvent::TurnStart
 and the persistent powers that react to it."""
 
+from conftest import make_state
 from sts_sim import CombatState, EndTurnAction, Monster, PlayCardAction, apply
-
-
-def make_state(hand=("Strike",), seed=42, **kwargs):
-    return CombatState(
-        player_hp=80,
-        player_energy=3,
-        monsters=[Monster(hp=44, attack=6)],
-        seed=seed,
-        hand=list(hand),
-        **kwargs,
-    )
 
 
 # ── DemonForm ────────────────────────────────────────────────────────────────

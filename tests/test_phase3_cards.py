@@ -1,6 +1,7 @@
 """Behavioural tests for Phase 3 Ironclad cards: damage/block scaled off
 game state (DynamicVar-style)."""
 
+from conftest import make_state
 from sts_sim import (
     CombatState,
     EndTurnAction,
@@ -9,18 +10,6 @@ from sts_sim import (
     SelectTargetAction,
     apply,
 )
-
-
-def make_state(hand=("Strike",), seed=42, player_block=0, **kwargs):
-    return CombatState(
-        player_hp=80,
-        player_energy=3,
-        monsters=[Monster(hp=44, attack=6)],
-        seed=seed,
-        hand=list(hand),
-        player_block=player_block,
-        **kwargs,
-    )
 
 
 # ── BodySlam ─────────────────────────────────────────────────────────────────

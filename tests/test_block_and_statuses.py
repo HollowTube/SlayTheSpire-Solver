@@ -1,4 +1,6 @@
 import pytest
+
+from conftest import make_state
 from sts_sim import (
     CombatState,
     EndTurnAction,
@@ -7,16 +9,6 @@ from sts_sim import (
     SelectTargetAction,
     apply,
 )
-
-
-def make_state(hand):
-    return CombatState(
-        player_hp=80,
-        player_energy=3,
-        monsters=[Monster(hp=44, attack=6)],
-        seed=42,
-        hand=list(hand),
-    )
 
 
 # Per the Slay the Spire wiki, base (un-upgraded) Defend grants 5 block.

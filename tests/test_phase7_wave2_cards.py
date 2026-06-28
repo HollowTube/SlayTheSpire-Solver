@@ -1,3 +1,4 @@
+from conftest import make_state
 from sts_sim import (
     CombatState,
     EndTurnAction,
@@ -7,16 +8,6 @@ from sts_sim import (
     apply,
     legal_actions,
 )
-
-
-def make_state(hand, player_energy=3, monsters=None):
-    return CombatState(
-        player_hp=80,
-        player_energy=player_energy,
-        monsters=monsters or [Monster(hp=44, attack=6)],
-        seed=42,
-        hand=list(hand),
-    )
 
 
 def test_setup_strike_deals_7_and_grants_2_strength_this_turn_only():

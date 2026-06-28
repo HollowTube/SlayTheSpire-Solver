@@ -2,19 +2,8 @@
 (exhaust-from-hand, draw, discard-to-draw-pile, hand-size-scaled damage, and
 adding generated cards to hand)."""
 
+from conftest import make_state
 from sts_sim import CombatState, Monster, PlayCardAction, SelectTargetAction, apply
-
-
-def make_state(hand=("Strike",), draw_pile=(), discard_pile=(), seed=42):
-    return CombatState(
-        player_hp=80,
-        player_energy=3,
-        monsters=[Monster(hp=44, attack=6)],
-        seed=seed,
-        hand=list(hand),
-        draw_pile=list(draw_pile),
-        discard_pile=list(discard_pile),
-    )
 
 
 # ── Cinder ───────────────────────────────────────────────────────────────────

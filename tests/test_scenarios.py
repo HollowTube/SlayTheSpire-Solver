@@ -1,6 +1,8 @@
 import random
 from collections import Counter
 
+import pytest
+
 from sts_sim import (
     EndTurnAction,
     PlayCardAction,
@@ -148,54 +150,26 @@ def test_complete_random_fights_against_the_jaw_worm_reach_correctly_shaped_term
 # ── Act 1 "easy pool" scenarios ──────────────────────────────────────────────
 
 
-def test_vs_twig_slime_s_loads_with_the_documented_starting_loadout():
-    state = ironclad_starter_deck_vs_twig_slime_s(seed=42)
+@pytest.mark.parametrize(
+    "scenario_fn, name, hp_const, intent",
+    [
+        (ironclad_starter_deck_vs_twig_slime_s, "Twig Slime (S)", TWIG_SLIME_S_STARTING_HP, "Tackle"),
+        (ironclad_starter_deck_vs_shrinker_beetle, "Shrinker Beetle", SHRINKER_BEETLE_STARTING_HP, "Shrink"),
+        (ironclad_starter_deck_vs_leaf_slime_s, "Leaf Slime (S)", LEAF_SLIME_S_STARTING_HP, "Tackle"),
+        (ironclad_starter_deck_vs_leaf_slime_m, "Leaf Slime (M)", LEAF_SLIME_M_STARTING_HP, "StickyShot"),
+        (ironclad_starter_deck_vs_twig_slime_m, "Twig Slime (M)", TWIG_SLIME_M_STARTING_HP, "StickyShot"),
+    ],
+)
+def test_easy_pool_single_monster_scenario_loads_with_documented_starting_loadout(
+    scenario_fn, name, hp_const, intent
+):
+    state = scenario_fn(seed=42)
 
     assert state.player_hp == PLAYER_STARTING_HP
     assert len(state.hand) == 5
-    assert state.monsters[0].name == "Twig Slime (S)"
-    assert state.monsters[0].hp == TWIG_SLIME_S_STARTING_HP
-    assert state.monsters[0].intent == "Tackle"
-
-
-def test_vs_shrinker_beetle_loads_with_the_documented_starting_loadout():
-    state = ironclad_starter_deck_vs_shrinker_beetle(seed=42)
-
-    assert state.player_hp == PLAYER_STARTING_HP
-    assert len(state.hand) == 5
-    assert state.monsters[0].name == "Shrinker Beetle"
-    assert state.monsters[0].hp == SHRINKER_BEETLE_STARTING_HP
-    assert state.monsters[0].intent == "Shrink"
-
-
-def test_vs_leaf_slime_s_loads_with_the_documented_starting_loadout():
-    state = ironclad_starter_deck_vs_leaf_slime_s(seed=42)
-
-    assert state.player_hp == PLAYER_STARTING_HP
-    assert len(state.hand) == 5
-    assert state.monsters[0].name == "Leaf Slime (S)"
-    assert state.monsters[0].hp == LEAF_SLIME_S_STARTING_HP
-    assert state.monsters[0].intent == "Tackle"
-
-
-def test_vs_leaf_slime_m_loads_with_the_documented_starting_loadout():
-    state = ironclad_starter_deck_vs_leaf_slime_m(seed=42)
-
-    assert state.player_hp == PLAYER_STARTING_HP
-    assert len(state.hand) == 5
-    assert state.monsters[0].name == "Leaf Slime (M)"
-    assert state.monsters[0].hp == LEAF_SLIME_M_STARTING_HP
-    assert state.monsters[0].intent == "StickyShot"
-
-
-def test_vs_twig_slime_m_loads_with_the_documented_starting_loadout():
-    state = ironclad_starter_deck_vs_twig_slime_m(seed=42)
-
-    assert state.player_hp == PLAYER_STARTING_HP
-    assert len(state.hand) == 5
-    assert state.monsters[0].name == "Twig Slime (M)"
-    assert state.monsters[0].hp == TWIG_SLIME_M_STARTING_HP
-    assert state.monsters[0].intent == "StickyShot"
+    assert state.monsters[0].name == name
+    assert state.monsters[0].hp == hp_const
+    assert state.monsters[0].intent == intent
 
 
 def test_vs_slimes_weak_loads_with_three_slime_monsters():

@@ -1,17 +1,8 @@
 """Behavioural tests for Phase 1 Ironclad cards: self-damage, energy, heal,
 and exhausting non-Power cards."""
 
+from conftest import make_state
 from sts_sim import CombatState, Monster, PlayCardAction, SelectTargetAction, apply
-
-
-def make_state(hand=("Strike",)):
-    return CombatState(
-        player_hp=80,
-        player_energy=3,
-        monsters=[Monster(hp=44, attack=6)],
-        seed=42,
-        hand=list(hand),
-    )
 
 
 # ── Bloodletting ────────────────────────────────────────────────────────────
