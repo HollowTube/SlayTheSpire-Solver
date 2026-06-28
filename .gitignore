@@ -30,3 +30,6 @@ build/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Aider
+.aider*
