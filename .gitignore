@@ -30,3 +30,9 @@ build/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Aider
+.aider*
+
+# VS Code workspace
+*.code-workspace
