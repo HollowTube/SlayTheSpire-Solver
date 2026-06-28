@@ -4,7 +4,14 @@ Tests use sts_sim._sts_sim.apply (the raw Rust function) so the Rust-level
 dispatch is exercised directly, not the Python wrapper's str(action) shim.
 """
 
-from sts_sim import CombatState, EndTurnAction, Monster, PlayCardAction, SelectTargetAction, apply
+from sts_sim import (
+    CombatState,
+    EndTurnAction,
+    Monster,
+    PlayCardAction,
+    SelectTargetAction,
+    apply,
+)
 from sts_sim._sts_sim import apply as _apply_rust
 
 
