@@ -33,3 +33,6 @@ build/
 
 # Aider
 .aider*
+
+# VS Code workspace
+*.code-workspace
