@@ -231,36 +231,37 @@ def handle_request(payload):
         # internally; this tells the player *which* target that is. Uses
         # evaluate() (one-step greedy) rather than another MCTS pass — the
         # ranking across targets is what matters, not calibrated HP estimates.
+        from . import PlayCardAction, SelectTargetAction
         target_values = {}
         if len(state.monsters) > 1:
             for action in actions:
-                if not action.startswith("PlayCard:"):
+                if not isinstance(action, PlayCardAction):
                     continue
                 try:
                     mid = apply(state, action)
                 except Exception:
                     continue
                 sub = legal_actions(mid)
-                if not sub or not sub[0].startswith("SelectTarget:Monster:"):
+                if not sub or not isinstance(sub[0], SelectTargetAction):
                     continue
                 tv = {}
                 for sub_action in sub:
                     try:
-                        tv[sub_action] = evaluate(apply(mid, sub_action))
+                        tv[str(sub_action)] = evaluate(apply(mid, sub_action))
                     except Exception:
                         pass
                 if tv:
-                    target_values[action] = tv
+                    target_values[str(action)] = tv
         return {
-            "legal_actions": actions,
-            "values": values,
+            "legal_actions": [str(a) for a in actions],
+            "values": {str(a): v for a, v in values.items()},
             "state_value": state_value,
             "expected_hp_lost": _simulated_expected_hp_lost(
                 state, iterations, seed, playouts
             ),
             "action_hp_lost": {
-                action: _expected_hp_lost(value, state)
-                for action, value in values.items()
+                str(a): _expected_hp_lost(v, state)
+                for a, v in values.items()
             },
             "target_values": target_values,
         }

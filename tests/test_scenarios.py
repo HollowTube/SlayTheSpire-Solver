@@ -1,7 +1,7 @@
 import random
 from collections import Counter
 
-from sts_sim import apply, is_terminal, legal_actions, reward
+from sts_sim import PlayCardAction, apply, is_terminal, legal_actions, reward
 from sts_sim.scenarios import (
     INKLET_STARTING_HP,
     IRONCLAD_STARTING_DECK,
@@ -84,13 +84,13 @@ def test_a_full_playthrough_plays_every_starting_card_in_some_sequence():
 
     played_counts = Counter()
     while not played_counts >= deck_counts:
-        playable = [a for a in legal_actions(state) if a.startswith("PlayCard:")]
+        playable = [a for a in legal_actions(state) if isinstance(a, PlayCardAction)]
         if not playable:
             state = apply(state, "EndTurn")
             assert not is_terminal(state)
             continue
         action = playable[0]
-        played_counts[action.removeprefix("PlayCard:")] += 1
+        played_counts[action.card] += 1
         state = apply(state, action)
         if state.pending == "SelectTarget":
             state = apply(state, "SelectTarget:Monster:0")

@@ -1,4 +1,5 @@
 mod act;
+mod action;
 mod cards;
 mod engine;
 mod mcts;
@@ -7,6 +8,7 @@ mod run;
 mod state;
 
 use act::{draw_overgrowth_elite, draw_overgrowth_monster_sequence};
+use action::{EndTurnAction, PlayCardAction, SelectTargetAction};
 use cards::{card_data, CardData, CardKeyword, CardType};
 use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
 use mcts::{
@@ -60,8 +62,9 @@ fn effective_cost(state: &CombatState, data: &CardData) -> i32 {
     base + tangled_bonus
 }
 
-#[pyfunction]
-fn legal_actions(state: &CombatState) -> Vec<String> {
+/// Internal hot-path version returning strings — used by mcts.rs, random_rollout,
+/// and optimal_value_rec which run entirely in Rust and have no Python token.
+pub(crate) fn legal_actions_str(state: &CombatState) -> Vec<String> {
     match state.pending {
         Some(PendingDecision::SelectTarget { .. }) => state
             .living_monster_indices()
@@ -89,6 +92,30 @@ fn legal_actions(state: &CombatState) -> Vec<String> {
             actions
         }
     }
+}
+
+/// Python-facing wrapper: converts each string action into a typed Action object.
+#[pyfunction]
+fn legal_actions(py: Python<'_>, state: &CombatState) -> Vec<PyObject> {
+    legal_actions_str(state)
+        .into_iter()
+        .map(|s| str_to_action(py, &s))
+        .collect()
+}
+
+fn str_to_action(py: Python<'_>, s: &str) -> PyObject {
+    if s == "EndTurn" {
+        return EndTurnAction::new().into_pyobject(py).unwrap().into_any().unbind();
+    }
+    if let Some(card) = s.strip_prefix("PlayCard:") {
+        return PlayCardAction::new(card.to_string()).into_pyobject(py).unwrap().into_any().unbind();
+    }
+    if let Some(idx_str) = s.strip_prefix("SelectTarget:Monster:") {
+        if let Ok(idx) = idx_str.parse::<usize>() {
+            return SelectTargetAction::new(idx).into_pyobject(py).unwrap().into_any().unbind();
+        }
+    }
+    unreachable!("legal_actions_str only produces well-formed action strings")
 }
 
 #[pyfunction]
@@ -475,7 +502,7 @@ fn redeterminized(state: &CombatState, seed: u64) -> CombatState {
 fn random_rollout(state: &CombatState, seed: u64) -> f64 {
     let mut s = state.reseeded(seed);
     while !is_terminal(&s) {
-        let actions = legal_actions(&s);
+        let actions = legal_actions_str(&s);
         let idx = s.rng.gen_range(0..actions.len());
         s = apply(&s, &actions[idx]).expect("legal action is always valid");
     }
@@ -579,7 +606,7 @@ fn optimal_value_rec(state: &CombatState, best: &mut f64, memo: &mut HashMap<Sta
         }
         return cached;
     }
-    let mut children: Vec<(f64, CombatState)> = legal_actions(state)
+    let mut children: Vec<(f64, CombatState)> = legal_actions_str(state)
         .into_iter()
         .map(|action| {
             let next = apply(state, &action).expect("legal action is always valid");
@@ -610,6 +637,9 @@ fn optimal_value(state: &CombatState) -> f64 {
 
 #[pymodule]
 fn _sts_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<EndTurnAction>()?;
+    m.add_class::<PlayCardAction>()?;
+    m.add_class::<SelectTargetAction>()?;
     m.add_class::<CombatState>()?;
     m.add_class::<Monster>()?;
     m.add_class::<RunState>()?;
