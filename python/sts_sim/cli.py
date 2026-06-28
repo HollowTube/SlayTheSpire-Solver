@@ -12,7 +12,17 @@ from dataclasses import dataclass
 
 import click
 
-from . import apply, evaluate, is_terminal, legal_actions, optimal_value, reward
+from . import (
+    EndTurnAction,
+    PlayCardAction,
+    SelectTargetAction,
+    apply,
+    evaluate,
+    is_terminal,
+    legal_actions,
+    optimal_value,
+    reward,
+)
 from .scenarios import (
     ironclad_starter_deck_vs_fuzzy_wurm_crawler,
     ironclad_starter_deck_vs_gremlin_nob,
@@ -251,6 +261,23 @@ def run_interactive(state, input_fn=input, output_fn=print, analysis=False):
     return state
 
 
+def _parse_action(action):
+    """Convert a string action to a typed Action object; pass through Action objects unchanged.
+
+    Used at the CLI/API boundary where history is stored as strings.
+    """
+    if isinstance(action, (EndTurnAction, PlayCardAction, SelectTargetAction)):
+        return action
+    if action == "EndTurn":
+        return EndTurnAction()
+    if action.startswith("PlayCard:"):
+        return PlayCardAction(action.removeprefix("PlayCard:"))
+    if action.startswith("SelectTarget:Monster:"):
+        idx = int(action.removeprefix("SelectTarget:Monster:"))
+        return SelectTargetAction(idx)
+    raise ValueError(f"unknown action string: {action!r}")
+
+
 def replay_history(seed, history, monster="jaw-worm"):
     """Reconstruct the state reached by `history` from a fresh `seed`.
 
@@ -266,7 +293,7 @@ def replay_history(seed, history, monster="jaw-worm"):
         )
     state = scenario_fn(seed=seed)
     for action in history:
-        state = apply(state, action)
+        state = apply(state, _parse_action(action))
     return state
 
 
@@ -292,7 +319,7 @@ def run_step(seed, history, action, monster="jaw-worm"):
     history — all in one shot. No persistent process, no new engine state.
     """
     before = replay_history(seed, history, monster=monster)
-    state = apply(before, action)
+    state = apply(before, _parse_action(action))
     return StepResult(
         state=state,
         rendered=render_state(state),
