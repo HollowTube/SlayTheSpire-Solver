@@ -153,11 +153,36 @@ def test_complete_random_fights_against_the_jaw_worm_reach_correctly_shaped_term
 @pytest.mark.parametrize(
     "scenario_fn, name, hp_const, intent",
     [
-        (ironclad_starter_deck_vs_twig_slime_s, "Twig Slime (S)", TWIG_SLIME_S_STARTING_HP, "Tackle"),
-        (ironclad_starter_deck_vs_shrinker_beetle, "Shrinker Beetle", SHRINKER_BEETLE_STARTING_HP, "Shrink"),
-        (ironclad_starter_deck_vs_leaf_slime_s, "Leaf Slime (S)", LEAF_SLIME_S_STARTING_HP, "Tackle"),
-        (ironclad_starter_deck_vs_leaf_slime_m, "Leaf Slime (M)", LEAF_SLIME_M_STARTING_HP, "StickyShot"),
-        (ironclad_starter_deck_vs_twig_slime_m, "Twig Slime (M)", TWIG_SLIME_M_STARTING_HP, "StickyShot"),
+        (
+            ironclad_starter_deck_vs_twig_slime_s,
+            "Twig Slime (S)",
+            TWIG_SLIME_S_STARTING_HP,
+            "Tackle",
+        ),
+        (
+            ironclad_starter_deck_vs_shrinker_beetle,
+            "Shrinker Beetle",
+            SHRINKER_BEETLE_STARTING_HP,
+            "Shrink",
+        ),
+        (
+            ironclad_starter_deck_vs_leaf_slime_s,
+            "Leaf Slime (S)",
+            LEAF_SLIME_S_STARTING_HP,
+            "Tackle",
+        ),
+        (
+            ironclad_starter_deck_vs_leaf_slime_m,
+            "Leaf Slime (M)",
+            LEAF_SLIME_M_STARTING_HP,
+            "StickyShot",
+        ),
+        (
+            ironclad_starter_deck_vs_twig_slime_m,
+            "Twig Slime (M)",
+            TWIG_SLIME_M_STARTING_HP,
+            "StickyShot",
+        ),
     ],
 )
 def test_easy_pool_single_monster_scenario_loads_with_documented_starting_loadout(
