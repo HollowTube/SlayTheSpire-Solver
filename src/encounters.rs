@@ -1,4 +1,5 @@
 use crate::state::Monster;
+use rand::seq::SliceRandom;
 use rand::Rng;
 use rand_pcg::Pcg32;
 
@@ -72,59 +73,39 @@ pub(crate) fn resolve_shape(shape: &EncounterShape, rng: &mut Pcg32) -> Vec<Mons
             count,
             hp_min,
             hp_max,
-        } => draw_from_pool(pool, *count, *hp_min, *hp_max, rng),
+        } => {
+            let pool_refs: Vec<&str> = pool.iter().map(String::as_str).collect();
+            draw_names(&pool_refs, *count, rng)
+                .into_iter()
+                .map(|name| {
+                    let hp = rng.gen_range(*hp_min..=*hp_max);
+                    Monster::new(hp, 0, None, Some(name), 0, vec![], None, None, 0, vec![])
+                })
+                .collect()
+        }
     }
 }
 
-/// Draw `slots` names from `pool` (in order), never repeating the
-/// immediately-previous draw, and reshuffling (cycling) once the bag is
-/// exhausted rather than erroring. Pool of size ≤ 1 is allowed to repeat.
-pub(crate) fn draw_from_pool(
-    pool: &[String],
-    slots: usize,
-    hp_min: i32,
-    hp_max: i32,
-    rng: &mut Pcg32,
-) -> Vec<Monster> {
+/// Draw `slots` names from `pool` without an immediate repeat, reshuffling
+/// (cycling) when the bag is exhausted. Pool of size <= 1 may repeat.
+pub(crate) fn draw_names(pool: &[&str], slots: usize, rng: &mut Pcg32) -> Vec<String> {
     if pool.is_empty() {
         return Vec::new();
     }
     let mut result = Vec::with_capacity(slots);
-    let mut bag: Vec<&String> = Vec::new();
-    let mut last: Option<&String> = None;
+    let mut bag: Vec<&str> = Vec::new();
+    let mut last: Option<&str> = None;
     while result.len() < slots {
         if bag.is_empty() {
-            let mut shuffled: Vec<&String> = pool.iter().collect();
-            // Fisher-Yates shuffle
-            let n = shuffled.len();
-            for i in (1..n).rev() {
-                let j = rng.gen_range(0..=i);
-                shuffled.swap(i, j);
+            bag = pool.to_vec();
+            bag.shuffle(rng);
+            if pool.len() > 1 && bag.first() == last.as_ref() {
+                bag.swap(0, 1);
             }
-            // Avoid repeating the last draw from the previous bag
-            if pool.len() > 1 {
-                while shuffled.first() == last.as_ref() {
-                    let j = rng.gen_range(1..n);
-                    shuffled.swap(0, j);
-                }
-            }
-            bag = shuffled;
         }
-        let picked = bag.remove(0);
-        last = Some(picked);
-        let hp = rng.gen_range(hp_min..=hp_max);
-        result.push(Monster::new(
-            hp,
-            0,
-            None,
-            Some(picked.clone()),
-            0,
-            Vec::new(),
-            None,
-            None,
-            0,
-            Vec::new(),
-        ));
+        let next = bag.remove(0);
+        result.push(next.to_string());
+        last = Some(next);
     }
     result
 }
@@ -132,7 +113,7 @@ pub(crate) fn draw_from_pool(
 /// Look up an encounter by name. Returns `None` when the name is unknown.
 pub(crate) fn encounter_def(name: &str) -> Option<EncounterShape> {
     match name {
-        // ── Overgrowth single-monster encounters ──
+        // -- Overgrowth single-monster encounters --
         "Inklet" => Some(EncounterShape::Single {
             name: "Inklet".into(),
             hp_min: 35,
@@ -204,7 +185,7 @@ pub(crate) fn encounter_def(name: &str) -> Option<EncounterShape> {
             hp_max: 35,
         }),
 
-        // ── Overgrowth elite encounters ──
+        // -- Overgrowth elite encounters --
         "Byrdonis" => Some(EncounterShape::Single {
             name: "Byrdonis".into(),
             hp_min: 88,
@@ -221,7 +202,7 @@ pub(crate) fn encounter_def(name: &str) -> Option<EncounterShape> {
             hp_max: 88,
         }),
 
-        // ── Overgrowth boss encounters ──
+        // -- Overgrowth boss encounters --
         "Ceremonial Beast" => Some(EncounterShape::Single {
             name: "Ceremonial Beast".into(),
             hp_min: 220,
@@ -238,7 +219,7 @@ pub(crate) fn encounter_def(name: &str) -> Option<EncounterShape> {
             hp_max: 220,
         }),
 
-        // ── Individual Ruby Raiders (as single-monster encounters) ──
+        // -- Individual Ruby Raiders (as single-monster encounters) --
         "Axe Ruby Raider" => Some(EncounterShape::Single {
             name: "Axe Ruby Raider".into(),
             hp_min: 38,
@@ -265,7 +246,7 @@ pub(crate) fn encounter_def(name: &str) -> Option<EncounterShape> {
             hp_max: 42,
         }),
 
-        // ── Non-Overgrowth test monsters (for existing test fixtures) ──
+        // -- Non-Overgrowth test monsters (for existing test fixtures) --
         "Nibbit" => Some(EncounterShape::Single {
             name: "Nibbit".into(),
             hp_min: 20,
@@ -277,7 +258,7 @@ pub(crate) fn encounter_def(name: &str) -> Option<EncounterShape> {
             hp_max: 28,
         }),
 
-        // ── Overgrowth fixed multi-monster encounters ──
+        // -- Overgrowth fixed multi-monster encounters --
         "OvergrowthCrawlers" => Some(EncounterShape::Fixed {
             monsters: vec![
                 ("Shrinker Beetle".into(), 35, 40),
@@ -285,7 +266,7 @@ pub(crate) fn encounter_def(name: &str) -> Option<EncounterShape> {
             ],
         }),
 
-        // ── Overgrowth pool encounters ──
+        // -- Overgrowth pool encounters --
         "ruby_raiders" => Some(EncounterShape::Pool {
             pool: vec![
                 "Axe Ruby Raider".into(),
@@ -309,21 +290,21 @@ mod tests {
     use rand::SeedableRng;
 
     #[test]
-    fn test_draw_from_pool_no_repeat() {
-        let pool: Vec<String> = ["A", "B", "C"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
+    fn draw_names_no_repeat_across_bag_boundary() {
+        // Pool of size 3, draw 4 items (crosses bag boundary at index 3).
+        // The 4th item (first of the second bag) must not equal the 3rd item (last of first bag).
+        let pool = &["A", "B", "C"];
         let mut rng = Pcg32::seed_from_u64(42);
-        let monsters = draw_from_pool(&pool, 4, 30, 40, &mut rng);
-        assert_eq!(monsters.len(), 4);
-        for i in 1..monsters.len() {
-            assert_ne!(
-                monsters[i].name.as_deref(),
-                monsters[i - 1].name.as_deref(),
-                "consecutive draws must differ"
-            );
-        }
+        let names = draw_names(pool, 4, &mut rng);
+        assert_eq!(names.len(), 4);
+        assert_ne!(names[2], names[3], "no repeat across bag boundary");
+    }
+
+    #[test]
+    fn draw_names_empty_pool() {
+        let mut rng = Pcg32::seed_from_u64(0);
+        let names = draw_names(&[], 3, &mut rng);
+        assert!(names.is_empty());
     }
 
     #[test]
