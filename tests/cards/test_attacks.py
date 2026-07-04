@@ -436,7 +436,7 @@ def test_mangle_deals_damage_and_applies_persistent_minus_10_strength():
     assert after_turn.monsters[0].strength == -10
 
 
-# ── FightMe! ──────────────────────────────────────────────────────────────────
+# ── FightMe ───────────────────────────────────────────────────────────────────
 
 
 def _jaw_worm_state(hand, seed=42, energy=3, draw_pile=None):
@@ -451,11 +451,25 @@ def _jaw_worm_state(hand, seed=42, energy=3, draw_pile=None):
 
 
 def test_fight_me_deals_5_damage_twice_and_grants_strength():
-    state = _jaw_worm_state(["FightMe!", "Strike", "Strike", "Strike", "Defend"])
-    after = apply(apply(state, PlayCardAction("FightMe!")), SelectTargetAction(0))
+    state = _jaw_worm_state(["FightMe", "Strike", "Strike", "Strike", "Defend"])
+    after = apply(apply(state, PlayCardAction("FightMe")), SelectTargetAction(0))
     assert after.monsters[0].hp == 44 - 5 - 5
     assert after.monsters[0].strength == 1
     assert after.player_strength == 3
+
+
+def test_fight_me_costs_2():
+    state = _jaw_worm_state(["FightMe", "Strike"])
+    assert "PlayCard:FightMe" in [str(a) for a in legal_actions(state)]
+
+
+def test_fight_me_upgrade_delta():
+    """FightMe+: damage 5→6 per hit, self Strength 3→4."""
+    state = _jaw_worm_state(["FightMe+"])
+    after = apply(apply(state, PlayCardAction("FightMe+")), SelectTargetAction(0))
+    assert after.monsters[0].hp == 44 - 6 - 6
+    assert after.player_strength == 4
+    assert after.monsters[0].strength == 1
 
 
 # ── Anger ─────────────────────────────────────────────────────────────────────

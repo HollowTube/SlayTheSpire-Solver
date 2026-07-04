@@ -176,6 +176,10 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             let mut next = state.clone();
             next.turn += 1;
 
+            // PlayerTurnEnd fires before monsters resolve — Plating grants
+            // block here, etc.
+            fire_event(&mut next, GameEvent::PlayerTurnEnd);
+
             // Snapshot for Ringing: if the player already had Ringing before
             // the monster acts, it should expire now. Ringing applied during
             // the monster's turn survives for the player's next turn.
@@ -344,6 +348,9 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                 // This monster's debuffs (e.g. Vulnerable) tick down at the
                 // end of its own turn — after it has acted.
                 tick_debuffs(&mut next.monsters[i].fighter.statuses);
+                // MonsterTurnEnd fires after each monster resolves — Plating
+                // decrements here, etc.
+                fire_event(&mut next, GameEvent::MonsterTurnEnd);
             }
 
             // Constrict: the player takes `n` unblockable damage at end of
@@ -380,6 +387,9 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             // Cards-played count resets at the start of each player turn
             // (e.g. Bygone Effigy's Status::Slow).
             next.cards_played_this_turn = 0;
+            // Block-gain count resets at the start of each player turn
+            // (e.g. Unmovable doubles first N block gains).
+            next.blocks_gained_this_turn = 0;
             // Draw the next turn's opening hand (reshuffling the discard
             // pile back in if the draw pile runs dry mid-draw).
             draw_cards(&mut next, HAND_SIZE);
@@ -416,14 +426,14 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                     CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
                     CardType::Attack => {
                         next.attacks_played_this_turn += 1;
-                        fire_event(&mut next, GameEvent::AttackPlayed);
+                        fire_event(&mut next, GameEvent::AttackPlayed(card.name.clone()));
                         // One Two Punch: the next Attack played this turn
                         // resolves a second time, then the power is consumed.
                         if let Some(pos) = next.player.statuses.iter().position(|s| *s == Status::OneTwoPunch) {
                             next.player.statuses.remove(pos);
                             run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)], is_attack);
                             next.attacks_played_this_turn += 1;
-                            fire_event(&mut next, GameEvent::AttackPlayed);
+                            fire_event(&mut next, GameEvent::AttackPlayed(card.name.clone()));
                         }
                     }
                     CardType::Power | CardType::Status => {}
@@ -504,7 +514,7 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                         CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
                         CardType::Attack => {
                             next.attacks_played_this_turn += 1;
-                            fire_event(&mut next, GameEvent::AttackPlayed);
+                            fire_event(&mut next, GameEvent::AttackPlayed(card_name.to_string()));
                             // One Two Punch: the next Attack played this turn
                             // resolves a second time, then the power is
                             // consumed.
@@ -512,7 +522,7 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                                 next.player.statuses.remove(pos);
                     run_effect_ops(&mut next, &data.effects, Actor::Player, &targets, is_attack);
                                 next.attacks_played_this_turn += 1;
-                                fire_event(&mut next, GameEvent::AttackPlayed);
+                                fire_event(&mut next, GameEvent::AttackPlayed(card_name.to_string()));
                             }
                         }
                         CardType::Power | CardType::Status => {}
@@ -684,6 +694,7 @@ struct StateKey {
     discard_pile: Vec<CardInstance>,
     exhaust_pile: Vec<CardInstance>,
     attacks_played_this_turn: i32,
+    blocks_gained_this_turn: i32,
     pending: Option<PendingDecision>,
     rng_fingerprint: [u32; 4],
 }
@@ -700,6 +711,7 @@ fn state_key(state: &CombatState) -> StateKey {
         discard_pile: state.discard_pile.clone(),
         exhaust_pile: state.exhaust_pile.clone(),
         attacks_played_this_turn: state.attacks_played_this_turn,
+        blocks_gained_this_turn: state.blocks_gained_this_turn,
         pending: state.pending.clone(),
         rng_fingerprint: [
             rng_clone.next_u32(),
