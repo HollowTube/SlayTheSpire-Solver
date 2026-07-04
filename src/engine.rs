@@ -6,11 +6,22 @@ use rand::Rng;
 /// coarser-grained than `EventType` (which drives the damage-modifier pipeline)
 /// — a `GameEvent` fires once per game action and may produce `EffectOp`s
 /// rather than just numeric modifiers.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub(crate) enum GameEvent {
     SkillPlayed,
-    AttackPlayed,
+    /// The name of the Attack card that was played (e.g. for Juggling's
+    /// "add a copy of the 3rd attack to hand").
+    AttackPlayed(String),
     TurnStart,
+    /// Fires at the end of the player's turn, before monster turns begin
+    /// (e.g. Plating grants block here).
+    PlayerTurnEnd,
+    /// Fires after each individual monster completes its turn (e.g. Plating
+    /// decrements here).
+    MonsterTurnEnd,
+    /// A status was applied to a combatant — `to` is the recipient, `by` is
+    /// the applier (e.g. Vicious checks for self-applied Vulnerable).
+    StatusApplied { to: Actor, by: Actor, which: Status },
     // Fires whenever an `EffectOp::LoseHp` reduces a combatant's HP (e.g.
     // Inferno's own turn-start self-damage, or other self-damage cards).
     HpLost,
@@ -150,6 +161,16 @@ pub(crate) enum Status {
     // turn. Decays at end of the player's turn. Applied by Ceremonial
     // Beast's Beast Cry.
     Ringing,
+    // Plating(n): at the end of each player turn, gain n Block. At the end
+    // of each monster turn, decrement by 1; removed when 0.
+    Plating(i32),
+    // Vicious(n): whenever the player self-applies Vulnerable, draw n cards.
+    Vicious(i32),
+    // Juggling(n): after the player's 3rd Attack each turn, add n copies of
+    // that Attack card to hand.
+    Juggling(i32),
+    // Unmovable(n): the first n Block gains per turn from cards are doubled.
+    Unmovable(i32),
 }
 
 impl Status {
@@ -189,6 +210,10 @@ impl Status {
             Status::Slow(_) => "Slow",
             Status::Plow(_) => "Plow",
             Status::Ringing => "Ringing",
+            Status::Plating(_) => "Plating",
+            Status::Vicious(_) => "Vicious",
+            Status::Juggling(_) => "Juggling",
+            Status::Unmovable(_) => "Unmovable",
         }
     }
 
@@ -241,6 +266,10 @@ impl Status {
             "Slow" => vec![Status::Slow(amount)],
             "Plow" => vec![Status::Plow(amount)],
             "Ringing" => vec![Status::Ringing; amount.max(0) as usize],
+            "Plating" => vec![Status::Plating(amount)],
+            "Vicious" => vec![Status::Vicious(amount)],
+            "Juggling" => vec![Status::Juggling(amount)],
+            "Unmovable" => vec![Status::Unmovable(amount)],
             _ => Vec::new(),
         }
     }
@@ -335,7 +364,7 @@ impl Status {
             (Status::Enrage(n), GameEvent::SkillPlayed) => {
                 vec![EffectOp::ApplyStatusToSelf(Status::Strength(*n))]
             }
-            (Status::Rage, GameEvent::AttackPlayed) => {
+            (Status::Rage, GameEvent::AttackPlayed(_)) => {
                 vec![EffectOp::GainBlock(3)]
             }
             (Status::DemonForm, GameEvent::TurnStart) => {
@@ -367,6 +396,20 @@ impl Status {
             }
             (Status::Pyre, GameEvent::TurnStart) => vec![EffectOp::GainEnergy(1)],
             (Status::BattleDrum, GameEvent::TurnStart) => vec![EffectOp::ExhaustTopOfDrawPile],
+            // Plating: grant block at end of player turn equal to current stack.
+            (Status::Plating(n), GameEvent::PlayerTurnEnd) => {
+                vec![EffectOp::GainBlock(*n)]
+            }
+            // Plating: after each monster's turn, decrement by 1 (removal
+            // when ≤ 1 is handled inline in fire_event).
+            (Status::Plating(n), GameEvent::MonsterTurnEnd) if *n > 1 => vec![],
+            // Vicious: when the player self-applies Vulnerable, draw N cards.
+            (Status::Vicious(n), GameEvent::StatusApplied { to: Actor::Player, by: Actor::Player, which: Status::Vulnerable }) => {
+                vec![EffectOp::DrawCards(*n as usize)]
+            }
+            // Juggling: on AttackPlayed, the per-card-name handler inside
+            // fire_event checks attacks_played_this_turn and pushes copies.
+            (Status::Juggling(_), GameEvent::AttackPlayed(_)) => vec![],
             _ => vec![],
         }
     }
@@ -623,6 +666,9 @@ pub(crate) enum EffectOp {
     // (e.g. Fogmog's Illusion spawns Eye With Teeth). The new monster
     // is added at the end of the monsters list.
     SpawnMonster(String, i32),
+    // Adds `count` copies of the named card to the player's hand (e.g.
+    // Juggling's "add N copies of the 3rd Attack to hand").
+    AddCardToHand(String, usize),
 }
 
 /// What a `DealDamageScaled` op reads its multiplier from. New scaling
@@ -795,14 +841,45 @@ pub(crate) fn fire_event(state: &mut CombatState, event: GameEvent) {
     let actors: Vec<Actor> = std::iter::once(Actor::Player)
         .chain((0..state.monsters.len()).map(Actor::Monster))
         .collect();
-    for actor in actors {
-        let ops: Vec<EffectOp> = state
+    for &actor in &actors {
+        let mut ops: Vec<EffectOp> = state
             .fighter(actor)
             .statuses
             .iter()
-            .flat_map(|s| s.reactions(event))
+            .flat_map(|s| s.reactions(event.clone()))
             .collect();
+        // Juggling: after the player's 3rd attack each turn, add N copies
+        // of that attack card to hand. Handled inline here (not in reactions)
+        // because it needs access to both the card name (from the event
+        // payload) and attacks_played_this_turn (from CombatState).
+        if actor == Actor::Player {
+            if let GameEvent::AttackPlayed(ref name) = event {
+                if state.attacks_played_this_turn == 3 {
+                    if let Some(n) = state.player.statuses.iter().find_map(|s| {
+                        if let Status::Juggling(n) = s { Some(*n) } else { None }
+                    }) {
+                        for _ in 0..n as usize {
+                            ops.push(EffectOp::AddCardToHand(name.clone(), 1));
+                        }
+                    }
+                }
+            }
+        }
         run_effect_ops(state, &ops, actor, &[], false);
+    }
+    // Plating: after MonsterTurnEnd, decrement by 1; remove when ≤ 1.
+    // Handled here (not in reactions) because decrementing a status
+    // requires mutation, not just emitting EffectOps.
+    if event == GameEvent::MonsterTurnEnd {
+        for actor in &actors {
+            let statuses = &mut state.fighter_mut(*actor).statuses;
+            if let Some(pos) = statuses.iter().position(|s| matches!(s, Status::Plating(_))) {
+                match &statuses[pos] {
+                    Status::Plating(n) if *n > 1 => statuses[pos] = Status::Plating(n - 1),
+                    _ => { statuses.remove(pos); }
+                }
+            }
+        }
     }
 }
 
@@ -842,7 +919,17 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 }
             }
             EffectOp::GainBlock(amount) => {
-                let modified = apply_block_modifiers(*amount, &state.fighter(actor).statuses);
+                let mut effective = *amount;
+                // Unmovable: the first N block gains per turn from cards are doubled.
+                if actor == Actor::Player {
+                    if let Some(Status::Unmovable(n)) = state.player.statuses.iter().find(|s| matches!(s, Status::Unmovable(_))) {
+                        if state.blocks_gained_this_turn < *n {
+                            effective *= 2;
+                        }
+                    }
+                    state.blocks_gained_this_turn += 1;
+                }
+                let modified = apply_block_modifiers(effective, &state.fighter(actor).statuses);
                 state.fighter_mut(actor).block += modified;
                 if actor == Actor::Player {
                     fire_event(state, GameEvent::BlockGained);
@@ -874,10 +961,12 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                         }
                     }
                     state.fighter_mut(target).statuses.push(status.clone());
+                    fire_event(state, GameEvent::StatusApplied { to: target, by: actor, which: status.clone() });
                 }
             }
             EffectOp::ApplyStatusToSelf(status) => {
-                state.fighter_mut(actor).statuses.push(status.clone())
+                state.fighter_mut(actor).statuses.push(status.clone());
+                fire_event(state, GameEvent::StatusApplied { to: actor, by: actor, which: status.clone() });
             }
             EffectOp::DrawCards(n) => draw_cards(state, *n),
             EffectOp::EscalateSelfStatus(new_status) => {
@@ -930,6 +1019,11 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                     move_streak: 0,
                     moves_used: Vec::new(),
                 });
+            }
+            EffectOp::AddCardToHand(name, count) => {
+                for _ in 0..*count {
+                    state.hand.push(CardInstance::new(name.clone()));
+                }
             }
             EffectOp::ExhaustTopOfDrawPile => {
                 if let Some(card) = state.draw_pile.pop() {
@@ -1060,7 +1154,17 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
             }
             EffectOp::GainBlockScaled { base, per_unit, source } => {
                 let raw = base + per_unit * source.read(state, actor, actor);
-                let modified = apply_block_modifiers(raw, &state.fighter(actor).statuses);
+                let mut effective = raw;
+                // Unmovable: the first N block gains per turn from cards are doubled.
+                if actor == Actor::Player {
+                    if let Some(Status::Unmovable(n)) = state.player.statuses.iter().find(|s| matches!(s, Status::Unmovable(_))) {
+                        if state.blocks_gained_this_turn < *n {
+                            effective *= 2;
+                        }
+                    }
+                    state.blocks_gained_this_turn += 1;
+                }
+                let modified = apply_block_modifiers(effective, &state.fighter(actor).statuses);
                 state.fighter_mut(actor).block += modified;
                 if actor == Actor::Player {
                     fire_event(state, GameEvent::BlockGained);

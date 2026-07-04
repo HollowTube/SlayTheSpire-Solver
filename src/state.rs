@@ -263,6 +263,10 @@ pub struct CombatState {
     // Whether the player has Exhausted a card this turn — resets to false at
     // the start of each player turn (e.g. Evil Eye, Forgotten Ritual).
     pub(crate) player_exhausted_card_this_turn: bool,
+    /// How many block-gaining effects have fired this turn — resets to 0 at
+    /// the start of each player turn (e.g. Unmovable doubles first N block
+    /// gains).
+    pub(crate) blocks_gained_this_turn: i32,
     // Index into `monsters` of whichever monster most recently dealt damage
     // to the player this combat, if any (e.g. FlameBarrier's retaliation
     // target).
@@ -330,6 +334,7 @@ impl CombatState {
             player_times_damaged_this_combat: 0,
             player_hp_lost_this_turn: false,
             player_exhausted_card_this_turn: false,
+            blocks_gained_this_turn: 0,
             last_attacker: None,
             pending: None,
             rng,

@@ -186,6 +186,30 @@ fn upgrade_delta(name: &str) -> Option<UpgradeDelta> {
             scaled_per_unit_delta: 1,
             ..Default::default()
         }),
+        // FightMe+: damage 5→6 per hit, self Strength 3→4.
+        "FightMe" => Some(UpgradeDelta {
+            effects_override: Some(vec![
+                EffectOp::DealDamage(6),
+                EffectOp::DealDamage(6),
+                EffectOp::ApplyStatusToSelf(Status::Strength(4)),
+                EffectOp::ApplyStatusToTarget(Status::Strength(1)),
+            ]),
+            ..Default::default()
+        }),
+        // Juggling+: upgrade only adds Innate (deferred).
+        "Juggling" => Some(UpgradeDelta { ..Default::default() }),
+        // StoneArmor+: Plating +2 → 6.
+        "StoneArmor" => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::ApplyStatusToSelf(Status::Plating(6))]),
+            ..Default::default()
+        }),
+        // Unmovable+: cost 2 → 1.
+        "Unmovable" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // Vicious+: Vicious +1 → 2.
+        "Vicious" => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::ApplyStatusToSelf(Status::Vicious(2))]),
+            ..Default::default()
+        }),
         _ => None,
     }
 }
@@ -915,21 +939,7 @@ fn card_data_base(name: &str) -> Option<CardData> {
             keywords: HashSet::from([CardKeyword::Exhaust]),
             rarity: CardRarity::Uncommon,
         }),
-        // Per the wiki, FightMe! costs 1, deals 5 damage twice, grants 3
-        // Strength to the player, and 1 Strength to the targeted enemy.
-        "FightMe!" => Some(CardData {
-            cost: 1,
-            targeted: true,
-            card_type: CardType::Attack,
-            effects: vec![
-                EffectOp::DealDamage(5),
-                EffectOp::DealDamage(5),
-                EffectOp::ApplyStatusToSelf(Status::Strength(3)),
-                EffectOp::ApplyStatusToTarget(Status::Strength(1)),
-            ],
-            keywords: HashSet::new(),
-            rarity: CardRarity::Uncommon,
-        }),
+        // Per the wiki, FightMe! is now FightMe below.
         // Per the wiki, Breakthrough costs 1, makes the player Lose 1 HP,
         // and deals 9 damage to ALL enemies (non-targeted, like Thunderclap).
         "Breakthrough" => Some(CardData {
@@ -1033,6 +1043,60 @@ fn card_data_base(name: &str) -> Option<CardData> {
             keywords: HashSet::new(),
             rarity: CardRarity::Uncommon,
         }),
+        // FightMe: 5 damage twice to target, gain 3 Strength, give target 1 Strength.
+        "FightMe" => Some(CardData {
+            cost: 2,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![
+                EffectOp::DealDamage(5),
+                EffectOp::DealDamage(5),
+                EffectOp::ApplyStatusToSelf(Status::Strength(3)),
+                EffectOp::ApplyStatusToTarget(Status::Strength(1)),
+            ],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
+        }),
+        // StoneArmor: apply Plating(4) — grants block at end of player turn,
+        // decrements by 1 after each enemy turn, removed when 0.
+        "StoneArmor" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Plating(4))],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
+        }),
+        // Vicious: apply Vicious(1) — when the player self-applies Vulnerable,
+        // draw N cards.
+        "Vicious" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Vicious(1))],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
+        }),
+        // Juggling: apply Juggling(1) — after the player's 3rd attack each
+        // turn, add N copies of that attack card to hand.
+        "Juggling" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Juggling(1))],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
+        }),
+        // Unmovable: apply Unmovable(1) — the first N block gains per turn
+        // from cards are doubled.
+        "Unmovable" => Some(CardData {
+            cost: 2,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Unmovable(1))],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
+        }),
         _ => None,
     }
 }
@@ -1075,7 +1139,7 @@ pub(crate) const ALL_CARD_NAMES: &[&str] = &[
     "Evil Eye",
     "FeelNoPain",
     "FiendFire",
-    "FightMe!",
+    "FightMe",
     "FlameBarrier",
     "Forgotten Ritual",
     "Headbutt",
@@ -1087,6 +1151,7 @@ pub(crate) const ALL_CARD_NAMES: &[&str] = &[
     "Inflame",
     "Iron Wave",
     "Juggernaut",
+    "Juggling",
     "Mangle",
     "MoltenFist",
     "NotYet",
@@ -1102,6 +1167,7 @@ pub(crate) const ALL_CARD_NAMES: &[&str] = &[
     "Slimed",
     "Spite",
     "Stomp",
+    "StoneArmor",
     "Strike",
     "Sword Boomerang",
     "Taunt",
@@ -1112,7 +1178,9 @@ pub(crate) const ALL_CARD_NAMES: &[&str] = &[
     "TrueGrit",
     "TwinStrike",
     "Unrelenting",
+    "Unmovable",
     "Uppercut",
+    "Vicious",
     "Wound",
 ];
 

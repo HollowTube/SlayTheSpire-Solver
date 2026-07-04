@@ -310,6 +310,15 @@ public static class NameMap
         // cards_played_this_turn. Inherent to Bygone Effigy (no decay, not a
         // debuff).
         ["SLOW"] = "Slow",
+        // Plating: grants block at end of player turn, decrements after each
+        // enemy turn.
+        ["PLATING"] = "Plating",
+        // Vicious: when the player self-applies Vulnerable, draw cards.
+        ["VICIOUS"] = "Vicious",
+        // Juggling: after the player's 3rd attack each turn, add copies to hand.
+        ["JUGGLING"] = "Juggling",
+        // Unmovable: the first N block gains per turn from cards are doubled.
+        ["UNMOVABLE"] = "Unmovable",
         // Minion: { leader } — not straightforward to map from a simple
         // name+amount power; the `leader` field must be set explicitly. If
         // the bridge encounters a MinionPower, it should be dropped and the

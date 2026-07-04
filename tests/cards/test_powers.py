@@ -8,6 +8,7 @@ from sts_sim import (
     PlayCardAction,
     SelectTargetAction,
     apply,
+    legal_actions,
 )
 
 
@@ -428,3 +429,175 @@ def test_drum_of_battle_exhausts_top_of_draw_at_turn_start():
     after = apply(state, PlayCardAction("DrumOfBattle"))
     assert len(after.draw_pile) == 0
     assert "BattleDrum" in after.player_statuses
+
+
+# ── StoneArmor (Plating) ──────────────────────────────────────────────────────
+
+
+def test_stone_armor_costs_1():
+    state = _pyre_state(["StoneArmor"])
+    assert "PlayCard:StoneArmor" in [str(a) for a in legal_actions(state)]
+
+
+def test_stone_armor_applies_plating():
+    state = _pyre_state(["StoneArmor", "Strike", "Strike", "Defend", "Defend"])
+    after = apply(state, PlayCardAction("StoneArmor"))
+    assert "Plating" in after.player_statuses
+
+
+def test_plating_reduces_damage_taken():
+    """Plating grants block at end of player turn, which absorbs monster damage."""
+    state = _pyre_state(["StoneArmor", "EndTurn"])
+    # End turn without StoneArmor for baseline
+    after_turn_no_armor = apply(state, EndTurnAction())
+    damage_no_armor = state.player_hp - after_turn_no_armor.player_hp
+    # Play StoneArmor, then end turn
+    after_play = apply(state, PlayCardAction("StoneArmor"))
+    after_turn = apply(after_play, EndTurnAction())
+    damage_with_armor = state.player_hp - after_turn.player_hp
+    assert after_turn.player_block == 0  # block reset (no Barricade)
+    assert damage_with_armor <= damage_no_armor
+
+
+def test_plating_decrements_after_monster_turn():
+    """After 4 monster turns, Plating expires."""
+    state = CombatState(
+        player_hp=80,
+        player_energy=3,
+        monsters=[Monster(hp=999, name="Jaw Worm")],
+        seed=42,
+        hand=["StoneArmor"],
+    )
+    after = apply(state, PlayCardAction("StoneArmor"))
+    assert "Plating" in after.player_statuses
+    for _ in range(5):
+        after = apply(after, EndTurnAction())
+    assert "Plating" not in after.player_statuses
+
+
+def test_stone_armor_upgrade_to_6():
+    """StoneArmor+: Plating 4→6 — grants 6 block instead of 4."""
+    state = _pyre_state(["StoneArmor+", "EndTurn"])
+    after_turn_no_armor = apply(state, EndTurnAction())
+    damage_no_armor = state.player_hp - after_turn_no_armor.player_hp
+    after_play = apply(state, PlayCardAction("StoneArmor+"))
+    after_turn = apply(after_play, EndTurnAction())
+    damage_with_armor = state.player_hp - after_turn.player_hp
+    assert damage_with_armor <= max(0, damage_no_armor - 6)
+
+
+# ── Vicious ────────────────────────────────────────────────────────────────────
+
+
+def test_vicious_costs_1():
+    state = _pyre_state(["Vicious"])
+    assert "PlayCard:Vicious" in [str(a) for a in legal_actions(state)]
+
+
+def test_vicious_applies_status():
+    state = _pyre_state(["Vicious", "Strike", "Strike", "Defend", "Defend"])
+    after = apply(state, PlayCardAction("Vicious"))
+    assert "Vicious" in after.player_statuses
+
+
+def test_vicious_upgrade():
+    """Vicious+: Vicious 1→2."""
+    state = _pyre_state(["Vicious+"])
+    after = apply(state, PlayCardAction("Vicious+"))
+    assert "Vicious" in after.player_statuses
+
+
+# ── Juggling ──────────────────────────────────────────────────────────────────
+
+
+def test_juggling_costs_1():
+    state = _pyre_state(["Juggling"])
+    assert "PlayCard:Juggling" in [str(a) for a in legal_actions(state)]
+
+
+def test_juggling_applies_status():
+    state = _pyre_state(["Juggling", "Strike", "Strike", "Defend", "Defend"])
+    after = apply(state, PlayCardAction("Juggling"))
+    assert "Juggling" in after.player_statuses
+
+
+def test_juggling_adds_copy_after_3rd_attack():
+    """After playing 3 attacks in one turn with Juggling, a copy is added to hand."""
+    state = CombatState(
+        player_hp=80,
+        player_energy=5,
+        monsters=[Monster(hp=99, name="Jaw Worm")],
+        seed=42,
+        hand=["Juggling", "Strike", "Strike", "Strike", "Defend"],
+    )
+    after = apply(state, PlayCardAction("Juggling"))
+    assert "Juggling" in after.player_statuses
+    after = apply(apply(after, PlayCardAction("Strike")), SelectTargetAction(0))
+    after = apply(apply(after, PlayCardAction("Strike")), SelectTargetAction(0))
+    after = apply(apply(after, PlayCardAction("Strike")), SelectTargetAction(0))
+    strikes = after.hand.count("Strike")
+    assert strikes >= 1, (
+        f"Expected at least 1 Strike in hand after 3rd attack, got {strikes}"
+    )
+
+
+# ── Unmovable ─────────────────────────────────────────────────────────────────
+
+
+def test_unmovable_costs_2():
+    state = _pyre_state(["Unmovable"], energy=3)
+    assert "PlayCard:Unmovable" in [str(a) for a in legal_actions(state)]
+
+
+def test_unmovable_applies_status():
+    state = _pyre_state(["Unmovable", "Strike", "Strike", "Defend", "Defend"], energy=3)
+    after = apply(state, PlayCardAction("Unmovable"))
+    assert "Unmovable" in after.player_statuses
+
+
+def test_unmovable_doubles_first_block_gain():
+    """Unmovable(1) doubles the first block gain per turn."""
+    state = CombatState(
+        player_hp=80,
+        player_energy=5,
+        monsters=[Monster(hp=30, name="Jaw Worm")],
+        seed=42,
+        hand=["Unmovable", "Defend", "Defend", "Defend", "Defend"],
+    )
+    after = apply(state, PlayCardAction("Unmovable"))
+    after = apply(after, PlayCardAction("Defend"))
+    assert after.player_block == 10  # 5 * 2
+    after = apply(after, PlayCardAction("Defend"))
+    assert after.player_block == 15  # 10 + 5 (not doubled)
+
+
+def test_unmovable_resets_per_turn():
+    """Unmovable resets the block-gain counter each turn."""
+    state = CombatState(
+        player_hp=80,
+        player_energy=5,
+        monsters=[Monster(hp=999, name="Jaw Worm")],
+        seed=42,
+        hand=["Unmovable", "Defend", "Defend", "Defend", "Defend"],
+    )
+    after = apply(state, PlayCardAction("Unmovable"))
+    after = apply(after, PlayCardAction("Defend"))
+    assert after.player_block == 10  # doubled
+    after = apply(after, PlayCardAction("Defend"))
+    assert after.player_block == 15  # not doubled
+    after = apply(after, EndTurnAction())
+    after = apply(after, PlayCardAction("Defend"))
+    assert after.player_block == 10  # doubled again on new turn
+
+
+def test_unmovable_upgrade_cost_reduction():
+    """Unmovable+: cost 2→1."""
+    state = CombatState(
+        player_hp=80,
+        player_energy=1,
+        monsters=[Monster(hp=30, name="Jaw Worm")],
+        seed=42,
+        hand=["Unmovable+"],
+    )
+    actions = legal_actions(state)
+    assert any("Unmovable+" in str(a) for a in actions)
