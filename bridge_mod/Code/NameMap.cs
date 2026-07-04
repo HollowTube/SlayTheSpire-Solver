@@ -264,6 +264,8 @@ public static class NameMap
         // Bygone Effigy (elite): Sleep → Wake → Slashes → repeat.
         // Status::Slow scales Attack-card damage by cards_played_this_turn.
         ["BYGONE_EFFIGY"] = "Bygone Effigy",
+        ["FLYCONID"] = "Flyconid",
+        ["FOGMOG"] = "Fogmog",
     };
 
     /// STS2 PowerModel.Id.Entry -> sts_sim status name. Only the statuses
@@ -343,5 +345,6 @@ public static class NameMap
         ["Vine Shambler"] = "vine-shambler",
         ["Bygone Effigy"] = "bygone-effigy",
         ["Flyconid"] = "flyconid",
+        ["Fogmog"] = "fogmog",
     };
 }

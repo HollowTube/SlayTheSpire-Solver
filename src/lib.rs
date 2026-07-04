@@ -271,6 +271,22 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                 }
 
                 next.monsters[i].fighter.block = 0;
+
+                // If a named monster has no intent yet (e.g. its
+                // opening_intent returned None because the opener is
+                // randomized), resolve one now via select_next_intent.
+                if next.monsters[i].intent.is_none() {
+                    if let Some(ref name) = next.monsters[i].name {
+                        next.monsters[i].intent = select_next_intent(
+                            name,
+                            &next.monsters[i].last_move,
+                            next.monsters[i].move_streak,
+                            &next.monsters[i].moves_used,
+                            &mut next.rng,
+                        );
+                    }
+                }
+
                 match next.monsters[i].name.clone() {
                     Some(name) => {
                         if let Some(intent) = next.monsters[i].intent.clone() {

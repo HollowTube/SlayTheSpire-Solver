@@ -28,6 +28,8 @@ NORMAL_POOL = {
     "Cubex Construct",
     "Mawler",
     "Vine Shambler",
+    "Flyconid",
+    "Fogmog",
 }
 
 
