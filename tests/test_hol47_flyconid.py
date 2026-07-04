@@ -14,14 +14,23 @@ def _flyconid(seed=42, hand=None):
     )
 
 
-def test_opens_with_frail_spores():
-    state = _flyconid()
-    assert state.monsters[0].intent == "Frail Spores"
+def test_opening_intent_is_frail_spores_or_smash_only():
+    """Flyconid's opening is a seeded random branch between Frail Spores
+    (weight 2) and Smash (weight 1). Vulnerable Spores is never the opener."""
+    openers = set()
+    for seed in range(200):
+        state = _flyconid(seed=seed)
+        after = apply(state, EndTurnAction())
+        openers.add(after.monsters[0].last_move)
+    assert openers == {"Frail Spores", "Smash"}, (
+        f"unexpected openers: {openers}"
+    )
 
 
 def test_frail_spores_deals_8_damage_and_applies_frail():
-    state = _flyconid()
+    state = _flyconid(seed=0)  # seed 0 reliably gives Frail Spores opener
     after = apply(state, EndTurnAction())
+    assert after.monsters[0].last_move == "Frail Spores"
     assert state.player_hp - after.player_hp == 8, "expected 8 damage from Frail Spores"
     assert "Frail" in after.player_statuses, "expected Frail to be applied"
 

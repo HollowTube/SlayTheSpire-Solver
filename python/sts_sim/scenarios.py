@@ -112,6 +112,7 @@ class MonsterName(str, Enum):
     VINE_SHAMBLER = "Vine Shambler"
     BYGONE_EFFIGY = "Bygone Effigy"
     FLYCONID = "Flyconid"
+    FOGMOG = "Fogmog"
 
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
@@ -219,6 +220,9 @@ BYGONE_EFFIGY_STARTING_HP = 132
 # Per the Overgrowth wiki, Flyconid is an elite with 47-49 HP.
 FLYCONID_STARTING_HP = 49
 
+# Fogmog (Overgrowth monster) HP: 74-78 normal. 76 used as canonical value.
+FOGMOG_STARTING_HP = 76
+
 # Canonical starting HP keyed by MonsterName value. Used by the server's
 # deck_baseline handler to construct a "fresh start" scenario from a named
 # monster list, so the benchmark uses canonical HP regardless of what the
@@ -252,6 +256,7 @@ MONSTER_STARTING_HP: dict[str, int] = {
     MonsterName.VINE_SHAMBLER: VINE_SHAMBLER_STARTING_HP,
     MonsterName.BYGONE_EFFIGY: BYGONE_EFFIGY_STARTING_HP,
     MonsterName.FLYCONID: FLYCONID_STARTING_HP,
+    MonsterName.FOGMOG: FOGMOG_STARTING_HP,
 }
 
 
@@ -840,9 +845,10 @@ def ironclad_starter_deck_vs_bygone_effigy(seed, deck=None):
 
 
 def ironclad_starter_deck_vs_flyconid(seed, deck=None):
-    """Ironclad's starting loadout against Flyconid (Overgrowth elite).
-    Weighted-random AI: Vulnerable Spores (2/6), Frail Spores (2/6),
-    Smash (1/6), never repeats consecutively."""
+    """Ironclad's starting loadout against Flyconid (Overgrowth normal).
+    Weighted-random AI: opening 2:1 FrailSpores:Smash, then
+    VulnerableSpores (3/6), FrailSpores (2/6), Smash (1/6), never repeats
+    consecutively."""
     return CombatState(
         player_hp=PLAYER_STARTING_HP,
         player_energy=3,
@@ -850,6 +856,25 @@ def ironclad_starter_deck_vs_flyconid(seed, deck=None):
             Monster(
                 hp=FLYCONID_STARTING_HP,
                 name=MonsterName.FLYCONID,
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_fogmog(seed, deck=None):
+    """Ironclad's starting loadout against Fogmog (Overgrowth normal).
+    HP: 74-78. AI: Illusion (spawn EyeWithTeeth) -> Swipe (8 dmg +1 Str),
+    then random branch between Swipe (40%) and Headbutt (60%),
+    no-repeat constraint."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=FOGMOG_STARTING_HP,
+                name=MonsterName.FOGMOG,
             )
         ],
         seed=seed,

@@ -1,5 +1,5 @@
 use crate::cards::{card_data, CardType};
-use crate::state::{draw_cards, CardInstance, CombatState};
+use crate::state::{draw_cards, CardInstance, CombatState, Fighter, Monster};
 use rand::Rng;
 
 /// Game events that statuses can react to via `Status::reactions`. These are
@@ -607,6 +607,10 @@ pub(crate) enum EffectOp {
     ExhaustTopOfDrawPile,
     // Add a copy of the named card to the player's discard pile (e.g. Anger).
     AddCardToDiscard(String),
+    // Spawns a new monster with the given name and HP onto the field
+    // (e.g. Fogmog's Illusion spawns Eye With Teeth). The new monster
+    // is added at the end of the monsters list.
+    SpawnMonster(String, i32),
 }
 
 /// What a `DealDamageScaled` op reads its multiplier from. New scaling
@@ -895,6 +899,25 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
             }
             EffectOp::AddCardToDiscard(card_name) => {
                 state.discard_pile.push(CardInstance::new(card_name.clone()));
+            }
+            EffectOp::SpawnMonster(name, hp) => {
+                // Spawned monster starts with no intent — the monster
+                // processing loop in lib.rs will resolve one via
+                // select_next_intent on its first EndTurn.
+                state.monsters.push(Monster {
+                    fighter: Fighter {
+                        hp: *hp,
+                        max_hp: *hp,
+                        block: 0,
+                        statuses: vec![],
+                    },
+                    attack: 0,
+                    name: Some(name.clone()),
+                    intent: None,
+                    last_move: None,
+                    move_streak: 0,
+                    moves_used: Vec::new(),
+                });
             }
             EffectOp::ExhaustTopOfDrawPile => {
                 if let Some(card) = state.draw_pile.pop() {
