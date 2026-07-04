@@ -429,12 +429,10 @@ def build_overgrowth_monster_only_run(seed: int, slots: int, deck: list | None =
     from .. import RunState, draw_overgrowth_monster_sequence
     from ..scenarios import (
         IRONCLAD_STARTING_DECK,
-        MONSTER_STARTING_HP,
         PLAYER_STARTING_HP,
     )
 
-    names = draw_overgrowth_monster_sequence(seed=seed, slots=slots)
-    path = [(name, MONSTER_STARTING_HP[name]) for name in names]
+    path = draw_overgrowth_monster_sequence(seed=seed, slots=slots)
     return RunState(
         seed=seed,
         deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
@@ -489,7 +487,6 @@ def build_overgrowth_run(seed: int, deck: list | None = None, hp: int | None = N
     from .. import RunState, draw_overgrowth_elite, draw_overgrowth_monster_sequence
     from ..scenarios import (
         IRONCLAD_STARTING_DECK,
-        MONSTER_STARTING_HP,
         PLAYER_STARTING_HP,
     )
 
@@ -506,22 +503,22 @@ def build_overgrowth_run(seed: int, deck: list | None = None, hp: int | None = N
         ]
     )
 
-    path: list[tuple[str, int]] = []
+    path: list[str] = []
     elite_indices: list[int] = []
     rest_site_indices: list[int] = []
     for kind in _OVERGROWTH_SKELETON:
         if kind in ("weak", "normal"):
             name = next(monster_names)
-            path.append((name, MONSTER_STARTING_HP[name]))
+            path.append(name)
         elif kind == "elite":
             elite_indices.append(len(path))
             name = next(elite_names)
-            path.append((name, MONSTER_STARTING_HP[name]))
+            path.append(name)
         elif kind == "rest":
             rest_site_indices.append(len(path))
-            path.append(("", 0))
+            path.append("RestSite")
         elif kind == "boss":
-            path.append(("Vantom", MONSTER_STARTING_HP["Vantom"]))
+            path.append("Vantom")
 
     return RunState(
         seed=seed,

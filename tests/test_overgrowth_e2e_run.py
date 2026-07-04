@@ -3,18 +3,9 @@ weak/normal monster-pool draw (HOL-61) feeding RunState's path (HOL-59),
 with card rewards (HOL-64) along the way — no elites, no rest sites, no
 skeleton-assembly issue (HOL-65) required."""
 
-from sts_sim import draw_overgrowth_monster_sequence, simulate_run_outcome
+from sts_sim import simulate_run_outcome
 from sts_sim.bench import build_overgrowth_monster_only_run, run_overgrowth_win_rate
-from sts_sim.scenarios import MONSTER_STARTING_HP, PLAYER_STARTING_HP
-
-
-def test_every_drawn_monster_name_has_a_known_starting_hp():
-    """The composition's one real assumption — that the pool draw never
-    returns a name `MONSTER_STARTING_HP` doesn't know — checked directly
-    rather than left implicit."""
-    names = draw_overgrowth_monster_sequence(seed=1, slots=40)
-    missing = set(names) - set(MONSTER_STARTING_HP)
-    assert not missing
+from sts_sim.scenarios import PLAYER_STARTING_HP
 
 
 def test_a_drawn_overgrowth_path_runs_end_to_end():

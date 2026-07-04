@@ -18,7 +18,7 @@ def test_a_rest_site_offers_heal_plus_one_upgrade_per_unupgraded_card():
         seed=1,
         deck=deck,
         hp=40,
-        path=[("", 0)],
+        path=["RestSite"],
         rest_site_indices=[0],
     )
     actions = run_legal_actions(run)
@@ -35,7 +35,7 @@ def test_heal_restores_30_percent_of_max_hp():
         deck=["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
         hp=40,
         max_hp=80,
-        path=[("", 0)],
+        path=["RestSite"],
         rest_site_indices=[0],
     )
     after = run_apply(run, "Heal")
@@ -48,7 +48,7 @@ def test_heal_never_exceeds_max_hp_when_already_near_full():
         deck=["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
         hp=75,
         max_hp=80,
-        path=[("", 0)],
+        path=["RestSite"],
         rest_site_indices=[0],
     )
     after = run_apply(run, "Heal")
@@ -57,7 +57,7 @@ def test_heal_never_exceeds_max_hp_when_already_near_full():
 
 def test_upgrade_increments_the_targeted_cards_upgrade_level():
     deck = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
-    run = RunState(seed=1, deck=deck, hp=40, path=[("", 0)], rest_site_indices=[0])
+    run = RunState(seed=1, deck=deck, hp=40, path=["RestSite"], rest_site_indices=[0])
     after = run_apply(run, "Upgrade:0")
     assert after.deck.count("Strike+") == 1
     assert after.deck.count("Strike") == 4
@@ -68,7 +68,7 @@ def test_an_already_upgraded_card_is_not_offered_as_an_upgrade_choice():
     already upgraded in the starting deck) must be excluded from the
     Upgrade options the next time a Rest Site is reached."""
     deck = ["Strike+"] + ["Strike"] * 4 + ["Defend"] * 4 + ["Bash"]
-    run = RunState(seed=1, deck=deck, hp=40, path=[("", 0)], rest_site_indices=[0])
+    run = RunState(seed=1, deck=deck, hp=40, path=["RestSite"], rest_site_indices=[0])
     actions = run_legal_actions(run)
     upgrade_actions = [a for a in actions if a.startswith("Upgrade:")]
     assert len(upgrade_actions) == len(deck) - 1
@@ -77,7 +77,7 @@ def test_an_already_upgraded_card_is_not_offered_as_an_upgrade_choice():
 
 def test_rest_site_advances_the_run_after_a_choice():
     run = RunState(
-        seed=1, deck=["Strike"] * 10, hp=40, path=[("", 0)], rest_site_indices=[0]
+        seed=1, deck=["Strike"] * 10, hp=40, path=["RestSite"], rest_site_indices=[0]
     )
     after = run_apply(run, "Heal")
     assert run_is_terminal(after)
@@ -88,7 +88,7 @@ def test_an_unmarked_path_is_unaffected_by_the_new_parameter():
         seed=1,
         deck=["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
         hp=80,
-        path=[("Nibbit", 24)],
+        path=["Nibbit"],
     )
     assert run_legal_actions(run) == ["ResolveCombat"]
 
@@ -103,7 +103,7 @@ def test_default_policy_drives_a_rest_site_then_combat_to_completion():
         seed=4,
         deck=["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
         hp=80,
-        path=[("", 0), ("Nibbit", 24)],
+        path=["RestSite", "Nibbit"],
         rest_site_indices=[0],
     )
     won, final_hp, nodes_completed = simulate_run_outcome(run, iterations=200, seed=4)

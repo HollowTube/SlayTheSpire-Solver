@@ -31,11 +31,7 @@ pub(crate) const OVERGROWTH_WEAK_POOL: &[&str] = &[
 pub(crate) const OVERGROWTH_NORMAL_POOL: &[&str] = &[
     "Inklet",
     "Snapping Jaxfruit",
-    "Axe Ruby Raider",
-    "Assassin Ruby Raider",
-    "Brute Ruby Raider",
-    "Crossbow Ruby Raider",
-    "Tracker Ruby Raider",
+    "ruby_raiders",
     "Slithering Strangler",
     "Cubex Construct",
     "Mawler",

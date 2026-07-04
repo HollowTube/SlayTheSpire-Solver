@@ -18,7 +18,7 @@ def _run_at_a_reward_decision(seed=1):
         seed=seed,
         deck=["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
         hp=80,
-        path=[("Nibbit", 24), ("Nibbit", 24)],
+        path=["Nibbit", "Nibbit"],
     )
     after_combat = run_apply(run, "ResolveCombat")
     return after_combat
@@ -53,7 +53,7 @@ def test_simulate_run_with_reward_lookahead_completes_and_is_deterministic():
             seed=3,
             deck=["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
             hp=80,
-            path=[("Nibbit", 24), ("Fuzzy Wurm Crawler", 24)],
+            path=["Nibbit", "Fuzzy Wurm Crawler"],
         )
         return simulate_run_with_reward_lookahead(
             run, num_sims=2, rollout_iterations=30, seed=3
@@ -74,7 +74,7 @@ def test_lookahead_policy_beats_always_skip_on_average():
     HP over a fixed seed range must be at least as good as always
     skipping every reward, over the same seeds."""
     deck = ["Strike"] * 5 + ["Defend"] * 4 + ["Bash"]
-    path = [("Nibbit", 24), ("Fuzzy Wurm Crawler", 24)]
+    path = ["Nibbit", "Fuzzy Wurm Crawler"]
     seeds = range(4)
 
     def lookahead_final_hp(seed):

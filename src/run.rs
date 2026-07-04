@@ -7,8 +7,9 @@
 //! A won combat immediately offers a card-reward decision (HOL-64) before
 //! the run advances to its next node.
 use crate::cards::{card_data, CardType, ALL_CARD_NAMES};
+use crate::encounters;
 use crate::mcts::simulate_fight_outcome;
-use crate::state::{CardInstance, CombatState, Monster};
+use crate::state::{CardInstance, CombatState};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rand::seq::SliceRandom;
@@ -34,24 +35,15 @@ const REST_SITE_HEAL_FRACTION: f64 = 0.3;
 /// from), since HOL-65's skeleton assembly needs to know where it placed
 /// elites. `RestSite` is a real player decision (Heal vs. Upgrade) resolved
 /// directly against `RunState`, with no embedded `CombatState` involved.
+///
+/// HOL-72: `Combat`/`Elite` now store an encounter name (looked up via
+/// `encounters::encounter_def` at resolution time) rather than a raw
+/// (name, hp) pair.
 #[derive(Clone, PartialEq)]
 pub(crate) enum NodeKind {
-    Combat { monster_name: String, monster_hp: i32 },
-    Elite { monster_name: String, monster_hp: i32 },
+    Combat { encounter_name: String },
+    Elite { encounter_name: String },
     RestSite,
-}
-
-impl NodeKind {
-    /// Only ever called for `Combat`/`Elite` — `resolve()` dispatches on
-    /// node kind before reaching this, so `RestSite` never gets here.
-    fn monster(&self) -> (&str, i32) {
-        match self {
-            NodeKind::Combat { monster_name, monster_hp } | NodeKind::Elite { monster_name, monster_hp } => {
-                (monster_name.as_str(), *monster_hp)
-            }
-            NodeKind::RestSite => unreachable!("RestSite has no monster; resolve() dispatches before this"),
-        }
-    }
 }
 
 #[pyclass]
@@ -78,7 +70,7 @@ impl RunState {
         seed: u64,
         deck: Vec<String>,
         hp: i32,
-        path: Vec<(String, i32)>,
+        path: Vec<String>,
         max_hp: Option<i32>,
         elite_indices: Vec<usize>,
         rest_site_indices: Vec<usize>,
@@ -88,13 +80,13 @@ impl RunState {
             path: path
                 .into_iter()
                 .enumerate()
-                .map(|(i, (monster_name, monster_hp))| {
+                .map(|(i, encounter_name)| {
                     if rest_site_indices.contains(&i) {
                         NodeKind::RestSite
                     } else if elite_indices.contains(&i) {
-                        NodeKind::Elite { monster_name, monster_hp }
+                        NodeKind::Elite { encounter_name }
                     } else {
-                        NodeKind::Combat { monster_name, monster_hp }
+                        NodeKind::Combat { encounter_name }
                     }
                 })
                 .collect(),
@@ -171,29 +163,21 @@ fn draw_reward_cards(seed: u64) -> Vec<String> {
 /// not (the run is terminal either way once `position` is exhausted or HP
 /// hits 0 — see `run_is_terminal`).
 fn resolve_combat(state: &RunState, iterations: u32) -> PyResult<RunState> {
-    let (monster_name, monster_hp) = state
-        .path
-        .get(state.position)
-        .ok_or_else(|| PyValueError::new_err("ResolveCombat at a terminal run"))?
-        .monster();
+    let encounter_name = match state.path.get(state.position) {
+        Some(NodeKind::Combat { encounter_name }) | Some(NodeKind::Elite { encounter_name }) => encounter_name,
+        _ => return Err(PyValueError::new_err("ResolveCombat at a terminal or non-combat node")),
+    };
 
-    let monster = Monster::new(
-        monster_hp,
-        0,
-        None,
-        Some(monster_name.to_string()),
-        0,
-        Vec::new(),
-        None,
-        None,
-        0,
-        Vec::new(),
-    );
+    let shape = encounters::encounter_def(encounter_name)
+        .ok_or_else(|| PyValueError::new_err(format!("unknown encounter: {encounter_name}")))?;
     let combat_seed = state.seed.wrapping_add(state.position as u64);
+    let mut rng = Pcg32::seed_from_u64(combat_seed);
+    let monsters = encounters::resolve_shape(&shape, &mut rng);
+
     let combat = CombatState::new(
         state.hp,
         3,
-        vec![monster],
+        monsters,
         combat_seed,
         Vec::new(),
         Some(state.deck.iter().map(CardInstance::as_str).collect()),
