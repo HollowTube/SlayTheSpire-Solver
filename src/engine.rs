@@ -142,6 +142,14 @@ pub(crate) enum Status {
     // holder (e.g. Bygone Effigy), not a conventional stack-based debuff —
     // never decays, not blocked by Artifact.
     Slow(i32),
+    // Plow: when the holder's HP is reduced to ≤ n by an unblocked hit,
+    // strip all Strength from the holder, override its intent to "Stun",
+    // and remove this status. Fires once (Ceremonial Beast).
+    Plow(i32),
+    // Ringing: player debuff — limits the player to one PlayCard action per
+    // turn. Decays at end of the player's turn. Applied by Ceremonial
+    // Beast's Beast Cry.
+    Ringing,
 }
 
 impl Status {
@@ -179,6 +187,8 @@ impl Status {
             Status::Infested { .. } => "Infested",
             Status::Tangled(_) => "Tangled",
             Status::Slow(_) => "Slow",
+            Status::Plow(_) => "Plow",
+            Status::Ringing => "Ringing",
         }
     }
 
@@ -229,6 +239,8 @@ impl Status {
             }],
             "Tangled" => vec![Status::Tangled(amount)],
             "Slow" => vec![Status::Slow(amount)],
+            "Plow" => vec![Status::Plow(amount)],
+            "Ringing" => vec![Status::Ringing; amount.max(0) as usize],
             _ => Vec::new(),
         }
     }
@@ -312,7 +324,7 @@ impl Status {
     pub(crate) fn is_debuff(&self) -> bool {
         matches!(
             self,
-            Status::Vulnerable | Status::Weak | Status::Shrink | Status::Constrict(_) | Status::Frail(_) | Status::Tangled(_)
+            Status::Vulnerable | Status::Weak | Status::Shrink | Status::Constrict(_) | Status::Frail(_) | Status::Tangled(_) | Status::Ringing
         )
     }
 
