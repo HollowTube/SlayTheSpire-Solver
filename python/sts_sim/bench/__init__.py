@@ -14,7 +14,12 @@ import statistics
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import cast
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from .. import RunState
 
 from ..scenarios import (
     PLAYER_STARTING_HP,
@@ -530,6 +535,114 @@ def run_overgrowth_skeleton_win_rate(
     `run_overgrowth_win_rate`'s monsters-only slice."""
     runs = [build_overgrowth_run(seed, deck) for seed in range(seeds)]
     return run_win_rate(runs, iterations)
+
+
+# Named run builders the reward-policy A/B can seed, keyed for the CLI/tests
+# so the process-pool workers only ever ship a *string* (RunState itself is
+# unpicklable — the same reason `_run_one_random` rebuilds from seed rather
+# than shipping the CombatState).
+_REWARD_RUN_BUILDERS: "dict[str, Callable[..., RunState]]" = {
+    "overgrowth-monsters": build_overgrowth_monster_only_run,
+    "overgrowth-skeleton": build_overgrowth_run,
+}
+
+
+def _run_one_reward_ab(args: tuple) -> tuple[int, int, int]:
+    """Paired A/B worker for one seed. Rebuilds the run (RunState is
+    unpicklable — pass the builder key + kwargs, not the object) and plays
+    it twice through the *same* `run_apply` combat path: once random-legal,
+    once with the lookahead reward picker. Because both arms resolve real
+    combats via `run_apply` (fixed 200-iter budget, `RESOLVE_COMBAT_ITERATIONS`)
+    and share the seed, combat strength is identical by construction and the
+    only thing that varies between arms is the card-reward decision. Returns
+    `(seed, random_final_hp, lookahead_final_hp)`."""
+    import random
+
+    from .. import run_apply, run_is_terminal, run_legal_actions
+    from ..policies import simulate_run_with_reward_lookahead
+
+    builder, kwargs, seed, num_sims, rollout_iterations = args
+    build = _REWARD_RUN_BUILDERS[builder]
+
+    rng = random.Random(seed)
+    current = build(seed=seed, **kwargs)
+    while not run_is_terminal(current):
+        current = run_apply(current, rng.choice(run_legal_actions(current)))
+    random_hp = current.hp
+
+    _, lookahead_hp, _ = simulate_run_with_reward_lookahead(
+        build(seed=seed, **kwargs), num_sims, rollout_iterations, seed
+    )
+    return seed, random_hp, lookahead_hp
+
+
+def compare_reward_policies(
+    builder: str = "overgrowth-monsters",
+    *,
+    seeds: int = 20,
+    num_sims: int = 5,
+    rollout_iterations: int = 30,
+    workers: int = 4,
+    builder_kwargs: dict | None = None,
+) -> tuple[BenchResult, BenchResult]:
+    """Run-level A/B: the lookahead card-reward picker
+    (`policies.lookahead_reward_policy`) vs. the default random-legal reward
+    choice, over `seeds` seeded runs of `builder` (one of `_REWARD_RUN_BUILDERS`).
+
+    Both arms play through the same `run_apply` combat path (fixed 200-iter
+    MCTS budget), so combat strength is identical by construction and the
+    only variable is the reward decision. Each seed's two arms share that
+    seed, so the comparison is *paired* (same monster/reward draws),
+    matching this module's `compare_decks`/`evaluate_reward_options`
+    convention — that pairing is what lets a modest `seeds` show signal.
+
+    COMPUTE COST: each lookahead run resolves roughly
+    `num_sims * offered_cards * remaining_nodes` embedded combats *per
+    reward node* — seconds per run. Defaults are deliberately small; scale
+    `seeds`/`num_sims` up together with `workers` (and patience). The random
+    arm is cheap and rides along in the same worker.
+
+    Returns `(random_result, lookahead_result)` as `BenchResult`s whose
+    `hp_outcomes` hold per-seed final HP (0 = death), so `win_rate`,
+    `mean_hp_lost`, and the percentiles all apply. `turn_outcomes` is left
+    empty — run-level nodes aren't combat turns.
+    """
+    if builder not in _REWARD_RUN_BUILDERS:
+        raise ValueError(
+            f"unknown builder {builder!r}; choices: {', '.join(_REWARD_RUN_BUILDERS)}"
+        )
+    kwargs = dict(builder_kwargs or {})
+    if builder == "overgrowth-monsters":
+        kwargs.setdefault("slots", 4)
+
+    random_hp: dict[int, int] = {}
+    lookahead_hp: dict[int, int] = {}
+    arg_list = [
+        (builder, kwargs, seed, num_sims, rollout_iterations) for seed in range(seeds)
+    ]
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(_run_one_reward_ab, args) for args in arg_list]
+        for fut in as_completed(futures):
+            seed, r_hp, l_hp = fut.result()
+            random_hp[seed] = r_hp
+            lookahead_hp[seed] = l_hp
+
+    random_result = BenchResult(
+        label="random reward", hp_outcomes=[random_hp[i] for i in range(seeds)]
+    )
+    lookahead_result = BenchResult(
+        label="lookahead reward", hp_outcomes=[lookahead_hp[i] for i in range(seeds)]
+    )
+    print(random_result)
+    print(lookahead_result)
+    hp_delta = lookahead_result.mean_hp_lost - random_result.mean_hp_lost
+    wr_delta = lookahead_result.win_rate - random_result.win_rate
+    print(
+        f"{'lookahead − random':<38}"
+        f"  avg_lost {hp_delta:+5.1f} (negative ⇒ lookahead better)"
+        f"  win_rate {wr_delta:+.2f}"
+    )
+    return random_result, lookahead_result
 
 
 def compare_decks(
