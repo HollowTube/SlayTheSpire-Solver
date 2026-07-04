@@ -214,6 +214,177 @@ fn upgrade_delta(name: &str) -> Option<UpgradeDelta> {
         "PactsEnd" => Some(UpgradeDelta { damage_delta: 6, ..Default::default() }),
         // HowlFromBeyond+: 16 → 21 AoE damage.
         "HowlFromBeyond" => Some(UpgradeDelta { damage_delta: 5, ..Default::default() }),
+        // Iron Wave+: 5 damage → 7 damage, 5 block → 7 block.
+        "Iron Wave" => Some(UpgradeDelta { damage_delta: 2, block_delta: 2, ..Default::default() }),
+        // Inflame+: 2 Strength → 3 Strength.
+        "Inflame" => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(3))]),
+            ..Default::default()
+        }),
+        // Sword Boomerang+: 3 hits of 3 → 3 hits of 4.
+        "Sword Boomerang" => Some(UpgradeDelta { damage_delta: 1, ..Default::default() }),
+        // Thunderclap+: 4 damage → 7 damage.
+        "Thunderclap" => Some(UpgradeDelta { damage_delta: 3, ..Default::default() }),
+        // Rage+: cost 0 → 0 (no stat change — applies the same Rage status).
+        "Rage" => Some(UpgradeDelta { ..Default::default() }),
+        // DemonForm+: cost 3 → 2.
+        "DemonForm" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // CrimsonMantle+: cost 2 → 1.
+        "CrimsonMantle" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // Inferno+ (Power): cost 1 → 0.
+        "Inferno" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // DarkEmbrace+: cost 2 → 1.
+        "DarkEmbrace" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // FeelNoPain+: cost 1 → 0.
+        "FeelNoPain" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // Juggernaut+: Juggernaut 5 → 7 (damage on block gain).
+        "Juggernaut" => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::ApplyStatusToSelf(Status::Juggernaut(7))]),
+            ..Default::default()
+        }),
+        // FlameBarrier+: 12 block → 16 block.
+        "FlameBarrier" => Some(UpgradeDelta { block_delta: 4, ..Default::default() }),
+        // Corruption+: cost 3 → 2.
+        "Corruption" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // Cruelty+: cost 1 → 0.
+        "Cruelty" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // Mangle+: 15 damage → 20 damage.
+        "Mangle" => Some(UpgradeDelta { damage_delta: 5, ..Default::default() }),
+        // OneTwoPunch+: cost 1 → 0.
+        "OneTwoPunch" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // Pommel Strike+: 9 damage → 10 damage.
+        "Pommel Strike" => Some(UpgradeDelta { damage_delta: 1, ..Default::default() }),
+        // Hemokinesis+: 15 damage → 20 damage.
+        "Hemokinesis" => Some(UpgradeDelta { damage_delta: 5, ..Default::default() }),
+        // Offering+: draw 3 → draw 5.
+        "Offering" => Some(UpgradeDelta { draw_delta: 2, ..Default::default() }),
+        // Tremble+: 3 Vulnerable → 4 Vulnerable.
+        "Tremble" => Some(UpgradeDelta {
+            extra_status_applications: vec![Status::Vulnerable],
+            ..Default::default()
+        }),
+        // Impervious+: 30 block → 40 block.
+        "Impervious" => Some(UpgradeDelta { block_delta: 10, ..Default::default() }),
+        // NotYet+: heal 10 → heal 14.
+        "NotYet" => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::Heal(14)]),
+            ..Default::default()
+        }),
+        // TrueGrit+: 7 block → 9 block.
+        "TrueGrit" => Some(UpgradeDelta { block_delta: 2, ..Default::default() }),
+        // Thrash+: 4+4=8 damage → 5+5=10 damage.
+        "Thrash" => Some(UpgradeDelta { damage_delta: 1, ..Default::default() }),
+        // SecondWind+: 5 block per card exhausted → 7 block per card.
+        "SecondWind" => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::ExhaustAllFromHand {
+                filter: HandFilter::NonAttack,
+                gain_block_per_card: 7,
+            }]),
+            ..Default::default()
+        }),
+        // Headbutt+: 9 damage → 12 damage.
+        "Headbutt" => Some(UpgradeDelta { damage_delta: 3, ..Default::default() }),
+        // FiendFire+: 7 damage per card in hand → 10.
+        "FiendFire" => Some(UpgradeDelta {
+            effects_override: Some(vec![
+                EffectOp::DealDamageScaled {
+                    base: 0,
+                    per_unit: 10,
+                    source: ScaleSource::HandSize,
+                },
+                EffectOp::ExhaustAllFromHand {
+                    filter: HandFilter::Any,
+                    gain_block_per_card: 0,
+                },
+            ]),
+            ..Default::default()
+        }),
+        // InfernalBlade+: cost 1 → 0.
+        "InfernalBlade" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // TwinStrike+: 5×2=10 damage → 7×2=14 damage.
+        "TwinStrike" => Some(UpgradeDelta { damage_delta: 2, ..Default::default() }),
+        // ShrugItOff+: 8 block → 11 block.
+        "ShrugItOff" => Some(UpgradeDelta { block_delta: 3, ..Default::default() }),
+        // Taunt+: 7 block → 10 block.
+        "Taunt" => Some(UpgradeDelta { block_delta: 3, ..Default::default() }),
+        // Uppercut+: 13 damage → 17 damage.
+        "Uppercut" => Some(UpgradeDelta { damage_delta: 4, ..Default::default() }),
+        // PerfectedStrike+: 6 + 2*strikes → 6 + 3*strikes.
+        "PerfectedStrike" => Some(UpgradeDelta { scaled_per_unit_delta: 1, ..Default::default() }),
+        // TearAsunder+: 5 damage per hit → 7 damage per hit.
+        "TearAsunder" => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::DealDamageRepeated {
+                amount: 7,
+                hits_base: 1,
+                hits_per_unit: 1,
+                hits_source: ScaleSource::DamageTakenThisCombat,
+            }]),
+            ..Default::default()
+        }),
+        // Spite+: 5 damage per hit → 8 damage per hit.
+        "Spite" => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::DealDamageRepeated {
+                amount: 8,
+                hits_base: 1,
+                hits_per_unit: 1,
+                hits_source: ScaleSource::HpLostThisTurn,
+            }]),
+            ..Default::default()
+        }),
+        // Dismantle+: 8 damage per hit → 11 damage per hit.
+        "Dismantle" => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::DealDamageRepeated {
+                amount: 11,
+                hits_base: 1,
+                hits_per_unit: 1,
+                hits_source: ScaleSource::TargetHasVulnerable,
+            }]),
+            ..Default::default()
+        }),
+        // Dominate+: applies 2 Vulnerable instead of 1, then gains Strength.
+        "Dominate" => Some(UpgradeDelta {
+            effects_override: Some(vec![
+                EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+                EffectOp::ApplyStatusToTarget(Status::Vulnerable),
+                EffectOp::GainStrengthEqualToTargetVulnerable,
+            ]),
+            ..Default::default()
+        }),
+        // MoltenFist+: 10 damage → 14 damage.
+        "MoltenFist" => Some(UpgradeDelta { damage_delta: 4, ..Default::default() }),
+        // Setup Strike+: 7 damage → 10 damage.
+        "Setup Strike" => Some(UpgradeDelta { damage_delta: 3, ..Default::default() }),
+        // Unrelenting+: 12 damage → 16 damage.
+        "Unrelenting" => Some(UpgradeDelta { damage_delta: 4, ..Default::default() }),
+        // Evil Eye+: 8 block (up to 16) → 11 block (up to 22).
+        "Evil Eye" => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::GainBlockScaled {
+                base: 11,
+                per_unit: 11,
+                source: ScaleSource::ExhaustedCardThisTurn,
+            }]),
+            ..Default::default()
+        }),
+        // Forgotten Ritual+: 3 energy → 4 energy.
+        "Forgotten Ritual" => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::GainEnergyScaled {
+                base: 0,
+                per_unit: 4,
+                source: ScaleSource::ExhaustedCardThisTurn,
+            }]),
+            ..Default::default()
+        }),
+        // Pyre+: gains the Innate keyword.
+        "Pyre" => Some(UpgradeDelta {
+            keywords_added: HashSet::from([CardKeyword::Innate]),
+            ..Default::default()
+        }),
+        // Anger+: 6 damage → 8 damage.
+        "Anger" => Some(UpgradeDelta { damage_delta: 2, ..Default::default() }),
+        // DrumOfBattle+: draw 2 → draw 3.
+        "DrumOfBattle" => Some(UpgradeDelta { draw_delta: 1, ..Default::default() }),
+        // Stomp+: 12 AoE damage → 17 AoE damage.
+        "Stomp" => Some(UpgradeDelta { damage_delta: 5, ..Default::default() }),
         _ => None,
     }
 }
