@@ -1,6 +1,7 @@
 mod act;
 mod action;
 mod cards;
+mod encounters;
 mod engine;
 mod mcts;
 mod monsters;

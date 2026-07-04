@@ -11,7 +11,7 @@ def test_an_elite_node_offers_resolve_combat_just_like_a_regular_node():
         seed=1,
         deck=["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
         hp=80,
-        path=[("Byrdonis", 84)],
+        path=["Byrdonis"],
         elite_indices=[0],
     )
     assert run_legal_actions(run) == ["ResolveCombat"]
@@ -20,14 +20,13 @@ def test_an_elite_node_offers_resolve_combat_just_like_a_regular_node():
 def test_an_elite_node_runs_through_the_standard_win_reward_skip_flow():
     """An elite node resolves through the same opaque win -> pending-reward
     -> Skip flow a regular combat node does (HOL-64) — the resolution path
-    is identical by construction (`NodeKind::monster()` hands the name to
-    `Monster::new` the same way for both variants), so this checks the
-    flow, not the moveset itself."""
+    is identical by construction (nodekind encodes an encounter name),
+    so this checks the flow, not the moveset itself."""
     run = RunState(
         seed=1,
         deck=["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
         hp=80,
-        path=[("Byrdonis", 84)],
+        path=["Byrdonis"],
         elite_indices=[0],
     )
     after_combat = run_apply(run, "ResolveCombat")
@@ -43,6 +42,6 @@ def test_an_unmarked_path_is_unaffected_by_the_new_parameter():
         seed=1,
         deck=["Strike"] * 5 + ["Defend"] * 4 + ["Bash"],
         hp=80,
-        path=[("Nibbit", 24)],
+        path=["Nibbit"],
     )
     assert run_legal_actions(run) == ["ResolveCombat"]

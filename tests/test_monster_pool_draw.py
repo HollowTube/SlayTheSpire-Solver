@@ -19,11 +19,7 @@ WEAK_POOL = {
 NORMAL_POOL = {
     "Inklet",
     "Snapping Jaxfruit",
-    "Axe Ruby Raider",
-    "Assassin Ruby Raider",
-    "Brute Ruby Raider",
-    "Crossbow Ruby Raider",
-    "Tracker Ruby Raider",
+    "ruby_raiders",
     "Slithering Strangler",
     "Cubex Construct",
     "Mawler",
