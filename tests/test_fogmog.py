@@ -68,10 +68,8 @@ def test_headbutt_deals_14_damage():
         assert hp_lost == 15, (
             f"expected 15 damage from Headbutt (14 base + 1 Str), got {hp_lost}"
         )
-    # else it was Swipe, which is fine — the next turn should find Headbutt
+    # else it was Swipe — CannotRepeat should force Headbutt next
     else:
-        after3 = apply(after2, EndTurnAction())
-        # After Swipe, CannotRepeat forces Headbutt next
         assert after2.monsters[0].intent == "Headbutt", (
             f"after Swipe, expected Headbutt, got {after2.monsters[0].intent}"
         )
