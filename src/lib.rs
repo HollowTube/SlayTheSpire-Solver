@@ -97,6 +97,14 @@ pub(crate) fn legal_actions_str(state: &CombatState) -> Vec<String> {
                 })
                 .map(|card| format!("PlayCard:{}", card.as_str()))
                 .collect();
+            // PactsEnd: only playable when 3+ cards are in the exhaust pile.
+            actions.retain(|a| {
+                if a == "PlayCard:PactsEnd" {
+                    state.exhaust_pile.len() >= 3
+                } else {
+                    true
+                }
+            });
             // Ringing: limits player to one PlayCard per turn.
             let ringing_active = state.player.statuses.iter().any(|s| *s == Status::Ringing);
             if ringing_active && state.cards_played_this_turn >= 1 {
@@ -131,6 +139,15 @@ pub(crate) fn legal_actions_typed(state: &CombatState) -> Vec<ActionKind> {
                 })
                 .map(|card| ActionKind::PlayCard(card.as_str().to_string()))
                 .collect();
+            // PactsEnd: only playable when 3+ cards are in the exhaust pile.
+            actions.retain(|a| {
+                match a {
+                    ActionKind::PlayCard(name) if name == "PactsEnd" => {
+                        state.exhaust_pile.len() >= 3
+                    }
+                    _ => true,
+                }
+            });
             // Ringing: limits player to one PlayCard per turn.
             let ringing_active = state.player.statuses.iter().any(|s| *s == Status::Ringing);
             if ringing_active && state.cards_played_this_turn >= 1 {
@@ -390,6 +407,21 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             // Block-gain count resets at the start of each player turn
             // (e.g. Unmovable doubles first N block gains).
             next.blocks_gained_this_turn = 0;
+            // HowlFromBeyond auto-play: if it's in the exhaust pile, run
+            // its effects against all living enemies before the hand is
+            // drawn. It stays in the exhaust pile (don't re-add).
+            if next.exhaust_pile.iter().any(|c| c.name == "HowlFromBeyond") {
+                let data = card_data("HowlFromBeyond", 0).expect("HowlFromBeyond has card_data");
+                let targets: Vec<Actor> = next
+                    .living_monster_indices()
+                    .into_iter()
+                    .map(Actor::Monster)
+                    .collect();
+                                run_effect_ops(&mut next, &data.effects, Actor::Player, &targets, true);
+                next.attacks_played_this_turn += 1;
+                fire_event(&mut next, GameEvent::AttackPlayed("HowlFromBeyond".to_string()));
+                check_plow_threshold(&mut next);
+            }
             // Draw the next turn's opening hand (reshuffling the discard
             // pile back in if the draw pile runs dry mid-draw).
             draw_cards(&mut next, HAND_SIZE);

@@ -210,6 +210,10 @@ fn upgrade_delta(name: &str) -> Option<UpgradeDelta> {
             effects_override: Some(vec![EffectOp::ApplyStatusToSelf(Status::Vicious(2))]),
             ..Default::default()
         }),
+        // PactsEnd+: 17 → 23 AoE damage.
+        "PactsEnd" => Some(UpgradeDelta { damage_delta: 6, ..Default::default() }),
+        // HowlFromBeyond+: 16 → 21 AoE damage.
+        "HowlFromBeyond" => Some(UpgradeDelta { damage_delta: 5, ..Default::default() }),
         _ => None,
     }
 }
@@ -1097,6 +1101,26 @@ fn card_data_base(name: &str) -> Option<CardData> {
             keywords: HashSet::new(),
             rarity: CardRarity::Rare,
         }),
+        // Per the wiki, PactsEnd costs 0, deals 17 AoE damage, and is only
+        // playable when 3+ cards are in the exhaust pile.
+        "PactsEnd" => Some(CardData {
+            cost: 0,
+            targeted: false,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamageToAllEnemies(17)],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
+        }),
+        // Per the wiki, HowlFromBeyond costs 3, deals 16 AoE damage, Exhausts.
+        // Auto-plays from exhaust pile at the start of each player turn.
+        "HowlFromBeyond" => Some(CardData {
+            cost: 3,
+            targeted: false,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamageToAllEnemies(16)],
+            keywords: HashSet::from([CardKeyword::Exhaust]),
+            rarity: CardRarity::Uncommon,
+        }),
         _ => None,
     }
 }
@@ -1144,6 +1168,7 @@ pub(crate) const ALL_CARD_NAMES: &[&str] = &[
     "Forgotten Ritual",
     "Headbutt",
     "Hemokinesis",
+    "HowlFromBeyond",
     "Impervious",
     "Infection",
     "InfernalBlade",
@@ -1158,6 +1183,7 @@ pub(crate) const ALL_CARD_NAMES: &[&str] = &[
     "Offering",
     "OneTwoPunch",
     "PerfectedStrike",
+    "PactsEnd",
     "Pommel Strike",
     "Pyre",
     "Rage",
