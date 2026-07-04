@@ -267,12 +267,14 @@ public static class NameMap
         ["FLYCONID"] = "Flyconid",
         ["FOGMOG"] = "Fogmog",
     };
+        ["CEREMONIAL_BEAST"] = "Ceremonial Beast",
 
     /// STS2 PowerModel.Id.Entry -> sts_sim status name. Only the statuses
     /// Status::from_name_and_amount understands are listed; other powers
     /// are silently dropped, matching that function's "unknown name -> empty
     /// vec" behavior.
     public static readonly Dictionary<string, string> PowerNameMap = new()
+        ["RINGING"] = "Ringing",
     {
         ["VULNERABLE"] = "Vulnerable",
         ["WEAK"] = "Weak",
@@ -346,5 +348,6 @@ public static class NameMap
         ["Bygone Effigy"] = "bygone-effigy",
         ["Flyconid"] = "flyconid",
         ["Fogmog"] = "fogmog",
+        ["Ceremonial Beast"] = "ceremonial-beast",
     };
 }

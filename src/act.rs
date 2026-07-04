@@ -53,6 +53,11 @@ pub(crate) const OVERGROWTH_NORMAL_POOL: &[&str] = &[
 /// and belong in `OVERGROWTH_NORMAL_POOL` instead, not here).
 pub(crate) const OVERGROWTH_ELITE_POOL: &[&str] = &["Byrdonis", "Phrog Parasite", "Bygone Effigy"];
 
+/// Boss encounters — each Overgrowth act ends with a boss fight. Unlike
+/// the other pools, bosses aren't drawn randomly per-run; the pool is
+/// recorded here for completeness and future encounter selection logic.
+pub(crate) const OVERGROWTH_BOSS_POOL: &[&str] = &["Ceremonial Beast", "The Kin", "Vantom"];
+
 /// How many of the leading monster-node slots draw from the weak pool
 /// before falling through to the normal pool — matches the real game's
 /// `Overgrowth.NumberOfWeakEncounters`. A plain constant for now; a future

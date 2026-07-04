@@ -66,6 +66,9 @@ pub(crate) fn opening_intent(monster_name: &str) -> Option<String> {
         "Flyconid" => None,
         // Fogmog: always opens with Illusion (spawns Eye With Teeth).
         "Fogmog" => Some("Illusion".to_string()),
+        // Ceremonial Beast: always opens with Stamp (applies Plow(150) to
+        // self, no damage).
+        "Ceremonial Beast" => Some("Stamp".to_string()),
         _ => None,
     }
 }
@@ -331,6 +334,26 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
             EffectOp::ApplyStatusToSelf(Status::Strength(1)),
         ]),
         ("Fogmog", "Headbutt") => Some(vec![EffectOp::DealDamage(14)]),
+        // Ceremonial Beast: Phase 1 — Stamp applies Plow(150) to self
+        // (no damage), then Plow loops forever (18 damage + 2 Str).
+        ("Ceremonial Beast", "Stamp") => Some(vec![
+            EffectOp::ApplyStatusToSelf(Status::Plow(150)),
+        ]),
+        ("Ceremonial Beast", "Plow") => Some(vec![
+            EffectOp::DealDamage(18),
+            EffectOp::ApplyStatusToSelf(Status::Strength(2)),
+        ]),
+        // Ceremonial Beast Phase 2: Stun (skip), Beast Cry (Ringing),
+        // Stomp (15 dmg), Crush (17 dmg + 3 Str).
+        ("Ceremonial Beast", "Stun") => Some(vec![]),
+        ("Ceremonial Beast", "Beast Cry") => Some(vec![
+            EffectOp::ApplyStatusToTarget(Status::Ringing),
+        ]),
+        ("Ceremonial Beast", "Stomp") => Some(vec![EffectOp::DealDamage(15)]),
+        ("Ceremonial Beast", "Crush") => Some(vec![
+            EffectOp::DealDamage(17),
+            EffectOp::ApplyStatusToSelf(Status::Strength(3)),
+        ]),
         _ => None,
     }
 }
@@ -373,7 +396,10 @@ fn max_streak(monster_name: &str, move_name: &str) -> u32 {
 /// `moves_used` set and `select_next_intent` will never return it again.
 /// Currently only Mawler's Roar uses this.
 pub(crate) fn is_one_time_move(monster_name: &str, move_name: &str) -> bool {
-    matches!((monster_name, move_name), ("Mawler", "Roar"))
+    matches!(
+        (monster_name, move_name),
+        ("Mawler", "Roar") | ("Ceremonial Beast", "Stun")
+    )
 }
 
 /// Rolls the monster's next telegraphed move from its documented weighted
@@ -658,6 +684,20 @@ pub(crate) fn select_next_intent(
                     return Some(candidate.to_string());
                 }
             },
+        },
+        // Ceremonial Beast: Phase 1 — Stamp → Plow → Plow → ... (forever).
+        // Phase 2 activates after Stun appears in moves_used (see issue).
+        "Ceremonial Beast" => {
+            let phase2 = moves_used.iter().any(|m| m == "Stun");
+            if phase2 {
+                match last_move.as_deref() {
+                    Some("Beast Cry") => Some("Stomp".to_string()),
+                    Some("Stomp") => Some("Crush".to_string()),
+                    _ => Some("Beast Cry".to_string()),
+                }
+            } else {
+                Some("Plow".to_string())
+            }
         },
         _ => None,
     }

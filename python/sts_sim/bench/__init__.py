@@ -29,6 +29,7 @@ from ..scenarios import (
     ironclad_starter_deck_vs_flyconid,
     ironclad_starter_deck_vs_fogmog,
     ironclad_starter_deck_vs_fuzzy_wurm_crawler,
+    ironclad_starter_deck_vs_ceremonial_beast,
     ironclad_starter_deck_vs_gremlin_nob,
     ironclad_starter_deck_vs_inklet,
     ironclad_starter_deck_vs_inklets,
@@ -78,6 +79,7 @@ class Encounter(str, Enum):
     BYGONE_EFFIGY = "bygone-effigy"
     FLYCONID = "flyconid"
     FOGMOG = "fogmog"
+    CEREMONIAL_BEAST = "ceremonial-beast"
 
 
 _SCENARIOS = {
@@ -101,6 +103,7 @@ _SCENARIOS = {
     Encounter.VINE_SHAMBLER: ironclad_starter_deck_vs_vine_shambler,
     Encounter.BYGONE_EFFIGY: ironclad_starter_deck_vs_bygone_effigy,
     Encounter.FLYCONID: ironclad_starter_deck_vs_flyconid,
+    Encounter.CEREMONIAL_BEAST: ironclad_starter_deck_vs_ceremonial_beast,
     Encounter.FOGMOG: ironclad_starter_deck_vs_fogmog,
 }
 

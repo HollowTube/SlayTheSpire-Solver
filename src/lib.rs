@@ -96,6 +96,11 @@ pub(crate) fn legal_actions_str(state: &CombatState) -> Vec<String> {
                 })
                 .map(|card| format!("PlayCard:{}", card.as_str()))
                 .collect();
+            // Ringing: limits player to one PlayCard per turn.
+            let ringing_active = state.player.statuses.iter().any(|s| *s == Status::Ringing);
+            if ringing_active && state.cards_played_this_turn >= 1 {
+                actions.retain(|a| !a.starts_with("PlayCard:"));
+            }
             actions.push("EndTurn".to_string());
             actions
         }
@@ -125,6 +130,11 @@ pub(crate) fn legal_actions_typed(state: &CombatState) -> Vec<ActionKind> {
                 })
                 .map(|card| ActionKind::PlayCard(card.as_str().to_string()))
                 .collect();
+            // Ringing: limits player to one PlayCard per turn.
+            let ringing_active = state.player.statuses.iter().any(|s| *s == Status::Ringing);
+            if ringing_active && state.cards_played_this_turn >= 1 {
+                actions.retain(|a| !matches!(a, ActionKind::PlayCard(_)));
+            }
             actions.push(ActionKind::EndTurn);
             actions
         }
@@ -164,6 +174,12 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
         ActionKind::EndTurn => {
             let mut next = state.clone();
             next.turn += 1;
+
+            // Snapshot for Ringing: if the player already had Ringing before
+            // the monster acts, it should expire now. Ringing applied during
+            // the monster's turn survives for the player's next turn.
+            let player_had_ringing_before_monsters =
+                next.player.statuses.iter().any(|s| *s == Status::Ringing);
 
             // "HP lost this turn" tracks damage taken since the last
             // EndTurn — reset here so the monsters' attacks below populate
@@ -366,6 +382,14 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             // Draw the next turn's opening hand (reshuffling the discard
             // pile back in if the draw pile runs dry mid-draw).
             draw_cards(&mut next, HAND_SIZE);
+            // Ringing: player debuff expires at the start of the player's
+            // next turn (one-card-per-turn limit only lasts one turn).
+            // Manual removal is needed because tick_debuffs runs every
+            // EndTurn, which would expire it immediately if it were
+            // decays_per_turn.
+            if player_had_ringing_before_monsters {
+                next.player.statuses.retain(|s| *s != Status::Ringing);
+            }
             // Player's duration debuffs (e.g. Vulnerable) tick at the start
             // of the player's turn — after the monster has already attacked,
             // matching Slay the Spire's documented turn structure.
@@ -403,6 +427,10 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                     }
                     CardType::Power | CardType::Status => {}
                 }
+                // Plow threshold: after card effects resolve, check if any
+                // monster with Plow(n) just dropped to ≤ n HP. Fires once per
+                // Plow status (removal is the idempotency guard).
+                check_plow_threshold(&mut next);
                 next.pending = None;
                 Ok(next)
             }
@@ -488,8 +516,33 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                         }
                         CardType::Power | CardType::Status => {}
                     }
+                    // Plow threshold: check after non-targeted card
+                    // effects (e.g. Thunderclap) resolve.
+                    check_plow_threshold(&mut next);
                 }
                 Ok(next)
+        }
+    }
+}
+
+/// Ceremonial Beast's Plow threshold: when the holder's HP drops to ≤ n
+/// after taking unblocked damage, strip all Strength, set intent to "Stun",
+/// and remove the Plow status. Fires once per Plow status — the status
+/// removal is the idempotency guard.
+fn check_plow_threshold(state: &mut CombatState) {
+    for i in 0..state.monsters.len() {
+        let threshold = state.monsters[i].fighter.statuses.iter().find_map(|s| {
+            if let Status::Plow(n) = s { Some(*n) } else { None }
+        });
+        if let Some(n) = threshold {
+            if state.monsters[i].fighter.hp <= n {
+                // Remove Plow status (idempotency guard)
+                state.monsters[i].fighter.statuses.retain(|s| !matches!(s, Status::Plow(_)));
+                // Strip all Strength
+                state.monsters[i].fighter.statuses.retain(|s| !matches!(s, Status::Strength(_)));
+                // Set intent to Stun
+                state.monsters[i].intent = Some("Stun".to_string());
+            }
         }
     }
 }

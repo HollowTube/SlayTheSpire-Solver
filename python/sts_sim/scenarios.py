@@ -113,6 +113,7 @@ class MonsterName(str, Enum):
     BYGONE_EFFIGY = "Bygone Effigy"
     FLYCONID = "Flyconid"
     FOGMOG = "Fogmog"
+    CEREMONIAL_BEAST = "Ceremonial Beast"
 
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
@@ -221,6 +222,8 @@ BYGONE_EFFIGY_STARTING_HP = 132
 FLYCONID_STARTING_HP = 49
 
 # Fogmog (Overgrowth monster) HP: 74-78 normal. 76 used as canonical value.
+# Ceremonial Beast (Overgrowth boss) HP: 252.
+CEREMONIAL_BEAST_STARTING_HP = 252
 FOGMOG_STARTING_HP = 76
 
 # Canonical starting HP keyed by MonsterName value. Used by the server's
@@ -255,6 +258,7 @@ MONSTER_STARTING_HP: dict[str, int] = {
     MonsterName.MAWLER: MAWLER_STARTING_HP,
     MonsterName.VINE_SHAMBLER: VINE_SHAMBLER_STARTING_HP,
     MonsterName.BYGONE_EFFIGY: BYGONE_EFFIGY_STARTING_HP,
+    MonsterName.CEREMONIAL_BEAST: CEREMONIAL_BEAST_STARTING_HP,
     MonsterName.FLYCONID: FLYCONID_STARTING_HP,
     MonsterName.FOGMOG: FOGMOG_STARTING_HP,
 }
@@ -875,6 +879,25 @@ def ironclad_starter_deck_vs_fogmog(seed, deck=None):
             Monster(
                 hp=FOGMOG_STARTING_HP,
                 name=MonsterName.FOGMOG,
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
+def ironclad_starter_deck_vs_ceremonial_beast(seed, deck=None):
+    """Ironclad's starting loadout against Ceremonial Beast (Overgrowth boss).
+    HP: 252. Two-phase AI: Phase 1 Stamp -> Plow loop (18 dmg +2 Str).
+    At 150 HP threshold: strip Strength, Stun. Phase 2: Beast Cry (Ringing)
+    -> Stomp (15 dmg) -> Crush (17 dmg +3 Str) -> loop."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=CEREMONIAL_BEAST_STARTING_HP,
+                name=MonsterName.CEREMONIAL_BEAST,
             )
         ],
         seed=seed,
