@@ -119,4 +119,4 @@ def test_swipe_never_triple_repeats():
         for i in range(2, len(moves)):
             triple = moves[i - 2 : i + 1]
             if all(m == "Swipe" for m in triple):
-                assert False, f"seed {seed}: triple Swipe at positions {i-2}..{i}"
+                assert False, f"seed {seed}: triple Swipe at positions {i - 2}..{i}"

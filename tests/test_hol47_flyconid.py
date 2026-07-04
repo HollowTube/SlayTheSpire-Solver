@@ -22,9 +22,7 @@ def test_opening_intent_is_frail_spores_or_smash_only():
         state = _flyconid(seed=seed)
         after = apply(state, EndTurnAction())
         openers.add(after.monsters[0].last_move)
-    assert openers == {"Frail Spores", "Smash"}, (
-        f"unexpected openers: {openers}"
-    )
+    assert openers == {"Frail Spores", "Smash"}, f"unexpected openers: {openers}"
 
 
 def test_frail_spores_deals_8_damage_and_applies_frail():
