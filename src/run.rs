@@ -17,11 +17,6 @@ use rand::SeedableRng;
 use rand_pcg::Pcg32;
 use rayon::prelude::*;
 
-/// MCTS iterations per combat-node resolution. A fixed default for now —
-/// matches `simulate_hp_lost`'s own default, plenty for the weak early
-/// encounters this issue's fixed path uses.
-const RESOLVE_COMBAT_ITERATIONS: u32 = 200;
-
 /// How many distinct cards a reward decision offers, before `Skip`.
 const REWARD_CHOICE_COUNT: usize = 3;
 
@@ -275,8 +270,9 @@ fn resolve(state: &RunState, action: &str, iterations: u32) -> PyResult<RunState
 }
 
 #[pyfunction]
-pub(crate) fn run_apply(state: &RunState, action: &str) -> PyResult<RunState> {
-    resolve(state, action, RESOLVE_COMBAT_ITERATIONS)
+#[pyo3(signature = (state, action, iterations=200))]
+pub(crate) fn run_apply(state: &RunState, action: &str, iterations: u32) -> PyResult<RunState> {
+    resolve(state, action, iterations)
 }
 
 /// Drives `run` to completion with the default run-level policy — uniform

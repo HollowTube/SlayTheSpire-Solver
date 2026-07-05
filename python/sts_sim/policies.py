@@ -26,7 +26,7 @@ def _rollout_final_hp(state: RunState, rng: random.Random, iterations: int) -> i
     while not run_is_terminal(current):
         actions = run_legal_actions(current)
         action = rng.choice(actions)
-        current = run_apply(current, action)
+        current = run_apply(current, action, iterations)
     return current.hp
 
 
