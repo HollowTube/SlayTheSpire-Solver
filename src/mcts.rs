@@ -5,7 +5,7 @@
 //! like "how does adding this card to my deck change my average HP lost over
 //! the next N fights" run live at a card-reward screen.
 use crate::state::CombatState;
-use crate::{apply_str, is_terminal, legal_actions_str, random_rollout, reward};
+use crate::{apply_action, apply_str, is_terminal, legal_actions_typed, random_rollout, reward, ActionKind};
 use pyo3::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
@@ -21,19 +21,19 @@ const DEFAULT_DETERMINIZATIONS: u32 = 8;
 struct Node {
     state: CombatState,
     parent: Option<usize>,
-    action: Option<String>,
+    action: Option<ActionKind>,
     children: Vec<usize>,
-    untried_actions: Vec<String>,
+    untried_actions: Vec<ActionKind>,
     visits: u32,
     total_value: f64,
 }
 
 impl Node {
-    fn new(state: CombatState, parent: Option<usize>, action: Option<String>) -> Self {
+    fn new(state: CombatState, parent: Option<usize>, action: Option<ActionKind>) -> Self {
         let untried_actions = if is_terminal(&state) {
             Vec::new()
         } else {
-            legal_actions_str(&state)
+            legal_actions_typed(&state)
         };
         Node {
             state,
@@ -75,7 +75,7 @@ fn build_tree(state: &CombatState, iterations: u32, rng: &mut Pcg32) -> Vec<Node
         if !arena[idx].untried_actions.is_empty() {
             let pos = rng.gen_range(0..arena[idx].untried_actions.len());
             let action = arena[idx].untried_actions.remove(pos);
-            let next_state = apply_str(&arena[idx].state, &action).expect("legal action is always valid");
+            let next_state = apply_action(&arena[idx].state, &action).expect("legal action is always valid");
             let child = Node::new(next_state, Some(idx), Some(action));
             let child_idx = arena.len();
             arena.push(child);
@@ -102,7 +102,7 @@ fn single_tree_action_values(state: &CombatState, iterations: u32, rng: &mut Pcg
     arena[0]
         .children
         .iter()
-        .map(|&i| (arena[i].action.clone().unwrap(), arena[i].total_value / arena[i].visits as f64))
+        .map(|&i| (arena[i].action.as_ref().unwrap().to_string(), arena[i].total_value / arena[i].visits as f64))
         .collect()
 }
 
@@ -151,7 +151,7 @@ fn search_impl(state: &CombatState, iterations: u32, rng: &mut Pcg32, determiniz
             .iter()
             .max_by_key(|&&i| arena[i].visits)
             .expect("root has children after iterations > 0");
-        return arena[*best].action.clone().unwrap();
+        return arena[*best].action.as_ref().unwrap().to_string();
     }
     let values = action_values_impl(state, iterations, rng, true, determinizations);
     values
