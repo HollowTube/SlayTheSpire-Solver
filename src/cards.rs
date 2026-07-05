@@ -1,7 +1,7 @@
 use crate::engine::{EffectOp, HandFilter, ScaleSource, Status};
 use std::collections::HashSet;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub(crate) enum CardType {
     Attack,
     Skill,
@@ -385,6 +385,30 @@ fn upgrade_delta(name: &str) -> Option<UpgradeDelta> {
         "DrumOfBattle" => Some(UpgradeDelta { draw_delta: 1, ..Default::default() }),
         // Stomp+: 12 AoE damage → 17 AoE damage.
         "Stomp" => Some(UpgradeDelta { damage_delta: 5, ..Default::default() }),
+        // Havoc+: cost 1 → 0.
+        "Havoc" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // BattleTrance+: draw 3 → 4.
+        "BattleTrance" => Some(UpgradeDelta { draw_delta: 1, ..Default::default() }),
+        // Whirlwind+: base damage 5 → 8.
+        "Whirlwind" => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::DealDamageRepeated {
+                amount: 8,
+                hits_base: 0,
+                hits_per_unit: 1,
+                hits_source: ScaleSource::EnergyX,
+            }]),
+            ..Default::default()
+        }),
+        // Cascade+: play X+1 cards (one extra card).
+        "Cascade" => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::PlayTopOfDeckScaled {
+                count_base: 1,
+                count_per_unit: 1,
+                count_source: ScaleSource::EnergyX,
+                exhaust: false,
+            }]),
+            ..Default::default()
+        }),
         _ => None,
     }
 }
@@ -1292,6 +1316,59 @@ fn card_data_base(name: &str) -> Option<CardData> {
             keywords: HashSet::from([CardKeyword::Exhaust]),
             rarity: CardRarity::Uncommon,
         }),
+        // Havoc: Play the top card of your draw pile and Exhaust it.
+        // Cost 1 → 0 upgraded, Skill, Common.
+        "Havoc" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![EffectOp::PlayTopOfDeck { count: 1, exhaust: true }],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Common,
+        }),
+        // BattleTrance: Draw 3 cards. You cannot draw additional cards this turn.
+        // Cost 0, Skill, Uncommon.
+        "BattleTrance" => Some(CardData {
+            cost: 0,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![
+                EffectOp::DrawCards(3),
+                EffectOp::ApplyStatusToSelf(Status::NoDraw),
+            ],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
+        }),
+        // Whirlwind: Deal 5 damage to ALL enemies X times.
+        // X-cost, Attack, Uncommon.
+        "Whirlwind" => Some(CardData {
+            cost: -1,
+            targeted: false,
+            card_type: CardType::Attack,
+            effects: vec![EffectOp::DealDamageRepeated {
+                amount: 5,
+                hits_base: 0,
+                hits_per_unit: 1,
+                hits_source: ScaleSource::EnergyX,
+            }],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
+        }),
+        // Cascade: Play the top X cards of your draw pile.
+        // X-cost, Skill, Rare. Upgraded: X+1 cards.
+        "Cascade" => Some(CardData {
+            cost: -1,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![EffectOp::PlayTopOfDeckScaled {
+                count_base: 0,
+                count_per_unit: 1,
+                count_source: ScaleSource::EnergyX,
+                exhaust: false,
+            }],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
+        }),
         _ => None,
     }
 }
@@ -1310,6 +1387,7 @@ pub(crate) const ALL_CARD_NAMES: &[&str] = &[
     "AshenStrike",
     "Barricade",
     "Bash",
+    "BattleTrance",
     "Bloodletting",
     "BloodWall",
     "Bludgeon",
@@ -1319,6 +1397,7 @@ pub(crate) const ALL_CARD_NAMES: &[&str] = &[
     "Bully",
     "BurningPact",
     "Cinder",
+    "Cascade",
     "Colossus",
     "Conflagration",
     "Corruption",
@@ -1338,6 +1417,7 @@ pub(crate) const ALL_CARD_NAMES: &[&str] = &[
     "FlameBarrier",
     "Forgotten Ritual",
     "Headbutt",
+    "Havoc",
     "Hemokinesis",
     "HowlFromBeyond",
     "Impervious",
@@ -1378,6 +1458,7 @@ pub(crate) const ALL_CARD_NAMES: &[&str] = &[
     "Unmovable",
     "Uppercut",
     "Vicious",
+    "Whirlwind",
     "Wound",
 ];
 

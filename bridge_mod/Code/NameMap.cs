@@ -93,15 +93,12 @@ public static class NameMap
         // -- Ironclad card pool --
         ["ANGER"] = "Anger",
         ["ARMAMENTS"] = "Armaments",
-        ["BATTLE_TRANCE"] = "BattleTrance",
         ["BRAND"] = "Brand",
-        ["CASCADE"] = "Cascade",
         ["DEMONIC_SHIELD"] = "DemonicShield",
         ["DRUM_OF_BATTLE"] = "DrumOfBattle",
         ["EXPECT_A_FIGHT"] = "ExpectAFight",
         ["FEED"] = "Feed",
         ["FIGHT_ME"] = "FightMe",
-        ["HAVOC"] = "Havoc",
         ["HELLRAISER"] = "Hellraiser",
         ["HOWL_FROM_BEYOND"] = "HowlFromBeyond",
         ["JUGGLING"] = "Juggling",
@@ -118,7 +115,6 @@ public static class NameMap
         ["TANK"] = "Tank",
         ["UNMOVABLE"] = "Unmovable",
         ["VICIOUS"] = "Vicious",
-        ["WHIRLWIND"] = "Whirlwind",
         // -- Colorless card pool --
         ["ALCHEMIZE"] = "Alchemize",
         ["ANOINTED"] = "Anointed",

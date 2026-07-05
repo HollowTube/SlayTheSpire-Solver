@@ -1,5 +1,6 @@
 use crate::cards::{card_data, CardType};
 use crate::state::{draw_cards, CardInstance, CombatState, Fighter, Monster};
+use rand::seq::SliceRandom;
 use rand::Rng;
 
 /// Game events that statuses can react to via `Status::reactions`. These are
@@ -161,6 +162,10 @@ pub(crate) enum Status {
     // turn. Decays at end of the player's turn. Applied by Ceremonial
     // Beast's Beast Cry.
     Ringing,
+    // NoDraw: player debuff — blocks all draw effects during the player's
+    // turn. Removed at end of the player's turn (single-turn, like Ringing).
+    // Applied by BattleTrance.
+    NoDraw,
     // Plating(n): at the end of each player turn, gain n Block. At the end
     // of each monster turn, decrement by 1; removed when 0.
     Plating(i32),
@@ -210,6 +215,7 @@ impl Status {
             Status::Slow(_) => "Slow",
             Status::Plow(_) => "Plow",
             Status::Ringing => "Ringing",
+            Status::NoDraw => "NoDraw",
             Status::Plating(_) => "Plating",
             Status::Vicious(_) => "Vicious",
             Status::Juggling(_) => "Juggling",
@@ -266,6 +272,7 @@ impl Status {
             "Slow" => vec![Status::Slow(amount)],
             "Plow" => vec![Status::Plow(amount)],
             "Ringing" => vec![Status::Ringing; amount.max(0) as usize],
+            "NoDraw" => vec![Status::NoDraw; amount.max(0) as usize],
             "Plating" => vec![Status::Plating(amount)],
             "Vicious" => vec![Status::Vicious(amount)],
             "Juggling" => vec![Status::Juggling(amount)],
@@ -353,7 +360,7 @@ impl Status {
     pub(crate) fn is_debuff(&self) -> bool {
         matches!(
             self,
-            Status::Vulnerable | Status::Weak | Status::Shrink | Status::Constrict(_) | Status::Frail(_) | Status::Tangled(_) | Status::Ringing
+            Status::Vulnerable | Status::Weak | Status::Shrink | Status::Constrict(_) | Status::Frail(_) | Status::Tangled(_) | Status::Ringing | Status::NoDraw
         )
     }
 
@@ -669,6 +676,19 @@ pub(crate) enum EffectOp {
     // Adds `count` copies of the named card to the player's hand (e.g.
     // Juggling's "add N copies of the 3rd Attack to hand").
     AddCardToHand(String, usize),
+    // Pops `count` cards from the front of the draw pile (reshuffling discard
+    // if empty), runs each card's effects recursively, then routes the card
+    // to exhaust_pile (if `exhaust`) or discard_pile. Does NOT add to hand.
+    // Skips if both draw_pile and discard_pile are empty.
+    PlayTopOfDeck { count: usize, exhaust: bool },
+    // Like PlayTopOfDeck, but the count is scaled by a `source` (e.g.
+    // `EnergyX` for Cascade's X-cost card count).
+    PlayTopOfDeckScaled {
+        count_base: usize,
+        count_per_unit: i32,
+        count_source: ScaleSource,
+        exhaust: bool,
+    },
 }
 
 /// What a `DealDamageScaled` op reads its multiplier from. New scaling
@@ -701,6 +721,10 @@ pub(crate) enum ScaleSource {
     // 1 if the player has Exhausted a card this turn, else 0 (e.g. Evil Eye,
     // Forgotten Ritual).
     ExhaustedCardThisTurn,
+    // Amount of energy spent on an X-cost card (CostModel.Cost == -1 in
+    // STS2). Read by Whirlwind's DealDamageRepeated hit count and Cascade's
+    // PlayTopOfDeck card count.
+    EnergyX,
 }
 
 impl ScaleSource {
@@ -731,6 +755,7 @@ impl ScaleSource {
                 .iter()
                 .any(|s| *s == Status::Vulnerable) as i32,
             ScaleSource::ExhaustedCardThisTurn => state.player_exhausted_card_this_turn as i32,
+            ScaleSource::EnergyX => state.player_energy_x,
         }
     }
 }
@@ -968,7 +993,13 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 state.fighter_mut(actor).statuses.push(status.clone());
                 fire_event(state, GameEvent::StatusApplied { to: actor, by: actor, which: status.clone() });
             }
-            EffectOp::DrawCards(n) => draw_cards(state, *n),
+            EffectOp::DrawCards(n) => {
+                // NoDraw blocks all draws during the player's turn.
+                if actor == Actor::Player && state.player.statuses.contains(&Status::NoDraw) {
+                    continue;
+                }
+                draw_cards(state, *n)
+            }
             EffectOp::EscalateSelfStatus(new_status) => {
                 let statuses = &mut state.fighter_mut(actor).statuses;
                 if let Some(pos) = statuses.iter().position(|s| s.as_str() == new_status.as_str()) {
@@ -1176,6 +1207,76 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                     state.player_energy += amount;
                 }
             }
+            EffectOp::PlayTopOfDeck { count, exhaust } => {
+                run_play_top_of_deck(state, *count, *exhaust);
+            }
+            EffectOp::PlayTopOfDeckScaled {
+                count_base,
+                count_per_unit,
+                count_source,
+                exhaust,
+            } => {
+                let effective_count =
+                    *count_base + (count_per_unit * count_source.read(state, actor, actor)) as usize;
+                run_play_top_of_deck(state, effective_count, *exhaust);
+            }
+        }
+    }
+}
+
+/// Pops `count` cards from the front of the draw pile (reshuffling discard
+/// if empty), runs each card's effects recursively, and routes each card to
+/// exhaust_pile or discard_pile. Does NOT add to hand. Skips if both draw
+/// pile and discard pile are empty.
+fn run_play_top_of_deck(state: &mut CombatState, count: usize, exhaust: bool) {
+    let mut cards: Vec<CardInstance> = Vec::new();
+    // Temporarily remove the currently-resolving card from the discard pile
+    // so PlayTopOfDeck doesn't auto-play the card that generated this effect.
+    let stash = state.resolving_card.take();
+    if let Some(ref resolving) = stash {
+        if let Some(pos) = state.discard_pile.iter().position(|c| c == resolving) {
+            state.discard_pile.remove(pos);
+        }
+    }
+    for _ in 0..count {
+        if state.draw_pile.is_empty() {
+            if state.discard_pile.is_empty() {
+                break;
+            }
+            state.draw_pile.append(&mut state.discard_pile);
+            state.draw_pile.shuffle(&mut state.rng);
+        }
+        let card = state.draw_pile.remove(0);
+        cards.push(card);
+    }
+    // Restore the stashed resolving card.
+    if let Some(resolving) = stash {
+        state.discard_pile.push(resolving);
+        state.resolving_card = Some(state.discard_pile.last().unwrap().clone());
+    }
+    for card in &cards {
+        if let Some(data) = card_data(&card.name, card.upgrade_level) {
+            let targets: Vec<Actor> = state
+                .living_monster_indices()
+                .into_iter()
+                .map(Actor::Monster)
+                .collect();
+            let is_attack = matches!(data.card_type, CardType::Attack);
+            run_effect_ops(state, &data.effects, Actor::Player, &targets, is_attack);
+            match data.card_type {
+                CardType::Skill => fire_event(state, GameEvent::SkillPlayed),
+                CardType::Attack => {
+                    state.attacks_played_this_turn += 1;
+                    fire_event(state, GameEvent::AttackPlayed(card.name.clone()));
+                }
+                CardType::Power | CardType::Status => {}
+            }
+        }
+        if exhaust {
+            state.exhaust_pile.push(card.clone());
+            fire_event(state, GameEvent::CardExhausted);
+        } else {
+            state.discard_pile.push(card.clone());
         }
     }
 }

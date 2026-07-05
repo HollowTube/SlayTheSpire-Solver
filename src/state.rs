@@ -231,6 +231,11 @@ pub struct CombatState {
     pub(crate) player: Fighter,
     #[pyo3(get)]
     pub(crate) player_energy: i32,
+    // Amount of energy spent on an X-cost card this turn — set when resolving
+    // a card whose cost is -1 (the X sentinel). Read by `EffectOp::DealDamageAll`
+    // and `EffectOp::PlayTopOfDeck` when they use `EnergyX`. Reset to 0 at the
+    // start of each player turn.
+    pub(crate) player_energy_x: i32,
     // What `EndTurn` refreshes `player_energy` back up to each turn — Slay
     // the Spire characters draw a fixed energy amount every turn rather than
     // carrying it over. Defaults to the starting `player_energy` (a fresh
@@ -273,6 +278,10 @@ pub struct CombatState {
     pub(crate) last_attacker: Option<usize>,
     pub(crate) pending: Option<PendingDecision>,
     pub(crate) rng: Pcg32,
+    // The card instance that is currently being resolved (set before
+    // run_effect_ops, cleared after). Used by PlayTopOfDeck to avoid
+    // auto-playing the card that generated the effect.
+    pub(crate) resolving_card: Option<CardInstance>,
 }
 
 #[pymethods]
@@ -322,6 +331,7 @@ impl CombatState {
                     .collect(),
             },
             player_energy,
+            player_energy_x: 0,
             player_max_energy: player_max_energy.unwrap_or(player_energy),
             monsters,
             turn,
@@ -338,6 +348,7 @@ impl CombatState {
             last_attacker: None,
             pending: None,
             rng,
+            resolving_card: None,
         };
         if deal_opening_hand {
             draw_cards(&mut state, HAND_SIZE);
