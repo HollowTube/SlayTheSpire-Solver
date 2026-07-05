@@ -54,8 +54,13 @@ fn effective_cost(state: &CombatState, data: &CardData) -> i32 {
         0
     } else {
         let cost = data.cost;
+        // X-cost cards (cost -1) are always affordable — they spend all
+        // remaining energy when played.
+        if cost == -1 {
+            0
+        }
         // Stomp costs 1 less for each Attack played this turn (min 0).
-        if data.effects.iter().any(|op| matches!(op, engine::EffectOp::DealDamageToAllEnemies(_))) {
+        else if data.effects.iter().any(|op| matches!(op, engine::EffectOp::DealDamageToAllEnemies(_))) {
             (cost - state.attacks_played_this_turn).max(0)
         } else {
             cost
@@ -162,11 +167,14 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             // block here, etc.
             fire_event(&mut next, GameEvent::PlayerTurnEnd);
 
-            // Snapshot for Ringing: if the player already had Ringing before
-            // the monster acts, it should expire now. Ringing applied during
-            // the monster's turn survives for the player's next turn.
+            // Snapshot for Ringing/NoDraw: if the player already had Ringing
+            // or NoDraw before the monster acts, it should expire now.
+            // Applied during the monster's turn survives for the player's
+            // next turn.
             let player_had_ringing_before_monsters =
                 next.player.statuses.iter().any(|s| *s == Status::Ringing);
+            let player_had_nodraw_before_monsters =
+                next.player.statuses.iter().any(|s| *s == Status::NoDraw);
 
             // "HP lost this turn" tracks damage taken since the last
             // EndTurn — reset here so the monsters' attacks below populate
@@ -363,6 +371,8 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             // Energy refreshes to its per-turn maximum each turn — it does
             // not carry over either.
             next.player_energy = next.player_max_energy;
+            // X-cost energy spent is reset at the start of each player turn.
+            next.player_energy_x = 0;
             // Attack-played count resets at the start of each player turn
             // (e.g. Conflagration).
             next.attacks_played_this_turn = 0;
@@ -390,13 +400,15 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             // Draw the next turn's opening hand (reshuffling the discard
             // pile back in if the draw pile runs dry mid-draw).
             draw_cards(&mut next, HAND_SIZE);
-            // Ringing: player debuff expires at the start of the player's
-            // next turn (one-card-per-turn limit only lasts one turn).
-            // Manual removal is needed because tick_debuffs runs every
-            // EndTurn, which would expire it immediately if it were
-            // decays_per_turn.
+            // Ringing/NoDraw: player debuffs expire at the start of the
+            // player's next turn. Manual removal is needed because
+            // tick_debuffs runs every EndTurn, which would expire them
+            // immediately if they were decays_per_turn.
             if player_had_ringing_before_monsters {
                 next.player.statuses.retain(|s| *s != Status::Ringing);
+            }
+            if player_had_nodraw_before_monsters {
+                next.player.statuses.retain(|s| *s != Status::NoDraw);
             }
             // Player's duration debuffs (e.g. Vulnerable) tick at the start
             // of the player's turn — after the monster has already attacked,
@@ -458,13 +470,22 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                     .position(|c| c.as_str() == card_name)
                     .ok_or_else(|| PyValueError::new_err(format!("{card_name} is not in hand")))?;
                 let cost = effective_cost(&next, &data);
-                if cost > next.player_energy {
+                let base_cost = data.cost;
+                // X-cost cards (cost -1): spend all remaining energy, capture
+                // it as `player_energy_x` for effect resolution.
+                let is_x_cost = base_cost == -1;
+                if !is_x_cost && cost > next.player_energy {
                     return Err(PyValueError::new_err(format!(
                         "cannot afford {card_name}: costs {} but only {} energy available",
                         cost, next.player_energy
                     )));
                 }
+                if is_x_cost {
+                    next.player_energy_x = next.player_energy;
+                    next.player_energy = 0;
+                }
                 let played = next.hand.remove(position);
+                let resolving = played.clone();
                 // Corruption sends played Skills to the exhaust pile instead
                 // of discard, just like the Exhaust keyword.
                 let corruption_exhausts_skill =
@@ -483,7 +504,9 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                 } else {
                     next.discard_pile.push(played);
                 }
-                next.player_energy -= cost;
+                if !is_x_cost {
+                    next.player_energy -= cost;
+                }
                 next.cards_played_this_turn += 1;
                 // Unrelenting's FreeAttack: consumed by the next Attack
                 // played, regardless of whether it was actually free
@@ -497,16 +520,16 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                 if data.targeted {
                     next.pending = Some(PendingDecision::SelectTarget { card: instance });
                 } else {
-                    // Non-targeted attacks (e.g. Thunderclap) hit every
-                    // living enemy; non-targeted skills (Defend, Inflame,
-                    // Rage) have no `DealDamage`/`ApplyStatusToTarget` ops,
-                    // so the target list is simply unused for them.
                     let targets: Vec<Actor> = next
                         .living_monster_indices()
                         .into_iter()
                         .map(Actor::Monster)
                         .collect();
+                    // Track the currently-resolving card so PlayTopOfDeck can
+                    // avoid picking it up from the discard pile.
+                    next.resolving_card = Some(resolving);
                                 run_effect_ops(&mut next, &data.effects, Actor::Player, &targets, is_attack);
+                    next.resolving_card = None;
                     match data.card_type {
                         CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
                         CardType::Attack => {
@@ -684,6 +707,7 @@ fn player_fraction(state: &CombatState) -> f64 {
 struct StateKey {
     player: Fighter,
     player_energy: i32,
+    player_energy_x: i32,
     monsters: Vec<Monster>,
     turn: u32,
     hand: Vec<CardInstance>,
@@ -701,6 +725,7 @@ fn state_key(state: &CombatState) -> StateKey {
     StateKey {
         player: state.player.clone(),
         player_energy: state.player_energy,
+        player_energy_x: state.player_energy_x,
         monsters: state.monsters.clone(),
         turn: state.turn,
         hand: state.hand.clone(),
