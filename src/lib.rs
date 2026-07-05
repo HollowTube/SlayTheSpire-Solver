@@ -35,6 +35,16 @@ pub(crate) enum ActionKind {
     SelectTarget(usize),
 }
 
+impl std::fmt::Display for ActionKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ActionKind::EndTurn => write!(f, "EndTurn"),
+            ActionKind::PlayCard(name) => write!(f, "PlayCard:{name}"),
+            ActionKind::SelectTarget(i) => write!(f, "SelectTarget:Monster:{i}"),
+        }
+    }
+}
+
 /// The Energy cost to play `data`, accounting for Corruption (Skills cost 0
 /// while the player holds it) and Stomp (costs 1 less per Attack played).
 fn effective_cost(state: &CombatState, data: &CardData) -> i32 {
@@ -71,52 +81,7 @@ fn effective_cost(state: &CombatState, data: &CardData) -> i32 {
     base + tangled_bonus
 }
 
-/// Internal hot-path version returning strings — used by mcts.rs, random_rollout,
-/// and optimal_value_rec which run entirely in Rust and have no Python token.
-pub(crate) fn legal_actions_str(state: &CombatState) -> Vec<String> {
-    match state.pending {
-        Some(PendingDecision::SelectTarget { .. }) => state
-            .living_monster_indices()
-            .into_iter()
-            .map(|i| format!("SelectTarget:Monster:{i}"))
-            .collect(),
-        None => {
-            let mut actions: Vec<String> = state
-                .hand
-                .iter()
-                // Mirrors Slay the Spire greying out cards you can't afford —
-                // unaffordable cards are never legal plays, so the engine
-                // never has to model (or reject) going into negative energy.
-                .filter(|card| {
-                    card_data(&card.name, card.upgrade_level)
-                        .map(|data| {
-                            !data.keywords.contains(&CardKeyword::Unplayable)
-                                && effective_cost(state, &data) <= state.player_energy
-                        })
-                        .unwrap_or(false)
-                })
-                .map(|card| format!("PlayCard:{}", card.as_str()))
-                .collect();
-            // PactsEnd: only playable when 3+ cards are in the exhaust pile.
-            actions.retain(|a| {
-                if a == "PlayCard:PactsEnd" {
-                    state.exhaust_pile.len() >= 3
-                } else {
-                    true
-                }
-            });
-            // Ringing: limits player to one PlayCard per turn.
-            let ringing_active = state.player.statuses.iter().any(|s| *s == Status::Ringing);
-            if ringing_active && state.cards_played_this_turn >= 1 {
-                actions.retain(|a| !a.starts_with("PlayCard:"));
-            }
-            actions.push("EndTurn".to_string());
-            actions
-        }
-    }
-}
-
-/// Typed variant of `legal_actions_str` — used by Rust-only hot paths that
+/// Returns legal actions as typed `ActionKind` values — used by Rust-only hot paths that
 /// dispatch through `apply_action` without any string round-trip.
 pub(crate) fn legal_actions_typed(state: &CombatState) -> Vec<ActionKind> {
     match &state.pending {
@@ -159,12 +124,12 @@ pub(crate) fn legal_actions_typed(state: &CombatState) -> Vec<ActionKind> {
     }
 }
 
-/// Python-facing wrapper: converts each string action into a typed Action object.
+/// Python-facing wrapper: converts each typed action into a Python Action object.
 #[pyfunction]
 fn legal_actions(py: Python<'_>, state: &CombatState) -> Vec<PyObject> {
-    legal_actions_str(state)
+    legal_actions_typed(state)
         .into_iter()
-        .map(|s| str_to_action(py, &s))
+        .map(|a| str_to_action(py, &a.to_string()))
         .collect()
 }
 
@@ -180,7 +145,7 @@ fn str_to_action(py: Python<'_>, s: &str) -> PyObject {
             return SelectTargetAction::new(idx).into_pyobject(py).unwrap().into_any().unbind();
         }
     }
-    unreachable!("legal_actions_str only produces well-formed action strings")
+    unreachable!("legal_actions only produces well-formed action strings")
 }
 
 /// Core typed dispatch — accepts a crate-internal `ActionKind` and applies it
@@ -590,9 +555,9 @@ fn check_plow_threshold(state: &mut CombatState) {
     }
 }
 
-/// Rust-internal helper: parse a well-formed action string (as produced by
-/// `legal_actions_str`) into `ActionKind` and apply it. Used by `mcts.rs`
-/// which still routes through strings in its tree nodes.
+/// Rust-internal helper: parse a well-formed action string into `ActionKind`
+/// and apply it. Used by `mcts.rs` for the string boundary in its tree nodes
+/// (action_values_impl, search_impl, simulate_fight_outcome).
 pub(crate) fn apply_str(state: &CombatState, action: &str) -> PyResult<CombatState> {
     let kind = if action == "EndTurn" {
         ActionKind::EndTurn
