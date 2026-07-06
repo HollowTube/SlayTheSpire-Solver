@@ -550,6 +550,7 @@ pub enum MonsterId {
     Flyconid, // "Flyconid"
     Fogmog, // "Fogmog"
     CeremonialBeast, // "Ceremonial Beast"
+    EyeWithTeeth, // "Eye With Teeth"
 }
 
 impl MonsterId {
@@ -586,6 +587,7 @@ impl MonsterId {
             MonsterId::Flyconid => "Flyconid",
             MonsterId::Fogmog => "Fogmog",
             MonsterId::CeremonialBeast => "Ceremonial Beast",
+            MonsterId::EyeWithTeeth => "Eye With Teeth",
         }
     }
 
@@ -622,6 +624,7 @@ impl MonsterId {
             "Flyconid" => Some(MonsterId::Flyconid),
             "Fogmog" => Some(MonsterId::Fogmog),
             "Ceremonial Beast" => Some(MonsterId::CeremonialBeast),
+            "Eye With Teeth" => Some(MonsterId::EyeWithTeeth),
             _ => None,
         }
     }
@@ -659,6 +662,7 @@ impl MonsterId {
             MonsterId::Flyconid => "FLYCONID",
             MonsterId::Fogmog => "FOGMOG",
             MonsterId::CeremonialBeast => "CEREMONIAL_BEAST",
+            MonsterId::EyeWithTeeth => "EYE_WITH_TEETH",
         }
     }
 
@@ -695,6 +699,7 @@ impl MonsterId {
             "FLYCONID" => Some(MonsterId::Flyconid),
             "FOGMOG" => Some(MonsterId::Fogmog),
             "CEREMONIAL_BEAST" => Some(MonsterId::CeremonialBeast),
+            "EYE_WITH_TEETH" => Some(MonsterId::EyeWithTeeth),
             _ => None,
         }
     }
@@ -732,6 +737,7 @@ impl MonsterId {
             MonsterId::Flyconid,
             MonsterId::Fogmog,
             MonsterId::CeremonialBeast,
+            MonsterId::EyeWithTeeth,
         ]
     }
 }
