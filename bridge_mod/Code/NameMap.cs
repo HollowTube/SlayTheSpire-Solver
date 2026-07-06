@@ -82,6 +82,11 @@ public static class NameMap
         ["TWIN_STRIKE"] = "TwinStrike",
         ["UNRELENTING"] = "Unrelenting",
         ["UPPERCUT"] = "Uppercut",
+        // HOL-76: added to cards.rs
+        ["BATTLE_TRANCE"] = "BattleTrance",
+        ["CASCADE"] = "Cascade",
+        ["HAVOC"] = "Havoc",
+        ["WHIRLWIND"] = "Whirlwind",
         // Everything below has no src/cards.rs `card_data` entry yet (no
         // sts_sim effects implemented), but mapping the STS2 id to its class
         // name still lets these cards flow through to sts_sim instead of
@@ -217,6 +222,8 @@ public static class NameMap
     /// repeated every turn forever - see src/lib.rs's None-name handling).
     public static readonly Dictionary<string, string> MonsterNameMap = new()
     {
+        ["JAW_WORM"] = "Jaw Worm",
+        ["GREMLIN_NOB"] = "Gremlin Nob",
         ["NIBBIT"] = "Nibbit",
         ["FUZZY_WURM_CRAWLER"] = "Fuzzy Wurm Crawler",
         // Shrinker Beetle's "Shrink" self-debuff (-30% outgoing damage,
@@ -250,6 +257,9 @@ public static class NameMap
         // The Kin boss encounter: Kin Priest + 2 Kin Followers.
         ["KIN_PRIEST"] = "Kin Priest",
         ["KIN_FOLLOWER"] = "Kin Follower",
+        // Phrog Parasite (elite): spawns Wrigglers each turn.
+        ["PHROG_PARASITE"] = "Phrog Parasite",
+        ["WRIGGLER"] = "Wriggler",
         // Tracker Ruby Raider: Track (2 Frail, no damage) → Hounds forever.
         ["TRACKER_RUBY_RAIDER"] = "Tracker Ruby Raider",
         // Mawler (elite): opening Claw → random Rip and Tear / Roar / Claw.
@@ -262,16 +272,16 @@ public static class NameMap
         ["BYGONE_EFFIGY"] = "Bygone Effigy",
         ["FLYCONID"] = "Flyconid",
         ["FOGMOG"] = "Fogmog",
-    };
         ["CEREMONIAL_BEAST"] = "Ceremonial Beast",
+    };
 
     /// STS2 PowerModel.Id.Entry -> sts_sim status name. Only the statuses
     /// Status::from_name_and_amount understands are listed; other powers
     /// are silently dropped, matching that function's "unknown name -> empty
     /// vec" behavior.
     public static readonly Dictionary<string, string> PowerNameMap = new()
-        ["RINGING"] = "Ringing",
     {
+        ["RINGING"] = "Ringing",
         ["VULNERABLE"] = "Vulnerable",
         ["WEAK"] = "Weak",
         ["STRENGTH"] = "Strength",
