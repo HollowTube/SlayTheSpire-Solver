@@ -1,4 +1,4 @@
-use crate::engine::{Actor, Status};
+use crate::engine::{fire_event, Actor, GameEvent, Status};
 use crate::monsters::opening_intent;
 use pyo3::prelude::*;
 use rand::seq::SliceRandom;
@@ -60,7 +60,9 @@ pub(crate) fn draw_cards(state: &mut CombatState, count: usize) {
             state.draw_pile.shuffle(&mut state.rng);
         }
         if let Some(card) = state.draw_pile.pop() {
+            let name = card.name.clone();
             state.hand.push(card);
+            fire_event(state, GameEvent::CardDrawn(name));
         }
     }
 }

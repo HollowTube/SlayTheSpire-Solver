@@ -101,6 +101,11 @@ public static class NameMap
         ["FIGHT_ME"] = "FightMe",
         ["HELLRAISER"] = "Hellraiser",
         ["HOWL_FROM_BEYOND"] = "HowlFromBeyond",
+        ["STAMPEDE"] = "Stampede",
+        ["RUPTURE"] = "Rupture",
+        ["HELLRAISER"] = "Hellraiser",
+        ["EXPECT_A_FIGHT"] = "ExpectAFight",
+        ["PILLAGE"] = "Pillage",
         ["JUGGLING"] = "Juggling",
         ["PACTS_END"] = "PactsEnd",
         ["PILLAGE"] = "Pillage",
@@ -320,6 +325,10 @@ public static class NameMap
         // the bridge encounters a MinionPower, it should be dropped and the
         // caller should construct the Minion status manually with the correct
         // leader name instead.
+        ["STAMPEDE_POWER"] = "Stampede",
+        ["RUPTURE_POWER"] = "Rupture",
+        ["HELLRAISER_POWER"] = "Hellraiser",
+        ["NO_ENERGY_GAIN_POWER"] = "NoEnergyGain",
         // ["MINION"] = "Minion",
     };
 

@@ -166,6 +166,9 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             // PlayerTurnEnd fires before monsters resolve — Plating grants
             // block here, etc.
             fire_event(&mut next, GameEvent::PlayerTurnEnd);
+            // Stampede: at end of turn, play random Attacks from hand before
+            // the hand is discarded.
+            fire_event(&mut next, GameEvent::BeforeTurnEnd);
 
             // Snapshot for Ringing/NoDraw: if the player already had Ringing
             // or NoDraw before the monster acts, it should expire now.
@@ -189,6 +192,9 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             // monster resolves its next action), not at the start — so it
             // persists through the player's full card-play window.
             next.player.statuses.retain(|s| !matches!(s, Status::Tangled(_)));
+            // NoEnergyGain: removed at end of player turn so the next
+            // turn's energy refresh is unaffected.
+            next.player.statuses.retain(|s| *s != Status::NoEnergyGain);
 
             // The remaining hand is discarded before the monsters' turn
             // resolves — mirrors Slay the Spire's end-of-turn cleanup.
@@ -430,7 +436,14 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                 let mut next = state.clone();
                 let data = card_data(&card.name, card.upgrade_level).expect("pending card is always known");
                 let is_attack = matches!(data.card_type, CardType::Attack);
+                let hp_before = next.player.hp;
                 run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)], is_attack);
+                let hp_loss = hp_before - next.player.hp;
+                if hp_loss > 0 {
+                    next.player_times_damaged_this_combat += 1;
+                    next.player_hp_lost_this_turn = true;
+                    fire_event(&mut next, GameEvent::PlayerTookCardDamage(hp_loss));
+                }
                 match data.card_type {
                     CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
                     CardType::Attack => {
@@ -440,7 +453,14 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                         // resolves a second time, then the power is consumed.
                         if let Some(pos) = next.player.statuses.iter().position(|s| *s == Status::OneTwoPunch) {
                             next.player.statuses.remove(pos);
+                            let hp_before2 = next.player.hp;
                             run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)], is_attack);
+                            let hp_loss2 = hp_before2 - next.player.hp;
+                            if hp_loss2 > 0 {
+                                next.player_times_damaged_this_combat += 1;
+                                next.player_hp_lost_this_turn = true;
+                                fire_event(&mut next, GameEvent::PlayerTookCardDamage(hp_loss2));
+                            }
                             next.attacks_played_this_turn += 1;
                             fire_event(&mut next, GameEvent::AttackPlayed(card.name.clone()));
                         }
@@ -528,7 +548,14 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                     // Track the currently-resolving card so PlayTopOfDeck can
                     // avoid picking it up from the discard pile.
                     next.resolving_card = Some(resolving);
-                                run_effect_ops(&mut next, &data.effects, Actor::Player, &targets, is_attack);
+                                let hp_before = next.player.hp;
+                    run_effect_ops(&mut next, &data.effects, Actor::Player, &targets, is_attack);
+                    let hp_loss = hp_before - next.player.hp;
+                    if hp_loss > 0 {
+                        next.player_times_damaged_this_combat += 1;
+                        next.player_hp_lost_this_turn = true;
+                        fire_event(&mut next, GameEvent::PlayerTookCardDamage(hp_loss));
+                    }
                     next.resolving_card = None;
                     match data.card_type {
                         CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
@@ -540,7 +567,14 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                             // consumed.
                             if let Some(pos) = next.player.statuses.iter().position(|s| *s == Status::OneTwoPunch) {
                                 next.player.statuses.remove(pos);
+                    let hp_before_otp = next.player.hp;
                     run_effect_ops(&mut next, &data.effects, Actor::Player, &targets, is_attack);
+                    let hp_loss_otp = hp_before_otp - next.player.hp;
+                    if hp_loss_otp > 0 {
+                        next.player_times_damaged_this_combat += 1;
+                        next.player_hp_lost_this_turn = true;
+                        fire_event(&mut next, GameEvent::PlayerTookCardDamage(hp_loss_otp));
+                    }
                                 next.attacks_played_this_turn += 1;
                                 fire_event(&mut next, GameEvent::AttackPlayed(card_name.to_string()));
                             }

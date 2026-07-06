@@ -1,6 +1,8 @@
 use crate::cards::{card_data, CardType};
 use crate::state::{draw_cards, CardInstance, CombatState, Fighter, Monster};
 use rand::seq::SliceRandom;
+use crate::cards::{card_data, CardType};
+use rand::Rng;
 use rand::Rng;
 
 /// Game events that statuses can react to via `Status::reactions`. These are
@@ -40,6 +42,15 @@ pub(crate) enum GameEvent {
     // `player_hp_lost_this_turn` are updated (e.g. FlameBarrier's
     // retaliation).
     DamageReceived,
+    // Fires at the end of the player's turn, before monsters act (e.g.
+    // Stampede auto-plays random Attacks from hand).
+    BeforeTurnEnd,
+    // Fires after a card is played if the player's HP decreased as a direct
+    // result of that card's effects (e.g. Rupture grants Strength).
+    PlayerTookCardDamage(i32),
+    // Fires after each individual card is added to the player's hand during
+    // a draw (e.g. Hellraiser auto-plays Strike-tagged cards).
+    CardDrawn(String),
 }
 
 /// A status that can be attached to a combatant. Each status participates in
@@ -176,6 +187,18 @@ pub(crate) enum Status {
     Juggling(i32),
     // Unmovable(n): the first n Block gains per turn from cards are doubled.
     Unmovable(i32),
+    // Stampede(n): at the end of the player's turn, auto-play n random Attack
+    // cards from hand.
+    Stampede(i32),
+    // Rupture(n): whenever the player loses HP directly from playing a card
+    // during their turn, gain n Strength.
+    Rupture(i32),
+    // Hellraiser: whenever the player draws a Strike-tagged card, immediately
+    // auto-play it.
+    Hellraiser,
+    // NoEnergyGain: prevents energy gain at player turn start. Removed at end
+    // of player turn (same pattern as NoDraw).
+    NoEnergyGain,
 }
 
 impl Status {
@@ -220,6 +243,10 @@ impl Status {
             Status::Vicious(_) => "Vicious",
             Status::Juggling(_) => "Juggling",
             Status::Unmovable(_) => "Unmovable",
+            Status::Stampede(_) => "Stampede",
+            Status::Rupture(_) => "Rupture",
+            Status::Hellraiser => "Hellraiser",
+            Status::NoEnergyGain => "NoEnergyGain",
         }
     }
 
@@ -277,6 +304,10 @@ impl Status {
             "Vicious" => vec![Status::Vicious(amount)],
             "Juggling" => vec![Status::Juggling(amount)],
             "Unmovable" => vec![Status::Unmovable(amount)],
+            "Stampede" => vec![Status::Stampede(amount)],
+            "Rupture" => vec![Status::Rupture(amount)],
+            "Hellraiser" => vec![Status::Hellraiser; amount.max(0) as usize],
+            "NoEnergyGain" => vec![Status::NoEnergyGain; amount.max(0) as usize],
             _ => Vec::new(),
         }
     }
@@ -417,6 +448,21 @@ impl Status {
             // Juggling: on AttackPlayed, the per-card-name handler inside
             // fire_event checks attacks_played_this_turn and pushes copies.
             (Status::Juggling(_), GameEvent::AttackPlayed(_)) => vec![],
+            // Stampede: before the player's turn ends, auto-play N random
+            // Attack cards from hand.
+            (Status::Stampede(n), GameEvent::BeforeTurnEnd) => {
+                vec![EffectOp::AutoPlayRandomAttacksFromHand(*n)]
+            }
+            // Rupture: whenever the player loses HP directly from playing a
+            // card, gain Strength.
+            (Status::Rupture(n), GameEvent::PlayerTookCardDamage(_)) => {
+                vec![EffectOp::ApplyStatusToSelf(Status::Strength(*n))]
+            }
+            // Hellraiser: whenever the player draws a Strike-tagged card,
+            // auto-play it against a random enemy.
+            (Status::Hellraiser, GameEvent::CardDrawn(name)) if name.contains("Strike") => {
+                vec![EffectOp::AutoPlayStrikeFromHand(name.clone())]
+            }
             _ => vec![],
         }
     }
@@ -689,6 +735,21 @@ pub(crate) enum EffectOp {
         count_source: ScaleSource,
         exhaust: bool,
     },
+    // Gain Energy equal to the number of Attack cards currently in the
+    // player's hand (e.g. ExpectAFight).
+    GainEnergyEqualToAttacksInHand,
+    // Draw cards from the draw pile one at a time until a non-Attack card
+    // is drawn (which is also added to hand). Stops if draw pile and discard
+    // pile are both empty (e.g. Pillage).
+    DrawUntilNonAttack,
+    // Find the named card in the player's hand, remove it, run its effects
+    // against a random living enemy (or all enemies if non-targeted), and
+    // route it to discard/exhaust as normal. Used by Hellraiser's Strike
+    // auto-play reaction.
+    AutoPlayStrikeFromHand(String),
+    // Auto-play N random Attack cards from the player's hand. Used by
+    // Stampede's BeforeTurnEnd reaction.
+    AutoPlayRandomAttacksFromHand(i32),
 }
 
 /// What a `DealDamageScaled` op reads its multiplier from. New scaling

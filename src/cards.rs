@@ -409,6 +409,16 @@ fn upgrade_delta(name: &str) -> Option<UpgradeDelta> {
             }]),
             ..Default::default()
         }),
+        // Stampede+: cost 2 -> 1.
+        "Stampede" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // Rupture+: cost 1 -> 0.
+        "Rupture" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // Hellraiser+: cost 3 -> 2.
+        "Hellraiser" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // ExpectAFight+: cost 1 -> 0.
+        "ExpectAFight" => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        // Pillage+: 8 damage -> 12 damage.
+        "Pillage" => Some(UpgradeDelta { damage_delta: 4, ..Default::default() }),
         _ => None,
     }
 }
@@ -1369,6 +1379,63 @@ fn card_data_base(name: &str) -> Option<CardData> {
             keywords: HashSet::new(),
             rarity: CardRarity::Rare,
         }),
+        // Stampede (Power): At the end of your turn, 1 random Attack in
+        // your Hand is played against a random enemy. Uncommon.
+        "Stampede" => Some(CardData {
+            cost: 2,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Stampede(1))],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
+        }),
+        // Rupture (Power): Whenever you lose HP on your turn, gain 1
+        // Strength. Uncommon.
+        "Rupture" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Rupture(1))],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
+        }),
+        // Hellraiser (Power): Whenever you draw a card containing "Strike",
+        // that card is played against a random enemy. Rare.
+        "Hellraiser" => Some(CardData {
+            cost: 3,
+            targeted: false,
+            card_type: CardType::Power,
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Hellraiser)],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Rare,
+        }),
+        // ExpectAFight (Skill): Gain Energy equal to the number of Attacks
+        // in your Hand. You cannot gain additional Energy this turn.
+        // Uncommon.
+        "ExpectAFight" => Some(CardData {
+            cost: 1,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![
+                EffectOp::GainEnergyEqualToAttacksInHand,
+                EffectOp::ApplyStatusToSelf(Status::NoEnergyGain),
+            ],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
+        }),
+        // Pillage (Attack): Deal 8 damage. Draw cards until you draw a
+        // non-Attack card. Uncommon.
+        "Pillage" => Some(CardData {
+            cost: 1,
+            targeted: true,
+            card_type: CardType::Attack,
+            effects: vec![
+                EffectOp::DealDamage(8),
+                EffectOp::DrawUntilNonAttack,
+            ],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
+        }),
         _ => None,
     }
 }
@@ -1411,6 +1478,7 @@ pub(crate) const ALL_CARD_NAMES: &[&str] = &[
     "Dominate",
     "DrumOfBattle",
     "Evil Eye",
+    "ExpectAFight",
     "FeelNoPain",
     "FiendFire",
     "FightMe",
@@ -1418,6 +1486,7 @@ pub(crate) const ALL_CARD_NAMES: &[&str] = &[
     "Forgotten Ritual",
     "Headbutt",
     "Havoc",
+    "Hellraiser",
     "Hemokinesis",
     "HowlFromBeyond",
     "Impervious",
@@ -1437,12 +1506,15 @@ pub(crate) const ALL_CARD_NAMES: &[&str] = &[
     "PactsEnd",
     "Pommel Strike",
     "Pyre",
+    "Pillage",
     "Rage",
+    "Rupture",
     "SecondWind",
     "Setup Strike",
     "ShrugItOff",
     "Slimed",
     "Spite",
+    "Stampede",
     "Stomp",
     "StoneArmor",
     "Strike",
