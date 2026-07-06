@@ -111,10 +111,11 @@ class CardName(str, Enum):
     # ── Powers ──
     DEMON_FORM = "DemonForm"
 
-    # ── Status cards (added to hand/deck by game effects) ──
+    # ── Status / Curse cards (added to hand/deck by game effects or ascension) ──
     DAZED = "Dazed"
     SLIMED = "Slimed"
     WOUND = "Wound"
+    ASCENDERS_BANE = "Ascender's Bane"
 
 
 # ── Monster catalogue ─────────────────────────────────────────────────────────
@@ -180,11 +181,12 @@ _CARD_OVERRIDES: dict[str, str] = {
     "SetupStrike": "Setup Strike",
     "ForgottenRitual": "Forgotten Ritual",
     "HowlFromBeyond": "HowlFromBeyond",
-    # Status cards (no character suffix)
+    # Status / Curse cards (no character suffix)
     "Dazed": "Dazed",
     "Slimed": "Slimed",
     "Wound": "Wound",
     "Burn": "Burn",
+    "Ascender'sBane": "Ascender's Bane",
 }
 
 

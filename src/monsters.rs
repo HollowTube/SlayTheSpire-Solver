@@ -1,4 +1,5 @@
 use crate::engine::{EffectOp, Status};
+use crate::ids::CardId;
 use rand::Rng;
 use rand_pcg::Pcg32;
 
@@ -119,19 +120,19 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
         // player's discard pile (no damage).
         ("Leaf Slime (S)", "Tackle") => Some(vec![EffectOp::DealDamage(3)]),
         ("Leaf Slime (S)", "Goop") => {
-            Some(vec![EffectOp::ApplyCardToTarget("Slimed".to_string())])
+            Some(vec![EffectOp::ApplyCardToTarget(CardId::Slimed)])
         }
         // Leaf Slime (M): StickyShot gives the player two "Slimed" cards (no
         // damage); ClumpShot deals 8.
         ("Leaf Slime (M)", "StickyShot") => Some(vec![
-            EffectOp::ApplyCardToTarget("Slimed".to_string()),
-            EffectOp::ApplyCardToTarget("Slimed".to_string()),
+            EffectOp::ApplyCardToTarget(CardId::Slimed),
+            EffectOp::ApplyCardToTarget(CardId::Slimed),
         ]),
         ("Leaf Slime (M)", "ClumpShot") => Some(vec![EffectOp::DealDamage(8)]),
         // Twig Slime (M): StickyShot gives the player one "Slimed" card (no
         // damage); ClumpShot deals 11.
         ("Twig Slime (M)", "StickyShot") => {
-            Some(vec![EffectOp::ApplyCardToTarget("Slimed".to_string())])
+            Some(vec![EffectOp::ApplyCardToTarget(CardId::Slimed)])
         }
         ("Twig Slime (M)", "ClumpShot") => Some(vec![EffectOp::DealDamage(11)]),
         // Byrdonis: alternates Swoop (17) <-> Peck (3 hits of 3), and has
@@ -169,9 +170,9 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
         ]),
         ("Vantom", "Dismember") => Some(vec![
             EffectOp::DealDamage(27),
-            EffectOp::ApplyCardToTarget("Wound".to_string()),
-            EffectOp::ApplyCardToTarget("Wound".to_string()),
-            EffectOp::ApplyCardToTarget("Wound".to_string()),
+            EffectOp::ApplyCardToTarget(CardId::Wound),
+            EffectOp::ApplyCardToTarget(CardId::Wound),
+            EffectOp::ApplyCardToTarget(CardId::Wound),
         ]),
         ("Vantom", "Prepare") => Some(vec![EffectOp::ApplyStatusToSelf(Status::Strength(2))]),
         // Snapping Jaxfruit: Energy Orb — deal 3 damage, gain 2 Strength.
@@ -252,9 +253,9 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
         // Phrog Parasite (elite): fixed 2-move cycle — Infect (apply 3
         // Infection cards) ↔ Lash (4 hits of 4 damage).
         ("Phrog Parasite", "Infect") => Some(vec![
-            EffectOp::ApplyCardToTarget("Infection".to_string()),
-            EffectOp::ApplyCardToTarget("Infection".to_string()),
-            EffectOp::ApplyCardToTarget("Infection".to_string()),
+            EffectOp::ApplyCardToTarget(CardId::Infection),
+            EffectOp::ApplyCardToTarget(CardId::Infection),
+            EffectOp::ApplyCardToTarget(CardId::Infection),
         ]),
         ("Phrog Parasite", "Lash") => Some(vec![
             EffectOp::DealDamage(4),
@@ -266,7 +267,7 @@ pub(crate) fn monster_move(monster_name: &str, move_name: &str) -> Option<Vec<Ef
         // damage) ↔ Wriggle (1 Infection card + self +2 Strength).
         ("Wriggler", "Nasty Bite") => Some(vec![EffectOp::DealDamage(6)]),
         ("Wriggler", "Wriggle") => Some(vec![
-            EffectOp::ApplyCardToTarget("Infection".to_string()),
+            EffectOp::ApplyCardToTarget(CardId::Infection),
             EffectOp::ApplyStatusToSelf(Status::Strength(2)),
         ]),
         // Tracker Ruby Raider: Track applies 2 Frail, Hounds is 8 hits of 1.
