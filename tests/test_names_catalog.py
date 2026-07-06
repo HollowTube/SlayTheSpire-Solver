@@ -7,9 +7,7 @@ corresponding entry is added to CardName in python/sts_sim/names.py.
 import re
 from pathlib import Path
 
-import pytest
-
-from sts_sim.names import CardName, MonsterName, card, monster, _MONSTER_MAP
+from sts_sim.names import CardName, MonsterName, card, _MONSTER_MAP
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -39,7 +37,7 @@ def test_card_name_enum_covers_all_rust_cards():
     enum_values = {c.value for c in CardName}
     missing = rust_cards - enum_values
     assert not missing, (
-        f"Cards in cards.rs but missing from CardName enum in names.py:\n"
+        "Cards in cards.rs but missing from CardName enum in names.py:\n"
         + "\n".join(f"  {c}" for c in sorted(missing))
         + "\n\nAdd them to the CardName enum in python/sts_sim/names.py."
     )
