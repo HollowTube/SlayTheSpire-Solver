@@ -313,7 +313,7 @@ mod tests {
         let mut rng = Pcg32::seed_from_u64(42);
         let monsters = resolve_shape(&shape, &mut rng);
         assert_eq!(monsters.len(), 1);
-        assert_eq!(monsters[0].name.as_deref(), Some("Flyconid"));
+        assert_eq!(monsters[0].name.map(|id| id.as_str()), Some("Flyconid"));
         assert!(monsters[0].fighter.hp >= 74 && monsters[0].fighter.hp <= 78);
     }
 
@@ -323,8 +323,8 @@ mod tests {
         let mut rng = Pcg32::seed_from_u64(42);
         let monsters = resolve_shape(&shape, &mut rng);
         assert_eq!(monsters.len(), 2);
-        assert_eq!(monsters[0].name.as_deref(), Some("Shrinker Beetle"));
-        assert_eq!(monsters[1].name.as_deref(), Some("Twig Slime"));
+        assert_eq!(monsters[0].name.map(|id| id.as_str()), Some("Shrinker Beetle"));
+        assert_eq!(monsters[1].name.map(|id| id.as_str()), Some("Twig Slime"));
     }
 
     #[test]

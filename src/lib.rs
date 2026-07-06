@@ -12,7 +12,7 @@ mod state;
 use act::{draw_overgrowth_elite, draw_overgrowth_monster_sequence};
 use action::{EndTurnAction, PlayCardAction, SelectTargetAction};
 use cards::{card_data, CardData, CardKeyword, CardType};
-use crate::ids::CardId;
+use crate::ids::{CardId, MonsterId};
 use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
 use mcts::{
     fight_outcomes_per_fight, hp_lost_per_fight, mcts_action_values, mcts_search,
@@ -228,6 +228,7 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                 if next.monsters[i].fighter.hp <= 0 {
                     if let Some((mname, mhp, mcount)) = infested {
                         for _ in 0..mcount {
+                            let mid = MonsterId::from_str(&mname).expect("Infested minion name not a valid MonsterId");
                             let monster = Monster {
                                 fighter: Fighter {
                                     hp: mhp,
@@ -236,8 +237,8 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                                     statuses: vec![Status::Stun],
                                 },
                                 attack: 0,
-                                name: Some(mname.clone()),
-                                intent: opening_intent(&mname),
+                                name: Some(mid),
+                                intent: opening_intent(mid),
                                 last_move: None,
                                 move_streak: 0,
                                 moves_used: Vec::new(),
@@ -256,7 +257,7 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                 let is_fled_minion = next.monsters[i].fighter.statuses.iter().any(|s| {
                     if let Status::Minion { leader } = s {
                         next.monsters.iter().any(|m| {
-                            m.name.as_deref() == Some(leader.as_str()) && m.fighter.hp <= 0
+                            m.name.map(|id| id.as_str()) == Some(leader.as_str()) && m.fighter.hp <= 0
                         })
                     } else {
                         false
@@ -286,7 +287,7 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                 // opening_intent returned None because the opener is
                 // randomized), resolve one now via select_next_intent.
                 if next.monsters[i].intent.is_none() {
-                    if let Some(ref name) = next.monsters[i].name {
+                    if let Some(name) = next.monsters[i].name {
                         next.monsters[i].intent = select_next_intent(
                             name,
                             &next.monsters[i].last_move,
@@ -297,10 +298,10 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                     }
                 }
 
-                match next.monsters[i].name.clone() {
+                match next.monsters[i].name {
                     Some(name) => {
                         if let Some(intent) = next.monsters[i].intent.clone() {
-                            if let Some(effects) = monster_move(&name, &intent) {
+                            if let Some(effects) = monster_move(name, &intent) {
                                 run_effect_ops(&mut next, &effects, Actor::Monster(i), &[Actor::Player], false);
                             }
                             let streak = if next.monsters[i].last_move.as_deref() == Some(intent.as_str()) {
@@ -310,11 +311,11 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                             };
                             next.monsters[i].move_streak = streak;
                             next.monsters[i].last_move = Some(intent.clone());
-                            if is_one_time_move(&name, &intent) {
+                            if is_one_time_move(name, &intent) {
                                 next.monsters[i].moves_used.push(intent.clone());
                             }
                             next.monsters[i].intent = select_next_intent(
-                                &name,
+                                name,
                                 &next.monsters[i].last_move,
                                 streak,
                                 &next.monsters[i].moves_used,

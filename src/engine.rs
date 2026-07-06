@@ -1,5 +1,5 @@
 use crate::cards::{card_data, CardType};
-use crate::ids::CardId;
+use crate::ids::{CardId, MonsterId};
 use crate::state::{draw_cards, CardInstance, CombatState, Fighter, Monster};
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -1043,7 +1043,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                         statuses: vec![],
                     },
                     attack: 0,
-                    name: Some(name.clone()),
+                    name: Some(MonsterId::from_str(name).expect("SpawnMonster: unknown monster name")),
                     intent: None,
                     last_move: None,
                     move_streak: 0,

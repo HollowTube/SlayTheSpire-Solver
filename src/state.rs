@@ -1,4 +1,4 @@
-use crate::ids::CardId;
+use crate::ids::{CardId, MonsterId};
 use crate::engine::{Actor, Status};
 use crate::monsters::opening_intent;
 use pyo3::prelude::*;
@@ -127,8 +127,7 @@ pub struct Monster {
     // intent-based AI (e.g. "Jaw Worm"). `None` (the default) keeps the
     // original trivial fixed-`attack` behavior used by the placeholder
     // monster and every pre-HOL-11 test.
-    #[pyo3(get)]
-    pub(crate) name: Option<String>,
+    pub(crate) name: Option<MonsterId>,
     // The move this monster has telegraphed for its next turn (e.g. "Chomp")
     // — mirrors how Slay the Spire shows enemy intent before the player acts.
     // `None` for monsters with no move pool (the trivial flat-attacker).
@@ -161,10 +160,11 @@ impl Monster {
         move_streak: u32,
         moves_used: Vec<String>,
     ) -> Self {
+        let name_id: Option<MonsterId> = name.as_deref().and_then(MonsterId::from_str);
         // `intent` lets a reconstructed monster show its *actual* current
         // telegraph rather than the species' opener — defaults to the opener
         // (today's behavior) when not given.
-        let intent = intent.or_else(|| name.as_deref().and_then(opening_intent));
+        let intent = intent.or_else(|| name_id.and_then(opening_intent));
         Monster {
             fighter: Fighter {
                 hp,
@@ -176,12 +176,17 @@ impl Monster {
                     .collect(),
             },
             attack,
-            name,
+            name: name_id,
             intent,
             last_move,
             move_streak,
             moves_used,
         }
+    }
+
+    #[getter]
+    fn name(&self) -> Option<String> {
+        self.name.map(|id| id.as_str().to_string())
     }
 
     #[getter]
