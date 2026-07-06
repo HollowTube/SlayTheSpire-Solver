@@ -3,6 +3,7 @@ mod action;
 mod cards;
 mod encounters;
 mod engine;
+pub mod ids;
 mod mcts;
 mod monsters;
 mod run;
