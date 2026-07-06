@@ -7,6 +7,7 @@
 //! A won combat immediately offers a card-reward decision (HOL-64) before
 //! the run advances to its next node.
 use crate::cards::{card_data, CardType, ALL_CARD_NAMES};
+use crate::ids::CardId;
 use crate::encounters;
 use crate::mcts::simulate_fight_outcome;
 use crate::state::{CardInstance, CombatState};
@@ -142,7 +143,7 @@ fn draw_reward_cards(seed: u64) -> Vec<String> {
     let pool: Vec<&str> = ALL_CARD_NAMES
         .iter()
         .copied()
-        .filter(|name| card_data(name, 0).map(|data| data.card_type != CardType::Status).unwrap_or(false))
+        .filter(|name| CardId::from_str(name).map_or(false, |id| card_data(id, 0).card_type != CardType::Status))
         .collect();
     let mut rng = Pcg32::seed_from_u64(seed);
     pool.choose_multiple(&mut rng, REWARD_CHOICE_COUNT.min(pool.len()))
@@ -217,7 +218,9 @@ fn resolve_reward(state: &RunState, action: &str) -> PyResult<RunState> {
     if !state.pending_reward.iter().any(|name| name == chosen) {
         return Err(PyValueError::new_err(format!("{chosen} is not on offer")));
     }
-    next.deck.push(CardInstance::new(chosen));
+    let card_id = CardId::from_str(chosen)
+        .ok_or_else(|| PyValueError::new_err(format!("unknown card: {chosen}")))?;
+    next.deck.push(CardInstance::new(card_id));
     next.pending_reward.clear();
     Ok(next)
 }

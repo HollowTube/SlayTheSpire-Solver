@@ -447,7 +447,7 @@ def test_stone_armor_applies_plating():
 
 def test_plating_reduces_damage_taken():
     """Plating grants block at end of player turn, which absorbs monster damage."""
-    state = _pyre_state(["StoneArmor", "EndTurn"])
+    state = _pyre_state(["StoneArmor", "Strike"])
     # End turn without StoneArmor for baseline
     after_turn_no_armor = apply(state, EndTurnAction())
     damage_no_armor = state.player_hp - after_turn_no_armor.player_hp
@@ -477,7 +477,7 @@ def test_plating_decrements_after_monster_turn():
 
 def test_stone_armor_upgrade_to_6():
     """StoneArmor+: Plating 4→6 — grants 6 block instead of 4."""
-    state = _pyre_state(["StoneArmor+", "EndTurn"])
+    state = _pyre_state(["StoneArmor+", "Strike"])
     after_turn_no_armor = apply(state, EndTurnAction())
     damage_no_armor = state.player_hp - after_turn_no_armor.player_hp
     after_play = apply(state, PlayCardAction("StoneArmor+"))

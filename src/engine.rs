@@ -1,4 +1,5 @@
 use crate::cards::{card_data, CardType};
+use crate::ids::CardId;
 use crate::state::{draw_cards, CardInstance, CombatState, Fighter, Monster};
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -12,7 +13,7 @@ pub(crate) enum GameEvent {
     SkillPlayed,
     /// The name of the Attack card that was played (e.g. for Juggling's
     /// "add a copy of the 3rd attack to hand").
-    AttackPlayed(String),
+    AttackPlayed(CardId),
     TurnStart,
     /// Fires at the end of the player's turn, before monster turns begin
     /// (e.g. Plating grants block here).
@@ -583,7 +584,7 @@ pub(crate) enum EffectOp {
     // by slime monster moves (Goop/StickyShot) to stick junk cards into the
     // player's deck. Only `Actor::Player` has card piles, so this is a no-op
     // for any other target in `targets`.
-    ApplyCardToTarget(String),
+    ApplyCardToTarget(CardId),
     // Removes one random card matching `filter` from `actor`'s hand and moves
     // it to the exhaust pile (e.g. Cinder, TrueGrit). No-op if no card in hand
     // matches `filter`. Only meaningful for `Actor::Player` — monsters have no
@@ -627,7 +628,7 @@ pub(crate) enum EffectOp {
     // Adds a random card from `pool` to `actor`'s hand (e.g. InfernalBlade
     // generating a random Attack). Only meaningful for `Actor::Player` —
     // monsters have no hand. No-op if `pool` is empty.
-    AddRandomCardToHand(Vec<String>),
+    AddRandomCardToHand(Vec<CardId>),
     // Doubles the number of Vulnerable stacks currently on each target —
     // a special-cased push applied *before* normal damage application (and
     // its Vulnerable-stack consumption) in the same effects list (e.g.
@@ -668,14 +669,14 @@ pub(crate) enum EffectOp {
     // turn-start trigger).
     ExhaustTopOfDrawPile,
     // Add a copy of the named card to the player's discard pile (e.g. Anger).
-    AddCardToDiscard(String),
+    AddCardToDiscard(CardId),
     // Spawns a new monster with the given name and HP onto the field
     // (e.g. Fogmog's Illusion spawns Eye With Teeth). The new monster
     // is added at the end of the monsters list.
     SpawnMonster(String, i32),
     // Adds `count` copies of the named card to the player's hand (e.g.
     // Juggling's "add N copies of the 3rd Attack to hand").
-    AddCardToHand(String, usize),
+    AddCardToHand(CardId, usize),
     // Pops `count` cards from the front of the draw pile (reshuffling discard
     // if empty), runs each card's effects recursively, then routes the card
     // to exhaust_pile (if `exhaust`) or discard_pile. Does NOT add to hand.
@@ -733,7 +734,7 @@ impl ScaleSource {
             ScaleSource::HandSize => state.hand.len() as i32,
             ScaleSource::CurrentBlock => state.fighter(actor).block,
             ScaleSource::StrikeCardsInDeck => {
-                let count_strikes = |pile: &[CardInstance]| pile.iter().filter(|c| c.name.contains("Strike")).count();
+                let count_strikes = |pile: &[CardInstance]| pile.iter().filter(|c| c.id.as_str().contains("Strike")).count();
                 (count_strikes(&state.hand)
                     + count_strikes(&state.draw_pile)
                     + count_strikes(&state.discard_pile)
@@ -772,13 +773,11 @@ pub(crate) enum HandFilter {
 }
 
 impl HandFilter {
-    fn matches(&self, card_name: &str) -> bool {
+    fn matches(&self, id: CardId) -> bool {
         match self {
             HandFilter::Any => true,
             HandFilter::Attack | HandFilter::NonAttack => {
-                let is_attack = card_data(card_name, 0)
-                    .map(|data| matches!(data.card_type, CardType::Attack))
-                    .unwrap_or(false);
+                let is_attack = matches!(card_data(id, 0).card_type, CardType::Attack);
                 if matches!(self, HandFilter::Attack) {
                     is_attack
                 } else {
@@ -878,13 +877,13 @@ pub(crate) fn fire_event(state: &mut CombatState, event: GameEvent) {
         // because it needs access to both the card name (from the event
         // payload) and attacks_played_this_turn (from CombatState).
         if actor == Actor::Player {
-            if let GameEvent::AttackPlayed(ref name) = event {
+            if let GameEvent::AttackPlayed(card_id) = event {
                 if state.attacks_played_this_turn == 3 {
                     if let Some(n) = state.player.statuses.iter().find_map(|s| {
                         if let Status::Juggling(n) = s { Some(*n) } else { None }
                     }) {
                         for _ in 0..n as usize {
-                            ops.push(EffectOp::AddCardToHand(name.clone(), 1));
+                            ops.push(EffectOp::AddCardToHand(card_id, 1));
                         }
                     }
                 }
@@ -1022,15 +1021,15 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 let fighter = state.fighter_mut(actor);
                 fighter.hp = (fighter.hp + amount).min(fighter.max_hp);
             }
-            EffectOp::ApplyCardToTarget(card_name) => {
+            EffectOp::ApplyCardToTarget(card_id) => {
                 for &target in targets {
                     if target == Actor::Player {
-                        state.discard_pile.push(CardInstance::new(card_name.clone()));
+                        state.discard_pile.push(CardInstance::new(*card_id));
                     }
                 }
             }
-            EffectOp::AddCardToDiscard(card_name) => {
-                state.discard_pile.push(CardInstance::new(card_name.clone()));
+            EffectOp::AddCardToDiscard(card_id) => {
+                state.discard_pile.push(CardInstance::new(*card_id));
             }
             EffectOp::SpawnMonster(name, hp) => {
                 // Spawned monster starts with no intent — the monster
@@ -1051,9 +1050,9 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                     moves_used: Vec::new(),
                 });
             }
-            EffectOp::AddCardToHand(name, count) => {
+            EffectOp::AddCardToHand(card_id, count) => {
                 for _ in 0..*count {
-                    state.hand.push(CardInstance::new(name.clone()));
+                    state.hand.push(CardInstance::new(*card_id));
                 }
             }
             EffectOp::ExhaustTopOfDrawPile => {
@@ -1067,7 +1066,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                     .hand
                     .iter()
                     .enumerate()
-                    .filter(|(_, card)| filter.matches(&card.name))
+                    .filter(|(_, card)| filter.matches(card.id))
                     .map(|(i, _)| i)
                     .collect();
                 if !candidates.is_empty() {
@@ -1082,7 +1081,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 gain_block_per_card,
             } => {
                 let (matching, remaining): (Vec<CardInstance>, Vec<CardInstance>) =
-                    state.hand.drain(..).partition(|card| filter.matches(&card.name));
+                    state.hand.drain(..).partition(|card| filter.matches(card.id));
                 let count = matching.len() as i32;
                 state.hand = remaining;
                 state.exhaust_pile.extend(matching);
@@ -1104,7 +1103,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                     .discard_pile
                     .iter()
                     .enumerate()
-                    .filter(|(_, card)| filter.matches(&card.name))
+                    .filter(|(_, card)| filter.matches(card.id))
                     .map(|(i, _)| i)
                     .collect();
                 if !candidates.is_empty() {
@@ -1139,7 +1138,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
             EffectOp::AddRandomCardToHand(pool) => {
                 if !pool.is_empty() {
                     let pick = state.rng.gen_range(0..pool.len());
-                    state.hand.push(CardInstance::new(pool[pick].clone()));
+                    state.hand.push(CardInstance::new(pool[pick]));
                 }
             }
             EffectOp::DoubleVulnerableOnTarget => {
@@ -1255,7 +1254,8 @@ fn run_play_top_of_deck(state: &mut CombatState, count: usize, exhaust: bool) {
         state.resolving_card = Some(state.discard_pile.last().unwrap().clone());
     }
     for card in &cards {
-        if let Some(data) = card_data(&card.name, card.upgrade_level) {
+        {
+            let data = card_data(card.id, card.upgrade_level);
             let targets: Vec<Actor> = state
                 .living_monster_indices()
                 .into_iter()
@@ -1267,7 +1267,7 @@ fn run_play_top_of_deck(state: &mut CombatState, count: usize, exhaust: bool) {
                 CardType::Skill => fire_event(state, GameEvent::SkillPlayed),
                 CardType::Attack => {
                     state.attacks_played_this_turn += 1;
-                    fire_event(state, GameEvent::AttackPlayed(card.name.clone()));
+                    fire_event(state, GameEvent::AttackPlayed(card.id));
                 }
                 CardType::Power | CardType::Status => {}
             }

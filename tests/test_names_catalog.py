@@ -16,10 +16,11 @@ _REPO_ROOT = Path(__file__).parent.parent
 
 
 def _cards_from_rust() -> set[str]:
-    """Parse all card names from cards.rs card_data() match arms."""
-    src = (_REPO_ROOT / "src" / "cards.rs").read_text()
-    # Match lines like:   "Strike" => Some(CardData {
-    return set(re.findall(r'^\s+"([^"]+)"\s*=>\s*Some\(CardData', src, re.MULTILINE))
+    """Parse all card display names from the CardId enum in ids.rs."""
+    src = (_REPO_ROOT / "src" / "ids.rs").read_text()
+    # Match lines like:   StrikeIronclad, // "Strike"
+    card_section = src[:src.index("pub enum MonsterId")]
+    return set(re.findall(r'^\s+\w+, // "([^"]+)"', card_section, re.MULTILINE))
 
 
 def _monsters_from_rust() -> set[str]:

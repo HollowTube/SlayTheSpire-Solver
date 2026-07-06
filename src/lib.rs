@@ -12,6 +12,7 @@ mod state;
 use act::{draw_overgrowth_elite, draw_overgrowth_monster_sequence};
 use action::{EndTurnAction, PlayCardAction, SelectTargetAction};
 use cards::{card_data, CardData, CardKeyword, CardType};
+use crate::ids::CardId;
 use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
 use mcts::{
     fight_outcomes_per_fight, hp_lost_per_fight, mcts_action_values, mcts_search,
@@ -101,12 +102,11 @@ pub(crate) fn legal_actions_typed(state: &CombatState) -> Vec<ActionKind> {
                 .hand
                 .iter()
                 .filter(|card| {
-                    card_data(&card.name, card.upgrade_level)
-                        .map(|data| {
-                            !data.keywords.contains(&CardKeyword::Unplayable)
-                                && effective_cost(state, &data) <= state.player_energy
-                        })
-                        .unwrap_or(false)
+                    {
+                        let data = card_data(card.id, card.upgrade_level);
+                        !data.keywords.contains(&CardKeyword::Unplayable)
+                            && effective_cost(state, &data) <= state.player_energy
+                    }
                 })
                 .map(|card| ActionKind::PlayCard(card.as_str().to_string()))
                 .collect();
@@ -196,9 +196,7 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             // Ethereal cards exhaust instead of being discarded.
             let (ethereal, rest): (Vec<CardInstance>, Vec<CardInstance>) =
                 next.hand.drain(..).partition(|card| {
-                    card_data(&card.name, card.upgrade_level)
-                        .map(|data| data.keywords.contains(&CardKeyword::Ethereal))
-                        .unwrap_or(false)
+                    card_data(card.id, card.upgrade_level).keywords.contains(&CardKeyword::Ethereal)
                 });
             next.exhaust_pile.extend(ethereal);
             next.discard_pile.extend(rest);
@@ -386,8 +384,8 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             // HowlFromBeyond auto-play: if it's in the exhaust pile, run
             // its effects against all living enemies before the hand is
             // drawn. It stays in the exhaust pile (don't re-add).
-            if next.exhaust_pile.iter().any(|c| c.name == "HowlFromBeyond") {
-                let data = card_data("HowlFromBeyond", 0).expect("HowlFromBeyond has card_data");
+            if next.exhaust_pile.iter().any(|c| c.id == CardId::HowlFromBeyond) {
+                let data = card_data(CardId::HowlFromBeyond, 0);
                 let targets: Vec<Actor> = next
                     .living_monster_indices()
                     .into_iter()
@@ -395,7 +393,7 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                     .collect();
                                 run_effect_ops(&mut next, &data.effects, Actor::Player, &targets, true);
                 next.attacks_played_this_turn += 1;
-                fire_event(&mut next, GameEvent::AttackPlayed("HowlFromBeyond".to_string()));
+                fire_event(&mut next, GameEvent::AttackPlayed(CardId::HowlFromBeyond));
                 check_plow_threshold(&mut next);
             }
             // Draw the next turn's opening hand (reshuffling the discard
@@ -429,21 +427,21 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                     )));
                 }
                 let mut next = state.clone();
-                let data = card_data(&card.name, card.upgrade_level).expect("pending card is always known");
+                let data = card_data(card.id, card.upgrade_level);
                 let is_attack = matches!(data.card_type, CardType::Attack);
                 run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)], is_attack);
                 match data.card_type {
                     CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
                     CardType::Attack => {
                         next.attacks_played_this_turn += 1;
-                        fire_event(&mut next, GameEvent::AttackPlayed(card.name.clone()));
+                        fire_event(&mut next, GameEvent::AttackPlayed(card.id));
                         // One Two Punch: the next Attack played this turn
                         // resolves a second time, then the power is consumed.
                         if let Some(pos) = next.player.statuses.iter().position(|s| *s == Status::OneTwoPunch) {
                             next.player.statuses.remove(pos);
                             run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)], is_attack);
                             next.attacks_played_this_turn += 1;
-                            fire_event(&mut next, GameEvent::AttackPlayed(card.name.clone()));
+                            fire_event(&mut next, GameEvent::AttackPlayed(card.id));
                         }
                     }
                     CardType::Power | CardType::Status => {}
@@ -462,8 +460,7 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
         ActionKind::PlayCard(card_name) => {
             let card_name = card_name.as_str();
             let instance = CardInstance::parse(card_name);
-                let data = card_data(&instance.name, instance.upgrade_level)
-                    .ok_or_else(|| PyValueError::new_err(format!("unknown card: {}", instance.name)))?;
+                let data = card_data(instance.id, instance.upgrade_level);
                 let mut next = state.clone();
                 let position = next
                     .hand
@@ -535,7 +532,7 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                         CardType::Skill => fire_event(&mut next, GameEvent::SkillPlayed),
                         CardType::Attack => {
                             next.attacks_played_this_turn += 1;
-                            fire_event(&mut next, GameEvent::AttackPlayed(card_name.to_string()));
+                            fire_event(&mut next, GameEvent::AttackPlayed(instance.id));
                             // One Two Punch: the next Attack played this turn
                             // resolves a second time, then the power is
                             // consumed.
@@ -543,7 +540,7 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                                 next.player.statuses.remove(pos);
                     run_effect_ops(&mut next, &data.effects, Actor::Player, &targets, is_attack);
                                 next.attacks_played_this_turn += 1;
-                                fire_event(&mut next, GameEvent::AttackPlayed(card_name.to_string()));
+                                fire_event(&mut next, GameEvent::AttackPlayed(instance.id));
                             }
                         }
                         CardType::Power | CardType::Status => {}
