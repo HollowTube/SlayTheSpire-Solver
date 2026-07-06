@@ -22,21 +22,21 @@ from . import names as _names
 # Status name map: bridge power id → sim Status string
 # Extend as more statuses are validated against the sim.
 _STATUS_MAP: dict[str, str] = {
-    "Strength":     "Strength",
-    "Dexterity":    "Dexterity",
-    "Vulnerable":   "Vulnerable",
-    "Weak":         "Weak",
-    "Frail":        "Frail",
-    "Poison":       "Poison",
-    "Thorns":       "Thorns",
-    "Metallicize":  "Metallicize",
-    "Ritual":       "Ritual",
-    "Barricade":    "Barricade",
-    "Plating":      "Plating",
-    "Regen":        "Regen",
-    "Brutality":    "Brutality",
-    "DemonForm":    "DemonForm",
-    "Juggernaut":   "Juggernaut",
+    "Strength": "Strength",
+    "Dexterity": "Dexterity",
+    "Vulnerable": "Vulnerable",
+    "Weak": "Weak",
+    "Frail": "Frail",
+    "Poison": "Poison",
+    "Thorns": "Thorns",
+    "Metallicize": "Metallicize",
+    "Ritual": "Ritual",
+    "Barricade": "Barricade",
+    "Plating": "Plating",
+    "Regen": "Regen",
+    "Brutality": "Brutality",
+    "DemonForm": "DemonForm",
+    "Juggernaut": "Juggernaut",
 }
 
 
@@ -124,15 +124,17 @@ def from_combat(combat: dict, player_state: dict | None = None) -> CombatState:
         intent_raw = e.get("intent")
         intent_str = _fmt_intent(intent_raw)
         m_statuses = _map_statuses(e.get("powers", []))
-        monsters.append(Monster(
-            hp=e.get("hp", 0),
-            max_hp=e.get("max_hp", e.get("hp", 0)),
-            block=e.get("block", 0),
-            attack=0,
-            name=sim_name,
-            intent=intent_str,
-            statuses=m_statuses,
-        ))
+        monsters.append(
+            Monster(
+                hp=e.get("hp", 0),
+                max_hp=e.get("max_hp", e.get("hp", 0)),
+                block=e.get("block", 0),
+                attack=0,
+                name=sim_name,
+                intent=intent_str,
+                statuses=m_statuses,
+            )
+        )
 
     return CombatState(
         player_hp=p.get("hp", 0),
