@@ -19,7 +19,7 @@ def _cards_from_rust() -> set[str]:
     """Parse all card display names from the CardId enum in ids.rs."""
     src = (_REPO_ROOT / "src" / "ids.rs").read_text()
     # Match lines like:   StrikeIronclad, // "Strike"
-    card_section = src[:src.index("pub enum MonsterId")]
+    card_section = src[: src.index("pub enum MonsterId")]
     return set(re.findall(r'^\s+\w+, // "([^"]+)"', card_section, re.MULTILINE))
 
 
