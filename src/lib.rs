@@ -807,6 +807,16 @@ fn optimal_value_rec(state: &CombatState, best: &mut f64, memo: &mut HashMap<Sta
 /// Python entry point for `optimal_value_rec`: the true optimal `reward`
 /// reachable from `state` (see that function's doc comment).
 #[pyfunction]
+fn all_card_names() -> Vec<&'static str> {
+    CardId::all().iter().map(|id| id.as_str()).collect()
+}
+
+#[pyfunction]
+fn all_monster_names() -> Vec<&'static str> {
+    MonsterId::all().iter().map(|id| id.as_str()).collect()
+}
+
+#[pyfunction]
 fn optimal_value(state: &CombatState) -> f64 {
     let mut best = f64::NEG_INFINITY;
     let mut memo = HashMap::new();
@@ -835,6 +845,8 @@ fn _sts_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(reward, m)?)?;
     m.add_function(wrap_pyfunction!(random_rollout, m)?)?;
     m.add_function(wrap_pyfunction!(redeterminized, m)?)?;
+    m.add_function(wrap_pyfunction!(all_card_names, m)?)?;
+    m.add_function(wrap_pyfunction!(all_monster_names, m)?)?;
     m.add_function(wrap_pyfunction!(optimal_value, m)?)?;
     m.add_function(wrap_pyfunction!(mcts_action_values, m)?)?;
     m.add_function(wrap_pyfunction!(mcts_search, m)?)?;

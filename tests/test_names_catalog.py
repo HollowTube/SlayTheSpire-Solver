@@ -1,32 +1,24 @@
-"""Guard: CardName enum in names.py stays in sync with cards.rs.
+"""Guard: CardName enum in names.py stays in sync with the live Rust binary.
 
-When a new card is added to cards.rs, this test fails until the
+When a new card is added to ids.rs/cards.rs, this test fails until the
 corresponding entry is added to CardName in python/sts_sim/names.py.
 """
 
-import re
-from pathlib import Path
-
+from sts_sim._sts_sim import all_card_names, all_monster_names
 from sts_sim.names import CardName, MonsterName, card, _MONSTER_MAP
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
-_REPO_ROOT = Path(__file__).parent.parent
-
 
 def _cards_from_rust() -> set[str]:
-    """Parse all card display names from the CardId enum in ids.rs."""
-    src = (_REPO_ROOT / "src" / "ids.rs").read_text()
-    # Match lines like:   StrikeIronclad, // "Strike"
-    card_section = src[: src.index("pub enum MonsterId")]
-    return set(re.findall(r'^\s+\w+, // "([^"]+)"', card_section, re.MULTILINE))
+    """All card display names from the live Rust binary (CardId::all())."""
+    return set(all_card_names())
 
 
 def _monsters_from_rust() -> set[str]:
-    """Parse all monster names from monsters.rs."""
-    src = (_REPO_ROOT / "src" / "monsters.rs").read_text()
-    return set(re.findall(r'^\s+"([^"]+)"\s*=>', src, re.MULTILINE))
+    """All monster display names from the live Rust binary (MonsterId::all())."""
+    return set(all_monster_names())
 
 
 # ── card tests ───────────────────────────────────────────────────────────────
