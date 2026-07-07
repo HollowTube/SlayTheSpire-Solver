@@ -107,6 +107,48 @@ def _call(fn, *args, **kwargs) -> dict:
 # ── main group ───────────────────────────────────────────────────────────────
 
 
+def _home_hints(screen: str, context_type: str = "") -> list[str]:
+    """Context-aware hints for the no-args home view."""
+    s = (screen or "").upper()
+    c = (context_type or "").upper()
+    if "COMBAT" in s or s == "COMBAT_PLAYER_TURN":
+        return [
+            "Run `sts2 actions` to see legal moves",
+            "Run `sts2 act <n>` to execute a move",
+            "Run `sts2 dev win` to instantly win, or `sts2 dev kill all` to kill enemies",
+        ]
+    if s in ("MAP", "MAP_SCREEN"):
+        return [
+            "Run `sts2 actions` to see available map paths",
+            "Run `sts2 act <n>` to travel to a node",
+            "Run `sts2 dev fight <ID>` to jump straight to a specific fight",
+        ]
+    if s == "REWARD":
+        return [
+            "Run `sts2 actions` to see reward choices",
+            "Run `sts2 act <n>` to pick a reward or proceed",
+            "Run `sts2 dev fight <ID>` to jump to the next fight directly",
+        ]
+    if s in ("MAIN_MENU", "TITLE", "", "?"):
+        return [
+            "Run `sts2 start` to begin a new run",
+            "Run `sts2 dev fight <ID>` to jump straight into a specific fight (e.g. JAW_WORM)",
+            "Run `sts2 --help` for all commands",
+        ]
+    if s == "EVENT" and c == "NEVENTROOM":
+        return [
+            "Run `sts2 actions` to see Neow's blessing options",
+            "Run `sts2 act <n>` to pick a blessing by index",
+            "Run `sts2 dev fight <ID>` to skip ahead to a specific fight (e.g. `sts2 dev fight JAW_WORM`)",
+        ]
+    # Default: no active combat — show how to get into one
+    return [
+        "Run `sts2 actions` to see what you can do on this screen",
+        "Run `sts2 dev fight <ID>` to jump to a fight (e.g. `sts2 dev fight JAW_WORM`)",
+        "Run `sts2 start` to begin a new run",
+    ]
+
+
 @click.group(invoke_without_command=True)
 @click.option(
     "--host",
@@ -182,15 +224,8 @@ def main(ctx: click.Context, host: str, as_json: bool, timeout: float) -> None:
                 ["name", "hp", "intent"],
             )
         )
-    parts.append(
-        _hint(
-            [
-                "Run `sts2 actions` to see legal moves",
-                "Run `sts2 act <n>` to execute a move",
-                "Run `sts2 --help` for all commands",
-            ]
-        )
-    )
+    context_type = (data.get("available_actions") or {}).get("screen_context_type", "")
+    parts.append(_hint(_home_hints(screen, context_type)))
     click.echo("\n".join(parts))
 
 
