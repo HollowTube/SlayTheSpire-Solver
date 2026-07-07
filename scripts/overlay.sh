@@ -5,7 +5,7 @@
 #   ./scripts/overlay.sh              # refresh WSL IP and start server
 #   ./scripts/overlay.sh build        # build and install mod (game must be off)
 #   ./scripts/overlay.sh server       # refresh WSL IP and start server
-#   ./scripts/overlay.sh launch       # launch STS2
+#   ./scripts/overlay.sh launch       # launch STS2 via Steam
 #   ./scripts/overlay.sh stop         # close STS2 gracefully
 #   ./scripts/overlay.sh fresh        # stop → build → launch → server
 
@@ -14,7 +14,17 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GAME_DIR="/mnt/d/SteamLibrary/steamapps/common/Slay the Spire 2"
 MOD_DIR="$GAME_DIR/mods/stssimbridgemod"
-GAME_EXE="$GAME_DIR/SlayTheSpire2.exe"
+STEAM_EXE="/mnt/c/Program Files (x86)/Steam/steam.exe"
+STS2_APP_ID=2868840
+
+# Windows .exe interop requires binfmt_misc WSLInterop handler.
+# It's registered by WSL on login but missing in non-interactive contexts.
+_ensure_interop() {
+    if [ ! -f /proc/sys/fs/binfmt_misc/WSLInterop ]; then
+        echo "==> Registering WSL Windows interop handler..."
+        echo ':WSLInterop:M::MZ::/init:PF' | sudo tee /proc/sys/fs/binfmt_misc/register > /dev/null
+    fi
+}
 
 _wsl_ip() {
     ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1
@@ -48,12 +58,15 @@ start_server() {
 }
 
 launch_game() {
-    echo "==> Launching STS2..."
-    "$GAME_EXE" &
-    echo "    Launched (PID $!)"
+    _ensure_interop
+    echo "==> Launching STS2 via Steam..."
+    # Start Steam if not running, then use -applaunch for proper Steam context
+    "$STEAM_EXE" -applaunch $STS2_APP_ID &
+    echo "    Launched (Steam will open the game)"
 }
 
 stop_game() {
+    _ensure_interop
     echo "==> Stopping STS2..."
     if taskkill.exe /IM SlayTheSpire2.exe 2>/dev/null; then
         echo "    Stopped gracefully"
@@ -69,13 +82,14 @@ case "$CMD" in
     launch)  launch_game ;;
     stop)    stop_game ;;
     fresh)
+        _ensure_interop
         stop_game
         echo "==> Waiting for game to close..."
         sleep 3
         build_mod
         launch_game
         echo "==> Waiting for game to start..."
-        sleep 5
+        sleep 25
         start_server
         ;;
     *)
