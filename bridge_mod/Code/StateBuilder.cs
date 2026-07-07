@@ -23,9 +23,6 @@ public static class StateBuilder
     // request, still negligible for an async background push.
     private const int DefaultIterations = 1000;
 
-    /// Names of cards/monsters dropped because NameMap doesn't recognize
-    /// them, so each is logged at most once per combat.
-    private static readonly HashSet<string> _loggedUnsupported = new();
 
     public static string BuildAnalyzeRequest(CombatState combatState, Player player)
     {
@@ -127,12 +124,7 @@ public static class StateBuilder
     {
         var statuses = new JsonArray();
         foreach (var power in creature.Powers)
-        {
-            if (NameMap.PowerNameMap.TryGetValue(power.Id.Entry, out var name))
-            {
-                statuses.Add(new JsonArray { name, power.Amount });
-            }
-        }
+            statuses.Add(new JsonArray { power.Id.Entry, power.Amount });
         return statuses;
     }
 
