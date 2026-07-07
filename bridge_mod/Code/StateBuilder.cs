@@ -40,9 +40,9 @@ public static class StateBuilder
     }
 
     /// Builds a "deck_baseline" request for the player's master deck against
-    /// the current fight's monsters, or null if any enemy isn't in
-    /// `NameMap.MonsterNameMap` (i.e. sts_sim doesn't model that monster and
-    /// can't run a deck-baseline simulation for this fight).
+    /// the current fight's monsters. Unknown STS2 monster IDs are resolved
+    /// by Rust via MonsterId::from_sts2(); unrecognised monsters use the
+    /// generic placeholder (attack from intent, repeated each turn).
     public static string? BuildDeckBaselineRequest(CombatState combatState, Player player)
     {
         var enemies = combatState.Enemies.ToList();
@@ -51,12 +51,8 @@ public static class StateBuilder
         var monstersArray = new JsonArray();
         foreach (var creature in enemies)
         {
-            var entry = creature.ModelId.Entry;
-            if (!NameMap.MonsterNameMap.TryGetValue(entry, out var monsterName))
-                return null;
-
             var (intentId, _) = NextMoveIntent(creature, targets);
-            var monsterObj = new JsonObject { ["name"] = monsterName };
+            var monsterObj = new JsonObject { ["name"] = creature.ModelId.Entry };
             if (intentId != null)
                 monsterObj["intent"] = intentId;
             var statuses = Statuses(creature);
@@ -74,21 +70,12 @@ public static class StateBuilder
         return root.ToJsonString();
     }
 
-    /// Returns the raw STS2 ids of any monsters/cards currently in play that
-    /// `NameMap` doesn't recognize, for the overlay's "unsupported" warning.
-    /// Monsters come from `combatState.Enemies`; cards come from the
-    /// player's hand, draw, discard, and exhaust piles plus their master
-    /// deck. An unmapped monster means this fight's analysis is using the
-    /// generic placeholder (see `BuildMonster`); an unmapped card means it's
-    /// silently dropped from the translated piles (see `CardNames`).
+    /// Returns the raw STS2 ids of any unsupported entities in the current fight.
+    /// Currently always returns empty lists — unknown cards and monsters are
+    /// handled gracefully by the Rust sim (silently dropped or generic placeholder).
     public static (List<string> unknownMonsters, List<string> unknownCards) FindUnsupported(CombatState combatState, Player player)
     {
-        var unknownMonsters = combatState.Enemies
-            .Select(c => c.ModelId.Entry)
-            .Where(entry => !NameMap.MonsterNameMap.ContainsKey(entry))
-            .Distinct()
-            .ToList();
-
+        var unknownMonsters = new List<string>();
         var unknownCards = new List<string>();
 
         return (unknownMonsters, unknownCards);
@@ -162,29 +149,19 @@ public static class StateBuilder
 
     private static JsonObject BuildMonster(Creature creature, List<Creature> targets)
     {
-        var entry = creature.ModelId.Entry;
-        var mapped = NameMap.MonsterNameMap.TryGetValue(entry, out var mappedName);
-        if (!mapped && _loggedUnsupported.Add($"monster:{entry}"))
-        {
-            MegaCrit.Sts2.Core.Logging.Log.Warn(
-                $"[sts_sim_bridge_mod] Unmapped monster {entry}, sending generic placeholder");
-        }
-
         var (intentId, attackDamage) = NextMoveIntent(creature, targets);
 
         var monster = new JsonObject
         {
-            ["name"] = mapped ? mappedName : null,
+            ["name"] = creature.ModelId.Entry,
             ["hp"] = creature.CurrentHp,
             ["max_hp"] = creature.MaxHp,
             ["block"] = creature.Block,
             ["statuses"] = Statuses(creature),
             ["attack"] = attackDamage,
         };
-        if (mapped && intentId != null)
-        {
+        if (intentId != null)
             monster["intent"] = intentId;
-        }
         return monster;
     }
 

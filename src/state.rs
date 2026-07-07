@@ -167,7 +167,7 @@ impl Monster {
         move_streak: u32,
         moves_used: Vec<String>,
     ) -> Self {
-        let name_id: Option<MonsterId> = name.as_deref().and_then(MonsterId::from_str);
+        let name_id: Option<MonsterId> = name.as_deref().and_then(|s| MonsterId::from_str(s).or_else(|| MonsterId::from_sts2(s)));
         // `intent` lets a reconstructed monster show its *actual* current
         // telegraph rather than the species' opener — defaults to the opener
         // (today's behavior) when not given.
