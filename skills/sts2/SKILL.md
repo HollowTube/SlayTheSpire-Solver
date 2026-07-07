@@ -136,3 +136,16 @@ All output is [TOON](https://toonformat.dev/) — token-efficient, agent-readabl
 - Analysis server runs in WSL on port 8765; the bridge mod connects to it automatically
 - `sts2 log` shows `[sts_sim_bridge_mod] analyze response: {...}` with MCTS action values and expected HP lost per action
 - ShrinkPower and other STS2-specific debuffs are not modelled by the Rust sim — the overlay's expected HP values may be optimistic when debuffed
+
+## Session hook — ambient game state on every session start
+
+Install a `SessionStart` hook so Claude Code automatically shows live game state at the top of every session — screen, HP, hand, enemies, and contextual hints — before you type anything:
+
+```bash
+sts2 setup-hook              # install into ./.claude/settings.json
+sts2 setup-hook --remove     # uninstall
+```
+
+The hook auto-detects the WSL bridge host from `/etc/resolv.conf` — no `STS2_BRIDGE_HOST` export needed. It fails silently when the bridge is unreachable so sessions open normally even if the game isn't running.
+
+After installing, restart Claude Code to activate.
