@@ -146,41 +146,119 @@ Block absorbs damage before HP and resets at the start of each combatant's own t
 ## Bridge mod — live overlay in Slay the Spire 2
 
 `bridge_mod/` is a C# mod for Slay the Spire 2 that pushes the live combat state to the
-`sts_sim` analysis server (see `python/sts_sim/server.py`) and shows the MCTS-suggested
-move values — and an estimated HP loss for each — in an in-game overlay.
+`sts_sim` analysis server and shows MCTS-suggested move values — and an estimated HP loss
+for each — in an in-game overlay.
 
-To build and install it (or pick up changes after editing `bridge_mod/Code/*.cs`):
+All the moving parts (build, install, game launch, server) are managed by `scripts/overlay.sh`.
 
-```bash
-cd bridge_mod
-dotnet build sts_sim_bridge_mod.csproj
+### overlay.sh — quick reference
+
+| Command | What it does |
+|---|---|
+| `./scripts/overlay.sh fresh` | **Full reset**: stop game → build mod → launch game → start server |
+| `./scripts/overlay.sh build` | Build and install the mod DLL (game must be off) |
+| `./scripts/overlay.sh server` | Refresh WSL IP and start the analysis server |
+| `./scripts/overlay.sh launch` | Launch STS2 via Steam |
+| `./scripts/overlay.sh stop` | Close STS2 gracefully |
+
+### First-time setup
+
+The script calls Windows executables (`taskkill.exe`, `steam.exe`) from WSL. In non-interactive
+shells these require the WSL binfmt_misc interop handler to be registered, which the script does
+automatically — but it needs `sudo` the first time each WSL session:
+
+```
+==> Registering WSL Windows interop handler...
+[sudo] password for tritin:
 ```
 
-Then copy the build output into the game's `mods/stssimbridgemod/` directory, e.g.:
+This only prompts once per WSL boot (the registration persists until WSL is shut down). To skip
+the prompt on subsequent runs, add the following to `/etc/sudoers` (via `sudo visudo`):
 
-```bash
-cp bin/Debug/net9.0/stssimbridgemod.dll bin/Debug/net9.0/stssimbridgemod.pdb \
-  "<Slay the Spire 2 install dir>/mods/stssimbridgemod/"
+```
+tritin ALL=(root) NOPASSWD: /usr/bin/tee /proc/sys/fs/binfmt_misc/register
 ```
 
-**The game must be closed while copying** — `stssimbridgemod.dll` is locked while the
-mod is loaded, so overwriting it while the game is running fails with a permissions
-error. Close the game, copy the new build, then relaunch.
+### Typical workflows
 
-### Closing and relaunching the game (WSL)
-
-From WSL, the game runs as `SlayTheSpire2.exe` on the Windows side and can be
-controlled with the Windows interop binaries under `/mnt/c/Windows/system32/`:
+**Starting a fresh session after modifying bridge mod code:**
 
 ```bash
-# Close it gracefully (sends WM_CLOSE, lets the game save/quit normally)
-taskkill.exe /IM SlayTheSpire2.exe
-
-# Force-kill if it's unresponsive
-taskkill.exe /IM SlayTheSpire2.exe /F
+# Game must be closed before running this so the DLL isn't locked
+./scripts/overlay.sh fresh
 ```
 
-Relaunch it via Steam with the `launch_game` MCP tool (or `steam://rungameid/2868840`).
+This stops the game (if running), builds and installs the mod, launches STS2 via Steam,
+waits for it to come up, then starts the analysis server in the foreground. Enter combat
+and the overlay will appear.
+
+**Game is already running, just need the server:**
+
+```bash
+./scripts/overlay.sh server
+```
+
+**Updating the mod without a full restart (hot reload):**
+
+```bash
+./scripts/overlay.sh build   # game must be off, or use hot reload below
+```
+
+Or, if the game is running and you want to avoid a full restart:
+
+```bash
+./scripts/overlay.sh build   # close game first
+# then hot-reload the installed DLL without restarting:
+sts2 console "bridge_hot_reload D:\\SteamLibrary\\steamapps\\common\\Slay the Spire 2\\mods\\stssimbridgemod\\stssimbridgemod.dll"
+```
+
+### How WSL networking works
+
+The analysis server runs in WSL; the game runs on Windows. They can't reach each other via
+`127.0.0.1` — each side's loopback is private to it.
+
+The script handles this automatically:
+
+1. **Server** is started with `--host 0.0.0.0` so it listens on all interfaces including the WSL virtual adapter.
+2. **Mod** reads its server address from `<mod_dir>/sts_sim_host.txt` at startup. The script writes the current WSL IP (e.g. `172.26.188.154`) to this file every time it runs. Since WSL2 assigns a new IP on every reboot, this file is always refreshed before the game starts.
+
+### `sts2` — bridge CLI
+
+The `sts2` CLI wraps the MCPTest bridge (port 21337) for inspecting and controlling a live game from the terminal.
+
+```bash
+# Show all commands
+sts2 --help
+
+# Status
+sts2 ping
+sts2 state          # current screen + context
+
+# Combat
+sts2 combat         # full combat state (HP, hand, enemies, intents)
+sts2 piles          # draw / hand / discard / exhaust piles
+sts2 actions        # numbered list of legal actions
+sts2 act <n>        # take action n, wait for next stable screen
+
+# Navigation
+sts2 map            # current map state
+sts2 act travel     # travel the highlighted map node
+
+# Player
+sts2 player         # player stats, relics, potions
+sts2 log            # game log
+
+# Console passthrough
+sts2 console "gold 999"
+sts2 console "bridge_hot_reload <path/to/stssimbridgemod.dll>"
+```
+
+By default `sts2` connects to `127.0.0.1:21337`. When running from WSL, set the Windows host IP:
+
+```bash
+export STS2_BRIDGE_HOST=172.26.176.1   # Windows IP as seen from WSL — check /etc/resolv.conf
+sts2 state
+```
 
 ## Python API
 
