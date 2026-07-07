@@ -39,12 +39,19 @@ impl CardInstance {
     /// Splits a trailing run of `+`s off `s` into an upgrade level — the
     /// inverse of `as_str`. A plain name (no `+`) parses as level 0, so
     /// existing callers passing bare card names are unaffected.
+    /// Accepts both display names ("Strike") and STS2 IDs ("STRIKE_IRONCLAD").
+    /// Panics on unrecognised input — use `try_parse` for lenient pile construction.
     pub(crate) fn parse(s: &str) -> Self {
+        Self::try_parse(s).unwrap_or_else(|| panic!("unknown card: {}", s.trim_end_matches('+')))
+    }
+
+    /// Like `parse` but returns `None` for unrecognised cards instead of panicking.
+    /// Used when building piles from bridge JSON, where unknown STS2 IDs are silently dropped.
+    pub(crate) fn try_parse(s: &str) -> Option<Self> {
         let trimmed = s.trim_end_matches('+');
         let upgrade_level = (s.len() - trimmed.len()) as u8;
-        let id = CardId::from_str(trimmed)
-            .unwrap_or_else(|| panic!("unknown card: {trimmed}"));
-        CardInstance { id, upgrade_level }
+        let id = CardId::from_str(trimmed).or_else(|| CardId::from_sts2(trimmed))?;
+        Some(CardInstance { id, upgrade_level })
     }
 }
 
@@ -324,10 +331,10 @@ impl CombatState {
             }
             None => (hand, draw_pile, false),
         };
-        let hand: Vec<CardInstance> = hand.iter().map(|s| CardInstance::parse(s)).collect();
-        let draw_pile: Vec<CardInstance> = draw_pile.iter().map(|s| CardInstance::parse(s)).collect();
-        let discard_pile: Vec<CardInstance> = discard_pile.iter().map(|s| CardInstance::parse(s)).collect();
-        let exhaust_pile: Vec<CardInstance> = exhaust_pile.iter().map(|s| CardInstance::parse(s)).collect();
+        let hand: Vec<CardInstance> = hand.iter().filter_map(|s| CardInstance::try_parse(s)).collect();
+        let draw_pile: Vec<CardInstance> = draw_pile.iter().filter_map(|s| CardInstance::try_parse(s)).collect();
+        let discard_pile: Vec<CardInstance> = discard_pile.iter().filter_map(|s| CardInstance::try_parse(s)).collect();
+        let exhaust_pile: Vec<CardInstance> = exhaust_pile.iter().filter_map(|s| CardInstance::try_parse(s)).collect();
         let mut state = CombatState {
             player: Fighter {
                 hp: player_hp,
