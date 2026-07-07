@@ -259,7 +259,72 @@ def test_piles_calls_get_card_piles_through_call(monkeypatch):
     assert "Strike" in result.output
 
 
+def test_actions_table_includes_status_column(monkeypatch):
+    from click.testing import CliRunner
+
+    data = {
+        "screen": "EVENT",
+        "actions": [
+            {"action": "event_option", "label": "Blessing A"},
+            {"action": "event_option", "label": "Blessing B"},
+            {"action": "event_proceed"},
+        ],
+    }
+    monkeypatch.setattr(bc, "get_available_actions", lambda: {"result": data})
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["actions"])
+    assert result.exit_code == 0
+    # Table header should include status column
+    assert "actions[3]{n,action,label,status}:" in result.output
+    # Blocked action should be marked
+    assert "blocked" in result.output
+    # Ready actions should be marked
+    assert "ready" in result.output
+
+
 # ─── send_request double-encoding ─────────────────────────────────────────────
+
+
+def test_act_warns_on_blocked_action(monkeypatch):
+    from click.testing import CliRunner
+
+    actions = [
+        {"action": "event_option", "label": "Blessing A"},
+        {"action": "event_proceed"},
+    ]
+    monkeypatch.setattr(
+        bc, "get_available_actions", lambda: {"result": {"actions": actions}}
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["act", "1"])
+    assert result.exit_code == 1
+    assert "error:" in result.output
+    assert "not valid right now" in result.output
+
+
+def test_act_executes_ready_action_normally(monkeypatch):
+    from click.testing import CliRunner
+
+    actions = [
+        {"action": "event_option", "label": "Blessing A"},
+        {"action": "event_proceed"},
+    ]
+    monkeypatch.setattr(
+        bc, "get_available_actions", lambda: {"result": {"actions": actions}}
+    )
+    # act_and_wait returns a new state
+    monkeypatch.setattr(
+        bc,
+        "act_and_wait",
+        lambda *a, **kw: {"screen": "MAP", "combat": {}, "result": {}},
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["act", "0"])
+    assert result.exit_code == 0
+    assert "acted:" in result.output
 
 
 def test_send_request_handles_double_encoded_json(monkeypatch):
@@ -321,3 +386,207 @@ def test_card_upgraded():
 def test_error_block():
     assert _error("boom") == "error: boom"
     assert _error("boom", "do this") == "error: boom\nhelp: do this"
+
+
+# ─── _action_status (tracer bullet) ───────────────────────────────────────────
+
+
+def test_action_status_event_proceed_blocked_when_blessings_available():
+    from sts_sim.bridge_cli import _action_status
+
+    actions = [
+        {"action": "event_option"},
+        {"action": "event_proceed"},
+    ]
+    assert _action_status({"action": "event_proceed"}, actions) == "blocked"
+
+
+def test_action_status_event_proceed_ready_when_no_blessings():
+    from sts_sim.bridge_cli import _action_status
+
+    actions = [
+        {"action": "event_proceed"},
+        {"action": "console"},
+    ]
+    assert _action_status({"action": "event_proceed"}, actions) == "ready"
+
+
+def test_action_status_card_confirm_blocked_until_selection():
+    from sts_sim.bridge_cli import _action_status
+
+    actions = [
+        {"action": "card_select"},
+        {"action": "card_confirm"},
+    ]
+    assert _action_status({"action": "card_confirm"}, actions) == "blocked"
+
+
+def test_action_status_card_confirm_ready_when_no_selections():
+    from sts_sim.bridge_cli import _action_status
+
+    actions = [
+        {"action": "card_confirm"},
+    ]
+    assert _action_status({"action": "card_confirm"}, actions) == "ready"
+
+
+def test_action_status_default_ready():
+    from sts_sim.bridge_cli import _action_status
+
+    actions = [{"action": "play_card"}, {"action": "end_turn"}]
+    assert _action_status({"action": "play_card"}, actions) == "ready"
+
+
+# ─── phase-aware hints ──────────────────────────────────────────────────────────
+
+
+def test_home_hints_neow_pick_phase():
+    from sts_sim.bridge_cli import _home_hints
+
+    actions = [
+        {"action": "event_option", "label": "Pomander"},
+        {"action": "event_option", "label": "Scissors"},
+        {"action": "event_proceed"},
+    ]
+    hints = _home_hints("EVENT", "NEVENTROOM", actions)
+    assert "pick a blessing" in " ".join(hints).lower()
+
+
+def test_home_hints_neow_proceed_phase():
+    from sts_sim.bridge_cli import _home_hints
+
+    actions = [
+        {"action": "event_proceed"},
+        {"action": "console"},
+    ]
+    hints = _home_hints("EVENT", "NEVENTROOM", actions)
+    assert "proceed" in " ".join(hints).lower()
+
+
+def test_home_hints_card_selection_upgrade():
+    from sts_sim.bridge_cli import _home_hints
+
+    actions = [
+        {"action": "card_select", "label": "Strike"},
+        {"action": "card_select", "label": "Defend"},
+        {"action": "card_confirm"},
+        {"action": "card_skip"},
+    ]
+    hints = _home_hints("CARD_SELECTION", "CardUpgradeScreen", actions)
+    assert "select" in " ".join(hints).lower()
+    assert "confirm" in " ".join(hints).lower()
+
+
+def test_home_hints_combat_turn():
+    from sts_sim.bridge_cli import _home_hints
+
+    actions = [
+        {"action": "play_card", "label": "Strike"},
+        {"action": "end_turn"},
+    ]
+    hints = _home_hints("COMBAT_PLAYER_TURN", "", actions)
+    assert "act" in " ".join(hints).lower()
+
+
+# ─── home view action preview ─────────────────────────────────────────────────
+
+
+def test_main_shows_actions_in_combat(monkeypatch):
+    from click.testing import CliRunner
+
+    data = {
+        "screen": "COMBAT_PLAYER_TURN",
+        "combat": {
+            "players": [
+                {
+                    "hp": 80,
+                    "max_hp": 80,
+                    "energy": 3,
+                    "max_energy": 3,
+                    "hand": [
+                        {"name": "Strike", "energy_cost": 1},
+                        {"name": "Defend", "energy_cost": 1},
+                    ],
+                }
+            ],
+            "enemies": [
+                {"name": "Jaw Worm", "hp": 44, "max_hp": 44, "intent": "Chomp"}
+            ],
+        },
+        "available_actions": {
+            "actions": [
+                {"action": "play_card", "card_name": "Strike"},
+                {"action": "play_card", "card_name": "Defend"},
+                {"action": "end_turn"},
+            ]
+        },
+    }
+    monkeypatch.setattr(bc, "get_full_state", lambda: {"result": data})
+
+    runner = CliRunner()
+    result = runner.invoke(main, [])
+    assert result.exit_code == 0
+    assert "actions[3]" in result.output
+    assert "Strike" in result.output
+    assert "Defend" in result.output
+    assert "End turn" in result.output
+
+
+def test_main_limits_actions_to_8(monkeypatch):
+    from click.testing import CliRunner
+
+    data = {
+        "screen": "COMBAT_PLAYER_TURN",
+        "combat": {
+            "players": [
+                {
+                    "hp": 80,
+                    "max_hp": 80,
+                    "energy": 3,
+                    "max_energy": 3,
+                    "hand": [{"name": "Strike", "energy_cost": 1}],
+                }
+            ],
+            "enemies": [
+                {"name": "Jaw Worm", "hp": 44, "max_hp": 44, "intent": "Chomp"}
+            ],
+        },
+        "available_actions": {
+            "actions": [
+                {"action": "play_card", "card_name": f"Card{i}"} for i in range(12)
+            ]
+        },
+    }
+    monkeypatch.setattr(bc, "get_full_state", lambda: {"result": data})
+
+    runner = CliRunner()
+    result = runner.invoke(main, [])
+    assert result.exit_code == 0
+    assert "actions[8]" in result.output
+    assert "Card0" in result.output
+    assert "Card7" in result.output
+    # Card8 should be truncated
+    assert "Card8" not in result.output
+
+
+def test_main_shows_actions_in_event(monkeypatch):
+    from click.testing import CliRunner
+
+    data = {
+        "screen": "EVENT",
+        "available_actions": {
+            "actions": [
+                {"action": "event_option", "label": "Pomander"},
+                {"action": "event_option", "label": "Scissors"},
+                {"action": "event_proceed"},
+            ]
+        },
+    }
+    monkeypatch.setattr(bc, "get_full_state", lambda: {"result": data})
+
+    runner = CliRunner()
+    result = runner.invoke(main, [])
+    assert result.exit_code == 0
+    assert "actions[3]" in result.output
+    assert "Pomander" in result.output
+    assert "Scissors" in result.output
