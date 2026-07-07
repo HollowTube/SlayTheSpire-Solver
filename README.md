@@ -248,8 +248,9 @@ sts2 act travel     # travel the highlighted map node
 sts2 player         # player stats, relics, potions
 sts2 log            # game log
 
-# Console passthrough
+# Console passthrough — run any in-game dev console command
 sts2 console "gold 999"
+sts2 console "fight JAW_WORM"
 sts2 console "bridge_hot_reload <path/to/stssimbridgemod.dll>"
 ```
 
@@ -259,6 +260,66 @@ By default `sts2` connects to `127.0.0.1:21337`. When running from WSL, set the 
 export STS2_BRIDGE_HOST=172.26.176.1   # Windows IP as seen from WSL — check /etc/resolv.conf
 sts2 state
 ```
+
+### Dev console commands
+
+All commands are passed through `sts2 console "<command>"`. IDs use SCREAMING_SNAKE_CASE (e.g. `BODY_SLAM`, `ENTROPIC_BREW`).
+
+**State manipulation (work in combat)**
+
+| Command | Args | Description |
+|---|---|---|
+| `gold <n>` | amount | Add gold |
+| `heal <n> [index]` | amount, target (0=player) | Heal HP |
+| `energy <n>` | amount | Add energy |
+| `block <n> [index]` | amount, target (0=player) | Add block |
+| `draw <n>` | count | Draw cards |
+| `damage <n> [index]` | amount, target (0=player) | Deal damage |
+| `kill [index\|all]` | target or "all" | Kill enemy/enemies |
+| `win` | — | Instantly win the combat |
+| `die` | — | Instantly die |
+| `godmode` | — | Toggle invincibility |
+| `stars <n>` | amount | Add stars |
+
+**Card / deck manipulation**
+
+| Command | Args | Description |
+|---|---|---|
+| `card <ID> [pile]` | card ID, pile name (default: hand) | Spawn a card into a pile |
+| `remove_card <ID> [pile]` | card ID, pile (default: hand) | Remove a card from a pile |
+| `upgrade <index>` | hand position (0 = leftmost) | Upgrade a card in hand |
+| `enchant <ID> [amount] [index]` | enchantment ID, amount, hand position | Apply enchantment to a card |
+| `afflict <ID> [amount] [index]` | affliction ID, amount, hand position | Apply affliction to a card |
+
+**Relics / potions / powers**
+
+| Command | Args | Description |
+|---|---|---|
+| `relic [add\|remove] <ID>` | add or remove (default: add), relic ID | Add/remove a relic |
+| `potion <ID>` | potion ID | Add a potion to your belt |
+| `power <ID> <amount> <index>` | power ID, stacks, target (0=player, 1=first enemy) | Apply a power/status |
+
+**Navigation**
+
+| Command | Args | Description |
+|---|---|---|
+| `fight <ID>` | encounter ID | Jump to a specific fight |
+| `event <ID>` | event ID | Jump to a specific event |
+| `room <ID>` | room ID | Jump to a specific room type |
+| `act <n\|ID>` | act number or ID | Jump to an act |
+| `travel` | — | Enable free map travel |
+
+**Misc**
+
+| Command | Args | Description |
+|---|---|---|
+| `unlock <type\|all>` | cards / potions / relics / monsters / events / all | Unlock content |
+| `achievement <unlock\|revoke> [ID]` | operation, achievement ID | Unlock/revoke achievements |
+| `instant` | — | Toggle instant (no animation) mode |
+| `dump` | — | Dump all model IDs to log |
+| `getlogs [name]` | filename | Zip and open game logs |
+
+> **Game log**: `sts2 log` streams the live game log — useful for seeing console command results, mod warnings, and the raw analyze responses the bridge mod receives from the server.
 
 ## Python API
 
