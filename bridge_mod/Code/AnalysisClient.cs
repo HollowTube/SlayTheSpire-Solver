@@ -15,7 +15,26 @@ namespace sts_sim_bridge_mod;
 /// </summary>
 public static class AnalysisClient
 {
-    private const string Host = "127.0.0.1";
+    private static readonly string Host = ResolveHost();
+
+    private static string ResolveHost()
+    {
+        // Read from <mod_dir>/sts_sim_host.txt so WSL can write the current IP on startup.
+        // Falls back to STS_SIM_HOST env var, then 127.0.0.1.
+        try
+        {
+            var modDir = Path.GetDirectoryName(typeof(AnalysisClient).Assembly.Location)!;
+            var configFile = Path.Combine(modDir, "sts_sim_host.txt");
+            if (File.Exists(configFile))
+            {
+                var host = File.ReadAllText(configFile).Trim();
+                if (!string.IsNullOrEmpty(host))
+                    return host;
+            }
+        }
+        catch { /* ignore, fall through */ }
+        return Environment.GetEnvironmentVariable("STS_SIM_HOST") ?? "127.0.0.1";
+    }
     private const int Port = 8765;
 
     private static TcpClient? _client;
