@@ -89,15 +89,7 @@ public static class StateBuilder
             .Distinct()
             .ToList();
 
-        var pcs = player.PlayerCombatState;
-        var piles = new[] { pcs?.Hand, pcs?.DrawPile, pcs?.DiscardPile, pcs?.ExhaustPile, player.Deck };
-        var unknownCards = piles
-            .Where(pile => pile != null)
-            .SelectMany(pile => pile!.Cards)
-            .Select(card => card.Id.Entry)
-            .Where(entry => !NameMap.CardNameMap.ContainsKey(entry))
-            .Distinct()
-            .ToList();
+        var unknownCards = new List<string>();
 
         return (unknownMonsters, unknownCards);
     }
@@ -140,18 +132,7 @@ public static class StateBuilder
             return names;
 
         foreach (var card in pile.Cards)
-        {
-            var entry = card.Id.Entry;
-            if (NameMap.CardNameMap.TryGetValue(entry, out var name))
-            {
-                names.Add(name);
-            }
-            else if (_loggedUnsupported.Add($"card:{entry}"))
-            {
-                MegaCrit.Sts2.Core.Logging.Log.Warn(
-                    $"[sts_sim_bridge_mod] Dropping unsupported card from translated state: {entry}");
-            }
-        }
+            names.Add(card.Id.Entry);
         return names;
     }
 
