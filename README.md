@@ -248,7 +248,21 @@ sts2 act travel     # travel the highlighted map node
 sts2 player         # player stats, relics, potions
 sts2 log            # game log
 
-# Console passthrough — run any in-game dev console command
+# Dev console shortcuts — ergonomic wrappers with context
+```bash
+sts2 dev                        # dashboard: current state + command catalogue
+sts2 dev fight JAW_WORM         # jump to a fight
+sts2 dev win                    # instantly win the current combat
+sts2 dev kill all               # kill all enemies
+sts2 dev godmode                # toggle invincibility
+sts2 dev gold 999               # add gold
+sts2 dev heal                   # full heal (default 999)
+sts2 dev card BASH              # spawn a card into hand
+sts2 dev relic BURNING_BLOOD    # add a relic
+sts2 dev power VULNERABLE 3 1   # apply a power (0=player, 1=first enemy)
+```
+
+# Raw console passthrough — any in-game dev console command
 sts2 console "gold 999"
 sts2 console "fight JAW_WORM"
 sts2 console "bridge_hot_reload <path/to/stssimbridgemod.dll>"

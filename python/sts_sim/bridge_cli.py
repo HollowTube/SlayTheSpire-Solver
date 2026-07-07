@@ -623,3 +623,388 @@ def console(ctx: click.Context, cmd: tuple[str, ...]) -> None:
             },
         )
     )
+
+
+# ── dev group ─────────────────────────────────────────────────────────────────
+
+# Console IDs use SCREAMING_SNAKE_CASE throughout.
+# Each subcommand: validates args → runs console command → prints result +
+# enough context that the agent doesn't need a follow-up call.
+
+
+def _dev_exec(command: str) -> dict:
+    """Run a console command and return the raw result dict."""
+    return _call(bc.execute_console_command, command)
+
+
+def _dev_out(
+    command: str, result: dict, context_parts: list[str] | None = None
+) -> None:
+    """Emit a TOON dev result block followed by optional context lines."""
+    click.echo(
+        _block("dev", {"command": command, "result": result.get("result", "ok")})
+    )
+    if context_parts:
+        for part in context_parts:
+            click.echo(part)
+
+
+def _combat_context() -> list[str]:
+    """Return TOON lines for the current combat state (best-effort, empty on error)."""
+    try:
+        data = _call(bc.get_combat_state)
+        player = (data.get("players") or [{}])[0]
+        parts = [
+            _block(
+                "context",
+                {
+                    "screen": data.get("screen", "?"),
+                    "hp": f"{player.get('hp', '?')}/{player.get('max_hp', '?')}",
+                    "energy": f"{player.get('energy', '?')}/{player.get('max_energy', '?')}",
+                    "block": player.get("block", 0),
+                },
+            )
+        ]
+        enemies = data.get("enemies", [])
+        if enemies:
+            parts.append(
+                _table(
+                    "enemies",
+                    [
+                        {
+                            "name": e.get("name", "?"),
+                            "hp": f"{e.get('hp', '?')}/{e.get('max_hp', '?')}",
+                            "intent": _fmt_intent(e.get("intent")),
+                        }
+                        for e in enemies
+                    ],
+                    ["name", "hp", "intent"],
+                )
+            )
+        hand = player.get("hand", data.get("hand", []))
+        if hand:
+            parts.append(
+                _table(
+                    "hand",
+                    [
+                        {
+                            "name": _card_name(c),
+                            "cost": c.get("energy_cost", "?")
+                            if isinstance(c, dict)
+                            else "?",
+                        }
+                        for c in hand
+                    ],
+                    ["name", "cost"],
+                )
+            )
+        return parts
+    except SystemExit:
+        return []
+
+
+def _screen_context() -> list[str]:
+    """Return a single TOON context line with the current screen (best-effort)."""
+    try:
+        data = _call(bc.get_run_state)
+        return [_block("context", {"screen": data.get("screen", "?")})]
+    except SystemExit:
+        return []
+
+
+@main.group(invoke_without_command=True)
+@click.pass_context
+def dev(ctx: click.Context) -> None:
+    """Dev console shortcuts — cheat commands for testing and exploration."""
+    if ctx.invoked_subcommand is not None:
+        return
+
+    # No-args: show current context + command catalogue
+    screen = "?"
+    hp = "?"
+    try:
+        run = _call(bc.get_run_state)
+        screen = run.get("screen", "?")
+        hp = f"{run.get('current_hp', '?')}/{run.get('max_hp', '?')}"
+    except SystemExit:
+        pass
+
+    click.echo(_block("dev", {"screen": screen, "hp": hp}))
+    click.echo(
+        _table(
+            "navigate",
+            [
+                {
+                    "cmd": "fight <ID>",
+                    "example": "fight JAW_WORM",
+                    "effect": "Jump to a specific fight",
+                },
+                {
+                    "cmd": "event <ID>",
+                    "example": "event ANCIENT",
+                    "effect": "Jump to a specific event",
+                },
+            ],
+            ["cmd", "example", "effect"],
+        )
+    )
+    click.echo(
+        _table(
+            "combat",
+            [
+                {"cmd": "win", "args": "", "effect": "Instantly win the fight"},
+                {
+                    "cmd": "kill [all|n]",
+                    "args": "all",
+                    "effect": "Kill all enemies or one by index",
+                },
+                {"cmd": "godmode", "args": "", "effect": "Toggle invincibility"},
+                {"cmd": "energy <n>", "args": "3", "effect": "Add energy"},
+                {"cmd": "heal [n]", "args": "999", "effect": "Heal HP (default: full)"},
+                {"cmd": "block <n>", "args": "50", "effect": "Add block"},
+                {
+                    "cmd": "power <ID> <n> <target>",
+                    "args": "VULNERABLE 3 1",
+                    "effect": "Apply a power (0=player, 1+=enemy)",
+                },
+            ],
+            ["cmd", "args", "effect"],
+        )
+    )
+    click.echo(
+        _table(
+            "cards",
+            [
+                {
+                    "cmd": "card <ID> [pile]",
+                    "args": "BASH hand",
+                    "effect": "Spawn a card (default pile: hand)",
+                },
+                {"cmd": "draw <n>", "args": "3", "effect": "Draw cards"},
+                {
+                    "cmd": "upgrade <i>",
+                    "args": "0",
+                    "effect": "Upgrade card at hand index",
+                },
+                {
+                    "cmd": "remove <ID>",
+                    "args": "CURSE_REGRET",
+                    "effect": "Remove card from hand or deck",
+                },
+            ],
+            ["cmd", "args", "effect"],
+        )
+    )
+    click.echo(
+        _table(
+            "loot",
+            [
+                {"cmd": "gold <n>", "args": "999", "effect": "Add gold"},
+                {"cmd": "relic <ID>", "args": "BURNING_BLOOD", "effect": "Add a relic"},
+                {
+                    "cmd": "potion <ID>",
+                    "args": "ENTROPIC_BREW",
+                    "effect": "Add a potion",
+                },
+            ],
+            ["cmd", "args", "effect"],
+        )
+    )
+    click.echo(
+        _hint(
+            [
+                "Run `sts2 dev <cmd> --help` for full usage",
+                "Run `sts2 dev fight <ID>` to jump straight to a fight",
+                "Run `sts2 dev win` to end the current combat instantly",
+            ]
+        )
+    )
+
+
+# ── navigation ────────────────────────────────────────────────────────────────
+
+
+@dev.command()
+@click.argument("encounter_id")
+@click.pass_context
+def fight(ctx: click.Context, encounter_id: str) -> None:
+    """Jump to a specific fight (e.g. JAW_WORM, MAWLER, TWO_LOUSES)."""
+    result = _dev_exec(f"fight {encounter_id}")
+    _dev_out(f"fight {encounter_id}", result, _screen_context())
+    click.echo(_hint(["Run `sts2 actions` to see available actions"]))
+
+
+@dev.command()
+@click.argument("event_id")
+@click.pass_context
+def event(ctx: click.Context, event_id: str) -> None:
+    """Jump to a specific event."""
+    result = _dev_exec(f"event {event_id}")
+    _dev_out(f"event {event_id}", result, _screen_context())
+
+
+# ── combat cheats ─────────────────────────────────────────────────────────────
+
+
+@dev.command()
+@click.pass_context
+def win(ctx: click.Context) -> None:
+    """Instantly win the current combat."""
+    result = _dev_exec("win")
+    _dev_out("win", result, _screen_context())
+
+
+@dev.command()
+@click.argument("target", default="all")
+@click.pass_context
+def kill(ctx: click.Context, target: str) -> None:
+    """Kill enemies. TARGET is 'all' or an enemy index (default: all)."""
+    cmd = f"kill {target}"
+    result = _dev_exec(cmd)
+    _dev_out(cmd, result, _combat_context())
+
+
+@dev.command()
+@click.pass_context
+def godmode(ctx: click.Context) -> None:
+    """Toggle invincibility."""
+    result = _dev_exec("godmode")
+    _dev_out("godmode", result)
+
+
+@dev.command()
+@click.argument("amount", type=int)
+@click.pass_context
+def energy(ctx: click.Context, amount: int) -> None:
+    """Add energy."""
+    cmd = f"energy {amount}"
+    result = _dev_exec(cmd)
+    _dev_out(cmd, result, _combat_context())
+
+
+@dev.command()
+@click.argument("amount", type=int, default=999)
+@click.argument("target", type=int, default=0)
+@click.pass_context
+def heal(ctx: click.Context, amount: int, target: int) -> None:
+    """Heal HP. AMOUNT defaults to 999 (effectively full). TARGET is 0=player."""
+    cmd = f"heal {amount} {target}" if target else f"heal {amount}"
+    result = _dev_exec(cmd)
+    _dev_out(cmd, result, _combat_context())
+
+
+@dev.command()
+@click.argument("amount", type=int)
+@click.argument("target", type=int, default=0)
+@click.pass_context
+def block(ctx: click.Context, amount: int, target: int) -> None:
+    """Add block. TARGET is 0=player, 1+=enemy index."""
+    cmd = f"block {amount} {target}" if target else f"block {amount}"
+    result = _dev_exec(cmd)
+    _dev_out(cmd, result, _combat_context())
+
+
+@dev.command()
+@click.argument("power_id")
+@click.argument("amount", type=int)
+@click.argument("target", type=int)
+@click.pass_context
+def power(ctx: click.Context, power_id: str, amount: int, target: int) -> None:
+    """Apply a power. TARGET: 0=player, 1+=enemy index. E.g.: power VULNERABLE 3 1"""
+    cmd = f"power {power_id} {amount} {target}"
+    result = _dev_exec(cmd)
+    _dev_out(cmd, result, _combat_context())
+
+
+# ── card manipulation ─────────────────────────────────────────────────────────
+
+
+@dev.command()
+@click.argument("card_id")
+@click.argument("pile", default="hand")
+@click.pass_context
+def card(ctx: click.Context, card_id: str, pile: str) -> None:
+    """Spawn CARD_ID into PILE (hand, draw, discard, exhaust). Default: hand."""
+    cmd = f"card {card_id} {pile}" if pile != "hand" else f"card {card_id}"
+    result = _dev_exec(cmd)
+    _dev_out(cmd, result, _combat_context())
+    click.echo(_hint(["Run `sts2 piles` to see all piles"]))
+
+
+@dev.command()
+@click.argument("amount", type=int)
+@click.pass_context
+def draw(ctx: click.Context, amount: int) -> None:
+    """Draw AMOUNT cards."""
+    cmd = f"draw {amount}"
+    result = _dev_exec(cmd)
+    _dev_out(cmd, result, _combat_context())
+
+
+@dev.command()
+@click.argument("hand_index", type=int)
+@click.pass_context
+def upgrade(ctx: click.Context, hand_index: int) -> None:
+    """Upgrade the card at HAND_INDEX (0 = leftmost card in hand)."""
+    cmd = f"upgrade {hand_index}"
+    result = _dev_exec(cmd)
+    _dev_out(cmd, result, _combat_context())
+
+
+@dev.command("remove")
+@click.argument("card_id")
+@click.argument("pile", default="hand")
+@click.pass_context
+def remove_card(ctx: click.Context, card_id: str, pile: str) -> None:
+    """Remove CARD_ID from PILE (default: hand)."""
+    cmd = (
+        f"remove_card {card_id} {pile}" if pile != "hand" else f"remove_card {card_id}"
+    )
+    result = _dev_exec(cmd)
+    _dev_out(cmd, result)
+
+
+# ── loot ──────────────────────────────────────────────────────────────────────
+
+
+@dev.command()
+@click.argument("amount", type=int)
+@click.pass_context
+def gold(ctx: click.Context, amount: int) -> None:
+    """Add AMOUNT gold."""
+    cmd = f"gold {amount}"
+    result = _dev_exec(cmd)
+    _dev_out(cmd, result)
+    click.echo(_hint(["Run `sts2 player` to verify"]))
+
+
+@dev.command()
+@click.argument("relic_id")
+@click.argument("operation", default="add")
+@click.pass_context
+def relic(ctx: click.Context, relic_id: str, operation: str) -> None:
+    """Add or remove a relic. OPERATION is 'add' (default) or 'remove'."""
+    if operation not in ("add", "remove"):
+        click.echo(
+            _error(
+                f"unknown operation '{operation}'", "sts2 dev relic <ID> [add|remove]"
+            )
+        )
+        sys.exit(2)
+    cmd = (
+        f"relic {operation} {relic_id}"
+        if operation == "remove"
+        else f"relic {relic_id}"
+    )
+    result = _dev_exec(cmd)
+    _dev_out(cmd, result)
+
+
+@dev.command()
+@click.argument("potion_id")
+@click.pass_context
+def potion(ctx: click.Context, potion_id: str) -> None:
+    """Add a potion to your belt."""
+    cmd = f"potion {potion_id}"
+    result = _dev_exec(cmd)
+    _dev_out(cmd, result)
