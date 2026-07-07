@@ -66,7 +66,7 @@ def _fmt_intent(intent: dict | str | None) -> str:
 def _card_name(c: Any) -> str:
     """Extract display name from a card — handles both dict and raw STS2 ID string."""
     if isinstance(c, dict):
-        return c.get("name", c.get("card_name", "?"))
+        return c.get("name") or c.get("card_name") or "?"
     return str(c)  # raw STS2 ID e.g. "STRIKE_IRONCLAD"
 
 
