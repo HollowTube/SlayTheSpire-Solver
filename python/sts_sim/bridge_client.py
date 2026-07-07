@@ -75,7 +75,15 @@ def send_request(
             return {"error": "Empty response from bridge"}
 
         try:
-            return json.loads(text)
+            result = json.loads(text)
+            # Some bridge versions double-encode the JSON (send a JSON string
+            # instead of a JSON object). Try one more decode if needed.
+            if isinstance(result, str):
+                try:
+                    result = json.loads(result)
+                except json.JSONDecodeError:
+                    pass  # keep the string as-is; callers will handle it
+            return result
         except json.JSONDecodeError as e:
             return {"error": f"Invalid JSON from bridge: {e}"}
 
@@ -177,25 +185,25 @@ def get_full_state() -> dict:
         player_result = _payload(player_raw)
         if isinstance(player_result, dict) and not player_result.get("error"):
             state["player"] = player_result
-        else:
-            # Fallback to run state for basic info
-            run_raw = get_run_state()
-            run_result = _payload(run_raw)
-            if isinstance(run_result, dict) and not run_result.get("error"):
-                state["run"] = {
-                    k: run_result[k]
-                    for k in (
-                        "act",
-                        "floor",
-                        "hp",
-                        "max_hp",
-                        "gold",
-                        "character",
-                        "ascension",
-                        "seed",
-                    )
-                    if k in run_result
-                }
+
+        # Always fetch run state for floor/act/seed (player_state may omit these)
+        run_raw = get_run_state()
+        run_result = _payload(run_raw)
+        if isinstance(run_result, dict) and not run_result.get("error"):
+            state["run"] = {
+                k: run_result[k]
+                for k in (
+                    "act",
+                    "floor",
+                    "hp",
+                    "max_hp",
+                    "gold",
+                    "character",
+                    "ascension",
+                    "seed",
+                )
+                if k in run_result
+            }
 
     # Add combat info if in combat
     if "COMBAT" in screen and "LOADING" not in screen:

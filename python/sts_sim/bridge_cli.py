@@ -87,12 +87,33 @@ _CONNECTION_ERRORS = (
 )
 
 
+def _first_player(data: Any) -> dict[str, Any]:
+    """Extract the first player dict from a bridge response.
+
+    The MCPTest bridge wraps player data in a ``players`` array.
+    This helper normalises both the wrapped form and the flat form.
+    """
+    if isinstance(data, dict):
+        players = data.get("players")
+        if isinstance(players, list) and players:
+            return players[0]
+    return {}  # type: ignore[return-value]
+
+
 def _call(fn, *args, **kwargs) -> dict:
     result = fn(*args, **kwargs)
     # send_request returns raw {"result": {...}} — unwrap it
     if isinstance(result, dict):
         result = result.get("result", result)
-    if isinstance(result, dict) and result.get("error"):
+    if not isinstance(result, dict):
+        click.echo(
+            _error(
+                f"Bridge returned {type(result).__name__} instead of dict",
+                "The bridge may have sent malformed or double-encoded data",
+            )
+        )
+        sys.exit(1)
+    if result.get("error"):
         err = result["error"]
         hint = (
             "Set STS2_BRIDGE_HOST if running from WSL"
@@ -177,21 +198,38 @@ def main(ctx: click.Context, host: str, as_json: bool, timeout: float) -> None:
 
     parts: list[str] = []
     screen = data.get("screen", "?")
-    run = data.get("run", {})
+
+    # get_full_state stores player/run info under "player" (a bridge response
+    # with a "players" array) and combat info under "combat".
+    player_data = _first_player(data.get("player", {}))
+    combat_data = data.get("combat", {})
+    combat_player = _first_player(combat_data)
+    run_data = data.get("run", {})
+
+    hp = f"{player_data.get('hp', combat_player.get('hp', run_data.get('hp', '?')))}/{player_data.get('max_hp', combat_player.get('max_hp', run_data.get('max_hp', '?')))}"
+    gold = player_data.get("gold", combat_player.get("gold", run_data.get("gold", "?")))
+    energy = f"{combat_player.get('energy', data.get('energy', '?'))}/{combat_player.get('max_energy', data.get('max_energy', '?'))}"
+
+    # get_full_state now stores run info under "run" (floor, act, seed).
+    # Fall back to player/combat data or top-level keys for older bridges.
     parts.append(
         _block(
             "game",
             {
                 "screen": screen,
-                "floor": run.get("floor", "?"),
-                "act": run.get("act", "?"),
-                "hp": f"{run.get('current_hp', '?')}/{run.get('max_hp', '?')}",
-                "gold": run.get("gold", "?"),
-                "energy": f"{data.get('energy', '?')}/{data.get('max_energy', '?')}",
+                "floor": run_data.get(
+                    "floor", player_data.get("floor", combat_data.get("floor", "?"))
+                ),
+                "act": run_data.get(
+                    "act", player_data.get("act", combat_data.get("act", "?"))
+                ),
+                "hp": hp,
+                "gold": gold,
+                "energy": energy,
             },
         )
     )
-    hand = data.get("hand", [])
+    hand = combat_player.get("hand", data.get("hand", []))
     if hand:
         parts.append(
             _table(
@@ -208,7 +246,7 @@ def main(ctx: click.Context, host: str, as_json: bool, timeout: float) -> None:
                 ["name", "cost"],
             )
         )
-    enemies = data.get("enemies", [])
+    enemies = combat_data.get("enemies", data.get("enemies", []))
     if enemies:
         parts.append(
             _table(
@@ -260,14 +298,15 @@ def state(ctx: click.Context) -> None:
     if ctx.obj["as_json"]:
         click.echo(json.dumps(data, indent=2))
         return
+    player = _first_player(data)
     click.echo(
         _block(
             "run",
             {
                 "floor": data.get("floor", "?"),
                 "act": data.get("act", "?"),
-                "hp": f"{data.get('current_hp', '?')}/{data.get('max_hp', '?')}",
-                "gold": data.get("gold", "?"),
+                "hp": f"{player.get('hp', data.get('current_hp', '?'))}/{player.get('max_hp', data.get('max_hp', '?'))}",
+                "gold": player.get("gold", data.get("gold", "?")),
                 "seed": data.get("seed", "?"),
             },
         )
@@ -346,13 +385,7 @@ def combat(ctx: click.Context) -> None:
 @click.pass_context
 def piles(ctx: click.Context) -> None:
     """Card piles: draw, hand, discard, exhaust (handles STS2 ID strings)."""
-    raw = bc.get_card_piles()
-    if isinstance(raw, dict):
-        raw = raw.get("result", raw)
-    if isinstance(raw, dict) and raw.get("error"):
-        click.echo(f"piles: {raw['error']}")
-        return
-    data = raw
+    data = _call(bc.get_card_piles)
     if ctx.obj["as_json"]:
         click.echo(json.dumps(data, indent=2))
         return
@@ -398,18 +431,19 @@ def player(ctx: click.Context) -> None:
     if ctx.obj["as_json"]:
         click.echo(json.dumps(data, indent=2))
         return
+    p = _first_player(data)
     parts: list[str] = []
     parts.append(
         _block(
             "player",
             {
-                "character": data.get("character", "?"),
-                "hp": f"{data.get('current_hp', '?')}/{data.get('max_hp', '?')}",
-                "gold": data.get("gold", "?"),
+                "character": p.get("character", data.get("character", "?")),
+                "hp": f"{p.get('hp', data.get('current_hp', '?'))}/{p.get('max_hp', data.get('max_hp', '?'))}",
+                "gold": p.get("gold", data.get("gold", "?")),
             },
         )
     )
-    deck = data.get("deck", [])
+    deck = p.get("deck", data.get("deck", []))
     if deck:
         parts.append(
             _table(
@@ -423,6 +457,36 @@ def player(ctx: click.Context) -> None:
                     for c in deck
                 ],
                 ["name", "upgraded", "type"],
+            )
+        )
+    relics = p.get("relics", data.get("relics", []))
+    if relics:
+        parts.append(
+            _table(
+                "relics",
+                [
+                    {
+                        "name": r.get("name", "?"),
+                        "rarity": r.get("rarity", "?"),
+                    }
+                    for r in relics
+                ],
+                ["name", "rarity"],
+            )
+        )
+    potions = p.get("potions", data.get("potions", []))
+    if potions:
+        parts.append(
+            _table(
+                "potions",
+                [
+                    {
+                        "slot": po.get("slot", "?"),
+                        "name": po.get("name", "?"),
+                    }
+                    for po in potions
+                ],
+                ["slot", "name"],
             )
         )
     click.echo("\n".join(parts))
@@ -447,12 +511,13 @@ def map_(ctx: click.Context) -> None:
                 "paths",
                 [
                     {
-                        "node": n.get("node", n.get("id", "?")),
+                        "node": f"{n.get('row', '?')},{n.get('col', '?')}",
                         "type": n.get("type", "?"),
+                        "available": "yes" if n.get("available") else "no",
                     }
                     for n in nodes
                 ],
-                ["node", "type"],
+                ["node", "type", "available"],
             )
         )
     click.echo("\n".join(parts))
@@ -463,14 +528,15 @@ def map_(ctx: click.Context) -> None:
 @click.pass_context
 def log(ctx: click.Context, lines: int) -> None:
     """Recent game log entries."""
-    data = _call(bc.get_game_log)
+    data = _call(bc.get_game_log, max_count=lines)
     if ctx.obj["as_json"]:
         click.echo(json.dumps(data, indent=2))
         return
     entries = data.get("entries", data.get("log", []))
     for entry in entries[-lines:]:
         if isinstance(entry, dict):
-            click.echo(f"  {entry.get('time', '')} {entry.get('message', entry)}")
+            ts = entry.get("timestamp", entry.get("time", ""))
+            click.echo(f"  {ts} {entry.get('message', entry)}")
         else:
             click.echo(f"  {entry}")
 
