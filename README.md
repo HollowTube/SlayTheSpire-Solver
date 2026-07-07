@@ -242,16 +242,14 @@ sts2 act <n>        # take action n, wait for next stable screen
 
 # Navigation
 sts2 map            # current map state
-sts2 act travel     # travel the highlighted map node
 
 # Player
 sts2 player         # player stats, relics, potions
 sts2 log            # game log
 
-# Dev console shortcuts — ergonomic wrappers with context
-```bash
-sts2 dev                        # dashboard: current state + command catalogue
-sts2 dev fight JAW_WORM         # jump to a fight
+# Dev console shortcuts (see `sts2 dev` for full catalogue)
+sts2 dev                        # dashboard: screen, HP, and all available commands
+sts2 dev fight JAW_WORM         # jump to a specific fight
 sts2 dev win                    # instantly win the current combat
 sts2 dev kill all               # kill all enemies
 sts2 dev godmode                # toggle invincibility
@@ -260,7 +258,6 @@ sts2 dev heal                   # full heal (default 999)
 sts2 dev card BASH              # spawn a card into hand
 sts2 dev relic BURNING_BLOOD    # add a relic
 sts2 dev power VULNERABLE 3 1   # apply a power (0=player, 1=first enemy)
-```
 
 # Raw console passthrough — any in-game dev console command
 sts2 console "gold 999"
@@ -274,6 +271,22 @@ By default `sts2` connects to `127.0.0.1:21337`. When running from WSL, set the 
 export STS2_BRIDGE_HOST=172.26.176.1   # Windows IP as seen from WSL — check /etc/resolv.conf
 sts2 state
 ```
+
+### `sts2 dev` — dev console shortcuts
+
+`sts2 dev` is an AXI-compliant wrapper around the 40 in-game dev console commands. Each subcommand validates its arguments, calls the game console, and returns TOON-formatted output including the updated combat state so you don't need a follow-up call.
+
+Running `sts2 dev` with no arguments shows the current screen, HP, and a full catalogue of available commands grouped by category.
+
+| Group | Subcommands |
+|---|---|
+| **Navigate** | `fight <ID>`, `event <ID>` |
+| **Combat** | `win`, `kill [all\|n]`, `godmode`, `energy <n>`, `heal [n]`, `block <n>`, `power <ID> <n> <target>` |
+| **Cards** | `card <ID> [pile]`, `draw <n>`, `upgrade <index>`, `remove <ID>` |
+| **Loot** | `gold <n>`, `relic <ID>`, `potion <ID>` |
+
+All IDs use SCREAMING_SNAKE_CASE. Run `sts2 dev <cmd> --help` for per-subcommand usage.
+
 
 ### Dev console commands
 
