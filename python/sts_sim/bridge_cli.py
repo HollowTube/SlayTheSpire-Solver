@@ -128,10 +128,18 @@ def _call(fn, *args, **kwargs) -> dict:
 # ── main group ───────────────────────────────────────────────────────────────
 
 
-def _home_hints(screen: str, context_type: str = "") -> list[str]:
-    """Context-aware hints for the no-args home view."""
+def _home_hints(
+    screen: str, context_type: str = "", actions: list[dict] | None = None
+) -> list[str]:
+    """Context-aware hints for the no-args home view.
+
+    Uses the *actions* list to detect multi-step flow phases (e.g. Neow event
+    pick-blessing vs proceed-to-map, or card-upgrade select vs confirm).
+    """
     s = (screen or "").upper()
     c = (context_type or "").upper()
+    action_types = {a.get("action", "") for a in (actions or [])}
+
     if "COMBAT" in s or s == "COMBAT_PLAYER_TURN":
         return [
             "Run `sts2 actions` to see legal moves",
@@ -156,11 +164,48 @@ def _home_hints(screen: str, context_type: str = "") -> list[str]:
             "Run `sts2 dev fight <ID>` to jump straight into a specific fight (e.g. JAW_WORM)",
             "Run `sts2 --help` for all commands",
         ]
-    if s == "EVENT" and c == "NEVENTROOM":
+    if s == "EVENT":
+        if "event_option" in action_types:
+            return [
+                "Run `sts2 actions` to see blessing options",
+                "Run `sts2 act <n>` to pick a blessing by index",
+                "Run `sts2 dev fight <ID>` to skip ahead to a specific fight",
+            ]
+        if "event_proceed" in action_types:
+            return [
+                "Run `sts2 actions` to confirm the next step",
+                "Run `sts2 act <n>` to proceed to the map",
+                "Run `sts2 dev fight <ID>` to jump straight to a fight",
+            ]
         return [
-            "Run `sts2 actions` to see Neow's blessing options",
-            "Run `sts2 act <n>` to pick a blessing by index",
-            "Run `sts2 dev fight <ID>` to skip ahead to a specific fight (e.g. `sts2 dev fight JAW_WORM`)",
+            "Run `sts2 actions` to see what you can do on this screen",
+            "Run `sts2 dev fight <ID>` to jump to a fight (e.g. `sts2 dev fight JAW_WORM`)",
+            "Run `sts2 start` to begin a new run",
+        ]
+    if s == "CARD_SELECTION":
+        if "upgrade" in c or "smith" in c:
+            return [
+                "Run `sts2 act <n>` to select a card to upgrade, then confirm",
+                "Run `sts2 actions` to see cards",
+                "Run `sts2 dev fight <ID>` to skip this selection",
+            ]
+        if "remove" in c or "purge" in c:
+            return [
+                "Run `sts2 act <n>` to select a card to remove, then confirm",
+                "Run `sts2 actions` to see cards",
+                "Run `sts2 dev fight <ID>` to skip this selection",
+            ]
+        if "transform" in c:
+            return [
+                "Run `sts2 act <n>` to select a card to transform, then confirm",
+                "Run `sts2 actions` to see cards",
+                "Run `sts2 dev fight <ID>` to skip this selection",
+            ]
+        # Generic card selection (e.g. draft, scry)
+        return [
+            "Run `sts2 act <n>` to select a card, then confirm",
+            "Run `sts2 actions` to see cards",
+            "Run `sts2 dev fight <ID>` to skip this selection",
         ]
     # Default: no active combat — show how to get into one
     return [
@@ -262,8 +307,28 @@ def main(ctx: click.Context, host: str, as_json: bool, timeout: float) -> None:
                 ["name", "hp", "intent"],
             )
         )
-    context_type = (data.get("available_actions") or {}).get("screen_context_type", "")
-    parts.append(_hint(_home_hints(screen, context_type)))
+    available_actions = data.get("available_actions", {})
+    context_type = (available_actions or {}).get("screen_context_type", "")
+    action_list = (available_actions or {}).get("actions", [])
+    # Show a compact action preview so the agent can act without a follow-up call
+    if action_list:
+        preview_limit = 8 if "COMBAT" in (screen or "").upper() else 5
+        preview = action_list[:preview_limit]
+        parts.append(
+            _table(
+                "actions",
+                [
+                    {
+                        "n": i,
+                        "label": _action_label(a),
+                        "status": _action_status(a, action_list),
+                    }
+                    for i, a in enumerate(preview)
+                ],
+                ["n", "label", "status"],
+            )
+        )
+    parts.append(_hint(_home_hints(screen, context_type, action_list)))
     click.echo("\n".join(parts))
 
 
@@ -554,6 +619,28 @@ def _action_label(a: dict) -> str:
     return a.get("label", t)
 
 
+def _action_status(action: dict, all_actions: list[dict]) -> str:
+    """Return 'ready' or 'blocked' for an action based on the current screen state."""
+    t = action.get("action", "")
+    if t == "event_proceed":
+        # Blocked if there are still blessings/options to pick
+        if any(a.get("action") == "event_option" for a in all_actions):
+            return "blocked"
+        return "ready"
+    if t == "card_confirm":
+        # Blocked if there are selectable cards but none selected yet
+        # (The bridge handles selection state; we approximate: if card_select
+        # actions exist, confirm is likely blocked until one is chosen.)
+        if any(a.get("action") == "card_select" for a in all_actions):
+            return "blocked"
+        return "ready"
+    if t == "card_skip":
+        # Often blocked on mandatory selections; we can't detect this server-side
+        # so we mark it ready and let the bridge reject it.
+        return "ready"
+    return "ready"
+
+
 def _execute(action: dict) -> dict:
     if action.get("action") == "travel":
         row, col = action["node"].split(",")
@@ -580,10 +667,15 @@ def actions(ctx: click.Context) -> None:
         _table(
             "actions",
             [
-                {"n": i, "action": a.get("action", "?"), "label": _action_label(a)}
+                {
+                    "n": i,
+                    "action": a.get("action", "?"),
+                    "label": _action_label(a),
+                    "status": _action_status(a, action_list),
+                }
                 for i, a in enumerate(action_list)
             ],
-            ["n", "action", "label"],
+            ["n", "action", "label", "status"],
         ),
         _hint(["Run `sts2 act <n>` to execute action by index"]),
     ]
@@ -600,6 +692,16 @@ def act(ctx: click.Context, n: int) -> None:
         click.echo(_error(f"index {n} out of range (0–{len(action_list) - 1})"))
         sys.exit(1)
     chosen = action_list[n]
+    status = _action_status(chosen, action_list)
+    if status == "blocked":
+        label = _action_label(chosen)
+        click.echo(
+            _error(
+                f"Action '{label}' is not valid right now",
+                "Choose a required option first, then proceed",
+            )
+        )
+        sys.exit(1)
     result = _execute(chosen)
     if ctx.obj["as_json"]:
         click.echo(json.dumps(result, indent=2))
@@ -660,7 +762,11 @@ def act(ctx: click.Context, n: int) -> None:
             )
     elif screen:
         parts.append(f"screen: {screen}")
-    parts.append(_hint(["Run `sts2 actions` to see next legal moves"]))
+    # Phase-aware hint for the new state after the action
+    new_actions = result.get("available_actions", {})
+    new_context = (new_actions or {}).get("screen_context_type", "")
+    new_action_list = (new_actions or {}).get("actions", [])
+    parts.append(_hint(_home_hints(screen, new_context, new_action_list)))
     click.echo("\n".join(parts))
 
 
