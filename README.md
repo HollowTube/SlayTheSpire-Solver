@@ -167,6 +167,33 @@ cp bin/Debug/net9.0/stssimbridgemod.dll bin/Debug/net9.0/stssimbridgemod.pdb \
 mod is loaded, so overwriting it while the game is running fails with a permissions
 error. Close the game, copy the new build, then relaunch.
 
+### Starting the analysis server
+
+The overlay requires the `sts_sim` analysis server to be running **before** entering combat:
+
+```bash
+# Run from the repo root. Bind to 0.0.0.0 so Windows (the game process) can reach it.
+sts-sim-server --host 0.0.0.0
+```
+
+The server listens on port 8765 by default.
+
+### WSL networking — pointing the mod at the server
+
+When running from WSL, the sts-sim server lives inside the WSL virtual network. The game process on Windows cannot reach `127.0.0.1:8765` (Windows loopback) — it needs the WSL VM's IP.
+
+The mod reads the host from `<mod_dir>/sts_sim_host.txt` on startup. Update this file before launching the game:
+
+```bash
+# Get the current WSL IP and write it to the mod's config file
+WSL_IP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
+echo "$WSL_IP" > "/mnt/d/SteamLibrary/steamapps/common/Slay the Spire 2/mods/stssimbridgemod/sts_sim_host.txt"
+```
+
+> **Why?** WSL2 assigns a new IP on every reboot. The `sts_sim_host.txt` file decouples the mod from the transient IP. Without it the mod defaults to `127.0.0.1` (Windows loopback), which cannot reach the WSL server.
+
+The `STS_SIM_HOST` environment variable is also respected if set in the game's process environment.
+
 ### Closing and relaunching the game (WSL)
 
 From WSL, the game runs as `SlayTheSpire2.exe` on the Windows side and can be
@@ -181,6 +208,44 @@ taskkill.exe /IM SlayTheSpire2.exe /F
 ```
 
 Relaunch it via Steam with the `launch_game` MCP tool (or `steam://rungameid/2868840`).
+
+### `sts2` — bridge CLI
+
+The `sts2` CLI wraps the MCPTest bridge (port 21337) for inspecting and controlling a live game from the terminal.
+
+```bash
+# Show all commands
+sts2 --help
+
+# Status
+sts2 ping
+sts2 state          # current screen + context
+
+# Combat
+sts2 combat         # full combat state (HP, hand, enemies, intents)
+sts2 piles          # draw / hand / discard / exhaust piles
+sts2 actions        # numbered list of legal actions
+sts2 act <n>        # take action n, wait for next stable screen
+
+# Navigation
+sts2 map            # current map state
+sts2 act travel     # travel the highlighted map node
+
+# Player
+sts2 player         # player stats, relics, potions
+sts2 log            # game log
+
+# Console passthrough
+sts2 console "gold 999"
+sts2 console "bridge_hot_reload <path/to/stssimbridgemod.dll>"
+```
+
+By default `sts2` connects to `127.0.0.1:21337`. When running from WSL, set the Windows host IP:
+
+```bash
+export STS2_BRIDGE_HOST=172.26.176.1   # Windows IP as seen from WSL — check /etc/resolv.conf
+sts2 state
+```
 
 ## Python API
 
