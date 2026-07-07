@@ -1215,3 +1215,118 @@ def potion(ctx: click.Context, potion_id: str) -> None:
     cmd = f"potion {potion_id}"
     result = _dev_exec(cmd)
     _dev_out(cmd, result)
+
+
+# ── hook setup ────────────────────────────────────────────────────────────────
+
+
+@main.command("setup-hook")
+@click.option(
+    "--project-dir",
+    default=None,
+    help="Project root containing .claude/. Defaults to cwd.",
+)
+@click.option("--remove", is_flag=True, help="Remove the hook instead of installing.")
+def setup_hook(project_dir: str | None, remove: bool) -> None:
+    """Install a Claude Code SessionStart hook that shows live game state.
+
+    Writes to <project>/.claude/settings.json. The hook runs `sts2` on every
+    session start and injects the home view (screen, HP, contextual hints) as
+    ambient context — before the agent takes any action.
+
+    The hook auto-detects the WSL bridge host from /etc/resolv.conf so no
+    manual STS2_BRIDGE_HOST export is required.
+
+    Examples:
+
+    \b
+      sts2 setup-hook              # install into ./.claude/settings.json
+      sts2 setup-hook --remove     # remove the hook
+    """
+    import os
+    import shutil
+
+    project_root = project_dir or os.getcwd()
+    settings_path = os.path.join(project_root, ".claude", "settings.json")
+
+    # Resolve portable binary path: prefer name-on-PATH, fall back to absolute.
+    bin_name = "sts2"
+    resolved = shutil.which(bin_name)
+    if resolved and os.path.realpath(resolved) == os.path.realpath(sys.argv[0]):
+        bin_path = bin_name
+    else:
+        bin_path = os.path.realpath(sys.argv[0])
+
+    # The hook command: auto-detect WSL host then run sts2 (fail silently when
+    # the bridge is unreachable so the session still opens normally).
+    hook_command = (
+        f"export STS2_BRIDGE_HOST=$("
+        f"grep '^nameserver' /etc/resolv.conf 2>/dev/null "
+        f"| awk 'NR==1{{print $2}}' || echo 127.0.0.1"
+        f"); {bin_path} 2>/dev/null || true"
+    )
+
+    hook_entry = {"type": "command", "command": hook_command, "timeout": 10}
+    hook_block = {"matcher": "", "hooks": [hook_entry]}
+
+    # Load or create settings.json.
+    os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+    try:
+        with open(settings_path) as f:
+            settings = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        settings = {}
+
+    session_hooks: list[dict] = settings.setdefault("SessionStart", [])
+
+    # Find existing sts2 hook blocks (identified by our bin_path in the command).
+    existing = [
+        i
+        for i, b in enumerate(session_hooks)
+        for h in b.get("hooks", [])
+        if bin_path in h.get("command", "") or "sts2" in h.get("command", "")
+    ]
+
+    if remove:
+        if not existing:
+            click.echo("hook: not installed (no-op)")
+            return
+        for i in sorted(existing, reverse=True):
+            session_hooks.pop(i)
+        with open(settings_path, "w") as f:
+            json.dump(settings, f, indent=2)
+        click.echo(_block("hook", {"status": "removed", "settings": settings_path}))
+        return
+
+    if existing:
+        click.echo(
+            _block(
+                "hook",
+                {"status": "already installed (no-op)", "settings": settings_path},
+            )
+        )
+        return
+
+    session_hooks.append(hook_block)
+    with open(settings_path, "w") as f:
+        json.dump(settings, f, indent=2)
+
+    click.echo(
+        _block(
+            "hook",
+            {
+                "status": "installed",
+                "trigger": "SessionStart",
+                "settings": settings_path,
+                "command": bin_path,
+            },
+        )
+    )
+    click.echo(
+        _hint(
+            [
+                "Restart your Claude Code session to activate",
+                "Run `sts2 setup-hook --remove` to uninstall",
+            ]
+        )
+    )
