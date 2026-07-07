@@ -79,10 +79,27 @@ def _card_upgraded(c: Any) -> bool:
 # ── bridge call wrapper ───────────────────────────────────────────────────────
 
 
+_CONNECTION_ERRORS = (
+    "Bridge not running",
+    "Bridge timed out",
+    "Bridge unreachable",
+    "Bridge communication failed",
+)
+
+
 def _call(fn, *args, **kwargs) -> dict:
     result = fn(*args, **kwargs)
+    # send_request returns raw {"result": {...}} — unwrap it
+    if isinstance(result, dict):
+        result = result.get("result", result)
     if isinstance(result, dict) and result.get("error"):
-        click.echo(_error(result["error"], "Set STS2_BRIDGE_HOST if running from WSL"))
+        err = result["error"]
+        hint = (
+            "Set STS2_BRIDGE_HOST if running from WSL"
+            if any(e in err for e in _CONNECTION_ERRORS)
+            else None
+        )
+        click.echo(_error(err, hint))
         sys.exit(1)
     return result
 
@@ -294,7 +311,13 @@ def combat(ctx: click.Context) -> None:
 @click.pass_context
 def piles(ctx: click.Context) -> None:
     """Card piles: draw, hand, discard, exhaust (handles STS2 ID strings)."""
-    data = _call(bc.get_card_piles)
+    raw = bc.get_card_piles()
+    if isinstance(raw, dict):
+        raw = raw.get("result", raw)
+    if isinstance(raw, dict) and raw.get("error"):
+        click.echo(f"piles: {raw['error']}")
+        return
+    data = raw
     if ctx.obj["as_json"]:
         click.echo(json.dumps(data, indent=2))
         return
