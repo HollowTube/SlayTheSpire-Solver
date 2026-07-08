@@ -93,6 +93,21 @@ def _statuses(entries):
     return [(name, amount) for name, amount in entries]
 
 
+def _hand_ids(hand: list) -> list:
+    """Extract card IDs from a hand list that may be plain strings or [id, cost] pairs."""
+    return [e[0] if isinstance(e, list) else e for e in hand]
+
+
+def _hand_costs(hand: list) -> dict:
+    """Return {card_id: cost_str} for display. -1 → 'X', else str(n)."""
+    result = {}
+    for e in hand:
+        if isinstance(e, list):
+            card_id, cost = e[0], e[1]
+            result[card_id] = "X" if cost == -1 else str(cost)
+    return result
+
+
 # The bridge mod sends each monster's `intent` as the raw STS2 MoveState id
 # (e.g. "ACID_GOOP", "BUTT_MOVE"), but src/monsters.rs's `monster_move` and
 # `select_next_intent` key on the display-style move names it generates
@@ -184,7 +199,7 @@ def build_state(payload):
         player_energy=player["energy"],
         monsters=monsters,
         seed=payload.get("seed", 0),
-        hand=state.get("hand", []),
+        hand=_hand_ids(state.get("hand", [])),
         player_max_hp=player.get("max_hp"),
         player_max_energy=player.get("max_energy"),
         player_block=player.get("block", 0),
@@ -371,9 +386,12 @@ def _debug_html() -> str:
             f"</tr>"
         )
 
+    costs = d.get("hand_costs", {})
     hand_cards = "".join(
-        f"<span style='background:#333;border-radius:4px;padding:4px 8px;margin:2px;display:inline-block'>{c}</span>"
-        for c in state.get("hand", [])
+        f"<span style='background:#333;border-radius:4px;padding:4px 8px;margin:2px;display:inline-block'>"
+        f"<span style='background:#555;border-radius:3px;padding:1px 5px;margin-right:5px;font-size:11px'>"
+        f"{costs.get(c, '?')}</span>{c}</span>"
+        for c in _hand_ids(state.get("hand", []))
     )
     statuses = player.get("statuses") or []
     status_str = ", ".join(f"{s[0]}={s[1]}" for s in statuses) if statuses else "none"
@@ -470,7 +488,9 @@ def _emit(line: str) -> None:
 def _log_analyze(payload: dict, response: dict, elapsed: float) -> None:
     """Emit a compact one-line summary of an analyze exchange."""
     state = payload.get("state", {})
-    hand = state.get("hand", [])
+    raw_hand = state.get("hand", [])
+    hand = _hand_ids(raw_hand)
+    costs = _hand_costs(raw_hand)
     player_statuses = state.get("player", {}).get("statuses", [])
     monsters = [
         f"{m.get('name', '?')}({m.get('hp', '?')}/{m.get('max_hp', '?')} {m.get('intent', '')})"
@@ -500,6 +520,7 @@ def _log_analyze(payload: dict, response: dict, elapsed: float) -> None:
             {
                 **response,
                 "state": payload.get("state", {}),
+                "hand_costs": costs,
                 "ts": ts,
                 "elapsed_ms": elapsed * 1000,
             }
