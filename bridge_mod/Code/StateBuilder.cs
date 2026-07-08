@@ -86,7 +86,7 @@ public static class StateBuilder
         var state = new JsonObject
         {
             ["player"] = BuildPlayer(creature, pcs),
-            ["hand"] = CardNames(pcs?.Hand),
+            ["hand"] = HandCards(pcs?.Hand),
             ["draw_pile"] = CardNames(pcs?.DrawPile),
             ["discard_pile"] = CardNames(pcs?.DiscardPile),
             ["exhaust_pile"] = CardNames(pcs?.ExhaustPile),
@@ -118,6 +118,22 @@ public static class StateBuilder
         foreach (var card in pile.Cards)
             names.Add(card.Id.Entry);
         return names;
+    }
+
+    // Hand sends [id, cost] pairs so the server can display effective energy costs.
+    // X-cost cards use -1; all others use GetAmountToSpend() (includes modifiers).
+    private static JsonArray HandCards(CardPile? pile)
+    {
+        var cards = new JsonArray();
+        if (pile == null)
+            return cards;
+
+        foreach (var card in pile.Cards)
+        {
+            var cost = card.EnergyCost.CostsX ? -1 : card.EnergyCost.GetAmountToSpend();
+            cards.Add(new JsonArray { (JsonNode)card.Id.Entry, cost });
+        }
+        return cards;
     }
 
     private static JsonArray Statuses(Creature creature)
