@@ -545,14 +545,24 @@ def serve(
 ) -> None:
     """Bind and serve forever. The CLI entry point."""
     # Debug HTTP server (auto-refreshing browser UI at http://localhost:<debug_port>)
-    debug_server = http.server.HTTPServer(("127.0.0.1", debug_port), _DebugHandler)
+    debug_server = http.server.HTTPServer(("0.0.0.0", debug_port), _DebugHandler)
     t = threading.Thread(target=debug_server.serve_forever, daemon=True)
     t.start()
 
     with make_server(host, port) as server:
         host, port = server.server_address
         print(f"sts_sim analysis server listening on {host}:{port}", flush=True)
-        print(f"sts_sim debug UI at http://127.0.0.1:{debug_port}/", flush=True)
+        try:
+            import subprocess
+
+            wsl_ip = (
+                subprocess.check_output(["ip", "addr", "show", "eth0"], text=True)
+                .split("inet ")[1]
+                .split("/")[0]
+            )
+        except Exception:
+            wsl_ip = "localhost"
+        print(f"sts_sim debug UI at http://{wsl_ip}:{debug_port}/", flush=True)
         server.serve_forever()
 
 
