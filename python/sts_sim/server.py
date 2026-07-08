@@ -62,7 +62,9 @@ state can be reconstructed faithfully, not just a fresh turn-0 combat.
 
 import argparse
 import json
+import logging
 import socketserver
+import time
 
 from . import CombatState, Monster, apply, evaluate, legal_actions, simulate_hp_lost
 from . import mcts as _mcts
@@ -334,16 +336,43 @@ def handle_request(payload):
     raise ValueError(f"unknown cmd: {cmd!r}")
 
 
+_log = logging.getLogger(__name__)
+
+
+def _log_analyze(payload: dict, response: dict, elapsed: float) -> None:
+    """Emit a compact one-line summary of an analyze exchange to the log."""
+    state = payload.get("state", {})
+    hand = state.get("hand", [])
+    monsters = [(m.get("name", "?"), m.get("hp", "?"), m.get("intent")) for m in state.get("monsters", [])]
+    vals = response.get("values", {})
+    best_action = max(vals, key=vals.get) if vals else "none"
+    best_val = vals.get(best_action, 0.0)
+    ranking = " ".join(
+        f"{a.replace('PlayCard:', '')}={v:+.3f}"
+        for a, v in sorted(vals.items(), key=lambda x: -x[1])
+    )
+    _log.info(
+        "analyze  hand=%s  monsters=%s  best=%s(%.3f)  ranking=[%s]  %.0fms",
+        hand, monsters, best_action, best_val, ranking, elapsed * 1000,
+    )
+
+
 class _Handler(socketserver.StreamRequestHandler):
     def handle(self):
         for line in self.rfile:
             line = line.decode("utf-8").strip()
             if not line:
                 continue
+            t0 = time.monotonic()
             try:
-                response = handle_request(json.loads(line))
+                payload = json.loads(line)
+                response = handle_request(payload)
             except Exception as exc:  # noqa: BLE001 - report to client, don't crash
                 response = {"error": str(exc)}
+                payload = {}
+            elapsed = time.monotonic() - t0
+            if payload.get("cmd") == "analyze":
+                _log_analyze(payload, response, elapsed)
             self.wfile.write((json.dumps(response) + "\n").encode("utf-8"))
 
 
@@ -359,11 +388,16 @@ def make_server(host="127.0.0.1", port=DEFAULT_PORT):
     return Server((host, port), _Handler)
 
 
-def serve(host="127.0.0.1", port=DEFAULT_PORT):
+def serve(host="127.0.0.1", port=DEFAULT_PORT, log_level: str = "INFO") -> None:
     """Bind and serve forever. The CLI entry point."""
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper(), logging.INFO),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        datefmt="%H:%M:%S",
+    )
     with make_server(host, port) as server:
         host, port = server.server_address
-        print(f"sts_sim analysis server listening on {host}:{port}")
+        print(f"sts_sim analysis server listening on {host}:{port}", flush=True)
         server.serve_forever()
 
 
@@ -371,8 +405,9 @@ def main():
     parser = argparse.ArgumentParser(description="sts_sim TCP/JSON analysis server")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING"])
     args = parser.parse_args()
-    serve(args.host, args.port)
+    serve(args.host, args.port, args.log_level)
 
 
 if __name__ == "__main__":
