@@ -9,6 +9,8 @@ Set STS2_BRIDGE_HOST env var for WSL (e.g. export STS2_BRIDGE_HOST=172.x.x.1).
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import sys
 from typing import Any
 
@@ -1219,57 +1221,65 @@ def potion(ctx: click.Context, potion_id: str) -> None:
 
 # ── hook setup ────────────────────────────────────────────────────────────────
 
+_OPENCODE_PLUGIN_TEMPLATE = """
+// sts2 OpenCode plugin — injects live game state as ambient context.
+// Auto-installed by `sts2 setup-hook --app opencode`.
+// Remove with `sts2 setup-hook --app opencode --remove`.
 
-@main.command("setup-hook")
-@click.option(
-    "--project-dir",
-    default=None,
-    help="Project root containing .claude/. Defaults to cwd.",
-)
-@click.option("--remove", is_flag=True, help="Remove the hook instead of installing.")
-def setup_hook(project_dir: str | None, remove: bool) -> None:
-    """Install a Claude Code SessionStart hook that shows live game state.
+export const Sts2Plugin = async ({ $ }) => {
+  return {
+    // Auto-detect WSL bridge host so STS2_BRIDGE_HOST never needs manual export.
+    "shell.env": async (input, output) => {
+      if (!process.env.STS2_BRIDGE_HOST) {
+        try {
+          const ns = await $`grep -m1 '^nameserver' /etc/resolv.conf`.text()
+          const ip = ns.trim().split(/\s+/)[1]
+          if (ip) output.env.STS2_BRIDGE_HOST = ip
+        } catch {
+          // Not WSL or resolv.conf missing — leave unset, falls back to 127.0.0.1
+        }
+      }
+    },
 
-    Writes to <project>/.claude/settings.json. The hook runs `sts2` on every
-    session start and injects the home view (screen, HP, contextual hints) as
-    ambient context — before the agent takes any action.
+    // Inject live game state whenever the session compacts (keeps context fresh).
+    "experimental.session.compacting": async (input, output) => {
+      try {
+        const state = await $`STS2_BIN_PATH 2>/dev/null`.text()
+        if (state?.trim()) {
+          output.context.push(`## STS2 live state\n${state.trim()}`)
+        }
+      } catch {
+        // Bridge not running — skip silently
+      }
+    },
+  }
+}
+""".strip()
 
-    The hook auto-detects the WSL bridge host from /etc/resolv.conf so no
-    manual STS2_BRIDGE_HOST export is required.
 
-    Examples:
+def _resolve_bin() -> str:
+    """Return the portable sts2 binary path (name if on PATH, else absolute)."""
 
-    \b
-      sts2 setup-hook              # install into ./.claude/settings.json
-      sts2 setup-hook --remove     # remove the hook
-    """
-    import os
-    import shutil
-
-    project_root = project_dir or os.getcwd()
-    settings_path = os.path.join(project_root, ".claude", "settings.json")
-
-    # Resolve portable binary path: prefer name-on-PATH, fall back to absolute.
     bin_name = "sts2"
     resolved = shutil.which(bin_name)
     if resolved and os.path.realpath(resolved) == os.path.realpath(sys.argv[0]):
-        bin_path = bin_name
-    else:
-        bin_path = os.path.realpath(sys.argv[0])
+        return bin_name
+    return os.path.realpath(sys.argv[0])
 
-    # The hook command: auto-detect WSL host then run sts2 (fail silently when
-    # the bridge is unreachable so the session still opens normally).
+
+def _setup_claude_code(project_root: str, bin_path: str, remove: bool) -> None:
+    settings_path = os.path.join(project_root, ".claude", "settings.json")
     hook_command = (
         f"export STS2_BRIDGE_HOST=$("
         f"grep '^nameserver' /etc/resolv.conf 2>/dev/null "
         f"| awk 'NR==1{{print $2}}' || echo 127.0.0.1"
         f"); {bin_path} 2>/dev/null || true"
     )
+    hook_block = {
+        "matcher": "",
+        "hooks": [{"type": "command", "command": hook_command, "timeout": 10}],
+    }
 
-    hook_entry = {"type": "command", "command": hook_command, "timeout": 10}
-    hook_block = {"matcher": "", "hooks": [hook_entry]}
-
-    # Load or create settings.json.
     os.makedirs(os.path.dirname(settings_path), exist_ok=True)
     try:
         with open(settings_path) as f:
@@ -1278,8 +1288,6 @@ def setup_hook(project_dir: str | None, remove: bool) -> None:
         settings = {}
 
     session_hooks: list[dict] = settings.setdefault("SessionStart", [])
-
-    # Find existing sts2 hook blocks (identified by our bin_path in the command).
     existing = [
         i
         for i, b in enumerate(session_hooks)
@@ -1289,20 +1297,33 @@ def setup_hook(project_dir: str | None, remove: bool) -> None:
 
     if remove:
         if not existing:
-            click.echo("hook: not installed (no-op)")
+            click.echo(
+                _block(
+                    "hook", {"app": "claude-code", "status": "not installed (no-op)"}
+                )
+            )
             return
         for i in sorted(existing, reverse=True):
             session_hooks.pop(i)
         with open(settings_path, "w") as f:
             json.dump(settings, f, indent=2)
-        click.echo(_block("hook", {"status": "removed", "settings": settings_path}))
+        click.echo(
+            _block(
+                "hook",
+                {"app": "claude-code", "status": "removed", "settings": settings_path},
+            )
+        )
         return
 
     if existing:
         click.echo(
             _block(
                 "hook",
-                {"status": "already installed (no-op)", "settings": settings_path},
+                {
+                    "app": "claude-code",
+                    "status": "already installed (no-op)",
+                    "settings": settings_path,
+                },
             )
         )
         return
@@ -1310,23 +1331,102 @@ def setup_hook(project_dir: str | None, remove: bool) -> None:
     session_hooks.append(hook_block)
     with open(settings_path, "w") as f:
         json.dump(settings, f, indent=2)
-
     click.echo(
         _block(
             "hook",
             {
+                "app": "claude-code",
                 "status": "installed",
                 "trigger": "SessionStart",
                 "settings": settings_path,
-                "command": bin_path,
             },
         )
     )
+
+
+def _setup_opencode(project_root: str, bin_path: str, remove: bool) -> None:
+    plugin_dir = os.path.join(project_root, ".opencode", "plugins")
+    plugin_path = os.path.join(plugin_dir, "sts2.ts")
+
+    if remove:
+        if not os.path.exists(plugin_path):
+            click.echo(
+                _block("hook", {"app": "opencode", "status": "not installed (no-op)"})
+            )
+            return
+        os.remove(plugin_path)
+        click.echo(
+            _block(
+                "hook", {"app": "opencode", "status": "removed", "plugin": plugin_path}
+            )
+        )
+        return
+
+    if os.path.exists(plugin_path):
+        click.echo(
+            _block(
+                "hook",
+                {
+                    "app": "opencode",
+                    "status": "already installed (no-op)",
+                    "plugin": plugin_path,
+                },
+            )
+        )
+        return
+
+    os.makedirs(plugin_dir, exist_ok=True)
+    plugin_src = _OPENCODE_PLUGIN_TEMPLATE.replace("STS2_BIN_PATH", bin_path)
+    with open(plugin_path, "w") as f:
+        f.write(plugin_src + "\n")
     click.echo(
-        _hint(
-            [
-                "Restart your Claude Code session to activate",
-                "Run `sts2 setup-hook --remove` to uninstall",
-            ]
+        _block(
+            "hook", {"app": "opencode", "status": "installed", "plugin": plugin_path}
         )
     )
+
+
+@main.command("setup-hook")
+@click.option("--project-dir", default=None, help="Project root. Defaults to cwd.")
+@click.option(
+    "--app",
+    type=click.Choice(["claude-code", "opencode", "all"], case_sensitive=False),
+    default="all",
+    show_default=True,
+    help="Which agent app to install the hook for.",
+)
+@click.option("--remove", is_flag=True, help="Remove the hook instead of installing.")
+def setup_hook(project_dir: str | None, app: str, remove: bool) -> None:
+    """Install agent session hooks that show live STS2 game state as ambient context.
+
+    Supports Claude Code (SessionStart hook in .claude/settings.json) and
+    OpenCode (plugin in .opencode/plugins/sts2.ts). Both auto-detect the WSL
+    bridge host from /etc/resolv.conf — no manual STS2_BRIDGE_HOST export needed.
+
+    Examples:
+
+    \b
+      sts2 setup-hook                        # install for all apps
+      sts2 setup-hook --app claude-code      # Claude Code only
+      sts2 setup-hook --app opencode         # OpenCode only
+      sts2 setup-hook --remove               # remove all
+    """
+    import os
+
+    project_root = project_dir or os.getcwd()
+    bin_path = _resolve_bin()
+
+    if app in ("claude-code", "all"):
+        _setup_claude_code(project_root, bin_path, remove)
+    if app in ("opencode", "all"):
+        _setup_opencode(project_root, bin_path, remove)
+
+    if not remove:
+        click.echo(
+            _hint(
+                [
+                    "Restart your agent session to activate",
+                    "Run `sts2 setup-hook --remove` to uninstall",
+                ]
+            )
+        )
