@@ -61,10 +61,12 @@ state can be reconstructed faithfully, not just a fresh turn-0 combat.
 """
 
 import argparse
+import http.server
 import json
 import os
 import socketserver
 import sys
+import threading
 import time
 
 from . import CombatState, Monster, apply, evaluate, legal_actions, simulate_hp_lost
@@ -341,6 +343,121 @@ def handle_request(payload):
 # line (os.write) so threads don't interleave, and bypasses Python buffering.
 _log_file: "int | None" = None
 
+# Last analyzed state — updated on every analyze request, read by the debug UI.
+_last_debug: dict = {}
+_debug_lock = threading.Lock()
+
+
+def _debug_html() -> str:
+    with _debug_lock:
+        d = dict(_last_debug)
+    if not d:
+        return "<p>No analysis received yet.</p>"
+
+    state = d.get("state", {})
+    player = state.get("player", {})
+    vals = d.get("values", {})
+    best_val = max(vals.values()) if vals else 0.0
+
+    rows = ""
+    for a, v in sorted(vals.items(), key=lambda x: -x[1]):
+        delta = v - best_val
+        colour = "#4caf50" if delta == 0 else "#ccc"
+        rows += (
+            f"<tr>"
+            f"<td style='color:{colour};font-weight:bold'>{a.replace('PlayCard:', '')}</td>"
+            f"<td style='color:{colour}'>{delta:+.3f}</td>"
+            f"<td>{v:.3f}</td>"
+            f"</tr>"
+        )
+
+    hand_cards = "".join(
+        f"<span style='background:#333;border-radius:4px;padding:4px 8px;margin:2px;display:inline-block'>{c}</span>"
+        for c in state.get("hand", [])
+    )
+    statuses = player.get("statuses") or []
+    status_str = ", ".join(f"{s[0]}={s[1]}" for s in statuses) if statuses else "none"
+
+    monsters_html = ""
+    for m in state.get("monsters", []):
+        hp_pct = int(100 * m.get("hp", 0) / max(m.get("max_hp", 1), 1))
+        intent = m.get("intent", "?")
+        atk = m.get("attack", 0)
+        monsters_html += (
+            f"<div style='margin:6px 0;padding:8px;background:#222;border-radius:4px'>"
+            f"<b>{m.get('name', '?')}</b> &nbsp; "
+            f"HP: {m.get('hp', '?')}/{m.get('max_hp', '?')} "
+            f"<div style='background:#555;border-radius:2px;width:200px;display:inline-block;height:8px;vertical-align:middle'>"
+            f"<div style='background:#e53;width:{hp_pct}%;height:8px;border-radius:2px'></div></div> &nbsp;"
+            f"Block: {m.get('block', 0)} &nbsp;"
+            f"Intent: <b>{intent}</b>"
+            f"{f' ({atk} dmg)' if atk else ''}"
+            f"</div>"
+        )
+
+    elapsed_ms = d.get("elapsed_ms", 0)
+    ts = d.get("ts", "?")
+
+    return f"""
+<p style='color:#888;font-size:12px'>Updated {ts} &nbsp;·&nbsp; {elapsed_ms:.0f}ms analysis</p>
+<div style='margin-bottom:12px'>
+  <b>Player</b>: HP {player.get("hp", "?")}/{player.get("max_hp", "?")} &nbsp;
+  Block: {player.get("block", 0)} &nbsp;
+  Energy: {player.get("energy", "?")}/{player.get("max_energy", "?")} &nbsp;
+  Statuses: {status_str}
+</div>
+<div style='margin-bottom:12px'><b>Hand</b>: {hand_cards}</div>
+<div style='margin-bottom:12px'><b>Monsters</b>:{monsters_html}</div>
+<table style='border-collapse:collapse;width:100%'>
+  <tr style='color:#888'><th style='text-align:left'>Action</th><th>Δ</th><th>Value</th></tr>
+  {rows}
+</table>
+"""
+
+
+_DEBUG_PAGE = """<!doctype html>
+<html><head><meta charset=utf-8><title>sts-sim debug</title>
+<style>
+  body {{background:#111;color:#eee;font-family:monospace;padding:20px;}}
+  table {{width:100%;border-collapse:collapse;}}
+  td,th {{padding:4px 10px;text-align:left;border-bottom:1px solid #333;}}
+  th {{color:#888;font-weight:normal;}}
+</style>
+</head><body>
+<h2 style='color:#fff;margin-top:0'>sts-sim debug <span style='font-size:14px;color:#888'>auto-refresh 1s</span></h2>
+<div id=content>Loading...</div>
+<script>
+async function refresh() {{
+  const r = await fetch('/state');
+  const html = await r.text();
+  document.getElementById('content').innerHTML = html;
+}}
+refresh();
+setInterval(refresh, 1000);
+</script>
+</body></html>"""
+
+
+class _DebugHandler(http.server.BaseHTTPRequestHandler):
+    def log_message(self, *_):
+        pass  # silence access log
+
+    def do_GET(self):
+        if self.path == "/state":
+            body = _debug_html().encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        else:
+            body = _DEBUG_PAGE.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
 
 def _emit(line: str) -> None:
     """Write one log line to stdout and the log file (if open)."""
@@ -354,6 +471,7 @@ def _log_analyze(payload: dict, response: dict, elapsed: float) -> None:
     """Emit a compact one-line summary of an analyze exchange."""
     state = payload.get("state", {})
     hand = state.get("hand", [])
+    player_statuses = state.get("player", {}).get("statuses", [])
     monsters = [
         f"{m.get('name', '?')}({m.get('hp', '?')}/{m.get('max_hp', '?')} {m.get('intent', '')})"
         for m in state.get("monsters", [])
@@ -368,12 +486,24 @@ def _log_analyze(payload: dict, response: dict, elapsed: float) -> None:
         for a, v in sorted(vals.items(), key=lambda x: -x[1])
     )
     ts = time.strftime("%H:%M:%S")
+    status_str = f"  player_statuses={player_statuses}" if player_statuses else ""
     _emit(
         f"[{ts}] analyze {elapsed * 1000:.0f}ms"
         f"  hand={hand}"
+        f"{status_str}"
         f"  vs {monsters}"
         f"  overlay: [{ranking}]"
     )
+    with _debug_lock:
+        _last_debug.clear()
+        _last_debug.update(
+            {
+                **response,
+                "state": payload.get("state", {}),
+                "ts": ts,
+                "elapsed_ms": elapsed * 1000,
+            }
+        )
 
 
 class _Handler(socketserver.StreamRequestHandler):
@@ -407,11 +537,22 @@ def make_server(host="127.0.0.1", port=DEFAULT_PORT):
     return Server((host, port), _Handler)
 
 
-def serve(host="127.0.0.1", port=DEFAULT_PORT) -> None:
+DEFAULT_DEBUG_PORT = 8766
+
+
+def serve(
+    host="127.0.0.1", port=DEFAULT_PORT, debug_port: int = DEFAULT_DEBUG_PORT
+) -> None:
     """Bind and serve forever. The CLI entry point."""
+    # Debug HTTP server (auto-refreshing browser UI at http://localhost:<debug_port>)
+    debug_server = http.server.HTTPServer(("127.0.0.1", debug_port), _DebugHandler)
+    t = threading.Thread(target=debug_server.serve_forever, daemon=True)
+    t.start()
+
     with make_server(host, port) as server:
         host, port = server.server_address
         print(f"sts_sim analysis server listening on {host}:{port}", flush=True)
+        print(f"sts_sim debug UI at http://127.0.0.1:{debug_port}/", flush=True)
         server.serve_forever()
 
 
@@ -419,8 +560,9 @@ def main():
     parser = argparse.ArgumentParser(description="sts_sim TCP/JSON analysis server")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument("--debug-port", type=int, default=DEFAULT_DEBUG_PORT)
     args = parser.parse_args()
-    serve(args.host, args.port)
+    serve(args.host, args.port, args.debug_port)
 
 
 if __name__ == "__main__":
