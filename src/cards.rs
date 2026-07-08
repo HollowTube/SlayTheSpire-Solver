@@ -1233,10 +1233,10 @@ fn card_data_base(id: CardId) -> CardData {
             keywords: HashSet::new(),
             rarity: CardRarity::Uncommon,
         },
-        // Per the wiki, Stomp costs 2 (base, minus 1 per Attack played this
-        // turn) and deals 12 damage to ALL enemies.
+        // Stomp costs 3 base (verified in-game; wiki was wrong), minus 1 per
+        // Attack played this turn (min 0), deals 12 damage to ALL enemies.
         CardId::Stomp => CardData {
-            cost: 2,
+            cost: 3,
             targeted: false,
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamageToAllEnemies(12)],
