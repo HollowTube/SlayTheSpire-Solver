@@ -355,7 +355,7 @@ def _log_analyze(payload: dict, response: dict, elapsed: float) -> None:
     state = payload.get("state", {})
     hand = state.get("hand", [])
     monsters = [
-        f"{m.get('name','?')}({m.get('hp','?')}/{m.get('max_hp','?')} {m.get('intent','')})"
+        f"{m.get('name', '?')}({m.get('hp', '?')}/{m.get('max_hp', '?')} {m.get('intent', '')})"
         for m in state.get("monsters", [])
     ]
     vals = response.get("values", {})
@@ -369,7 +369,7 @@ def _log_analyze(payload: dict, response: dict, elapsed: float) -> None:
     )
     ts = time.strftime("%H:%M:%S")
     _emit(
-        f"[{ts}] analyze {elapsed*1000:.0f}ms"
+        f"[{ts}] analyze {elapsed * 1000:.0f}ms"
         f"  hand={hand}"
         f"  vs {monsters}"
         f"  overlay: [{ranking}]"
