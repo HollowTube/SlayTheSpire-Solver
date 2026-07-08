@@ -209,6 +209,11 @@ def _home_hints(
             "Run `sts2 actions` to see cards",
             "Run `sts2 dev fight <ID>` to skip this selection",
         ]
+    if s == "CARD_SELECTION":
+        return [
+            "Run `sts2 actions` to see selectable cards",
+            "Run `sts2 act <n>` to pick a card (selection + confirm happen automatically)",
+        ]
     # Default: no active combat — show how to get into one
     return [
         "Run `sts2 actions` to see what you can do on this screen",
@@ -648,6 +653,10 @@ def _execute(action: dict) -> dict:
         row, col = action["node"].split(",")
         return _call(bc.navigate_map, int(row), int(col))
     params = {k: v for k, v in action.items() if k != "action" and v is not None}
+    # card_select needs confirm=True so the pick is atomic (confirm button is
+    # otherwise reported as blocked and requires a ForceClick that bypasses it).
+    if action.get("action") == "card_select":
+        params["confirm"] = True
     return _call(bc.act_and_wait, action["action"], **params)
 
 
@@ -676,6 +685,8 @@ def actions(ctx: click.Context) -> None:
                     "status": _action_status(a, action_list),
                 }
                 for i, a in enumerate(action_list)
+                # card_confirm is now handled automatically by card_select --confirm=True
+                if a.get("action") != "card_confirm"
             ],
             ["n", "action", "label", "status"],
         ),
