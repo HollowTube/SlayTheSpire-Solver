@@ -139,13 +139,23 @@ All output is [TOON](https://toonformat.dev/) — token-efficient, agent-readabl
 
 ## Session hook — ambient game state on every session start
 
-Install a `SessionStart` hook so Claude Code automatically shows live game state at the top of every session — screen, HP, hand, enemies, and contextual hints — before you type anything:
+Install session hooks so your agent automatically sees live game state at the start of every session — screen, HP, hand, enemies, and contextual hints — before you type anything.
+
+Supports **Claude Code** and **OpenCode**:
 
 ```bash
-sts2 setup-hook              # install into ./.claude/settings.json
-sts2 setup-hook --remove     # uninstall
+sts2 setup-hook                      # install for both apps (default)
+sts2 setup-hook --app claude-code    # Claude Code only
+sts2 setup-hook --app opencode       # OpenCode only
+sts2 setup-hook --remove             # remove all
 ```
 
-The hook auto-detects the WSL bridge host from `/etc/resolv.conf` — no `STS2_BRIDGE_HOST` export needed. It fails silently when the bridge is unreachable so sessions open normally even if the game isn't running.
+Both hooks auto-detect the WSL bridge host from `/etc/resolv.conf` — no `STS2_BRIDGE_HOST` export needed. They fail silently when the bridge is unreachable so sessions open normally even if the game isn't running.
 
-After installing, restart Claude Code to activate.
+**Claude Code** — writes a `SessionStart` hook to `.claude/settings.json` that runs `sts2` and injects output as ambient context.
+
+**OpenCode** — writes `.opencode/plugins/sts2.ts` with two hooks:
+- `shell.env`: sets `STS2_BRIDGE_HOST` automatically
+- `experimental.session.compacting`: injects `sts2` home view into session context on compaction
+
+After installing, restart your agent session to activate.
