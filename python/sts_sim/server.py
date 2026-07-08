@@ -539,6 +539,22 @@ def make_server(host="127.0.0.1", port=DEFAULT_PORT):
 
 DEFAULT_DEBUG_PORT = 8766
 
+# Path the C# mod reads to discover which WSL IP to connect to.
+_MOD_HOST_FILE = "/mnt/d/SteamLibrary/steamapps/common/Slay the Spire 2/mods/stssimbridgemod/sts_sim_host.txt"
+
+
+def _write_host_file(ip: str) -> None:
+    """Write current WSL IP to the mod's sts_sim_host.txt so it survives reboots."""
+    try:
+        import pathlib
+
+        p = pathlib.Path(_MOD_HOST_FILE)
+        if p.parent.exists():
+            p.write_text(ip + "\n")
+            _emit(f"[server] wrote {ip} -> {_MOD_HOST_FILE}")
+    except Exception as exc:
+        _emit(f"[server] could not write host file: {exc}")
+
 
 def serve(
     host="127.0.0.1", port=DEFAULT_PORT, debug_port: int = DEFAULT_DEBUG_PORT
@@ -562,6 +578,7 @@ def serve(
             )
         except Exception:
             wsl_ip = "localhost"
+        _write_host_file(wsl_ip)
         print(f"sts_sim debug UI at http://{wsl_ip}:{debug_port}/", flush=True)
         server.serve_forever()
 
