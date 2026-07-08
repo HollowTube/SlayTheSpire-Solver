@@ -62,8 +62,9 @@ state can be reconstructed faithfully, not just a fresh turn-0 combat.
 
 import argparse
 import json
-import logging
+import os
 import socketserver
+import sys
 import time
 
 from . import CombatState, Monster, apply, evaluate, legal_actions, simulate_hp_lost
@@ -336,24 +337,42 @@ def handle_request(payload):
     raise ValueError(f"unknown cmd: {cmd!r}")
 
 
-_log = logging.getLogger(__name__)
+# Append-mode log file; None until serve() sets it. Written atomically per
+# line (os.write) so threads don't interleave, and bypasses Python buffering.
+_log_file: "int | None" = None
+
+
+def _emit(line: str) -> None:
+    """Write one log line to stdout and the log file (if open)."""
+    msg = line + "\n"
+    os.write(sys.stdout.fileno(), msg.encode())
+    if _log_file is not None:
+        os.write(_log_file, msg.encode())
 
 
 def _log_analyze(payload: dict, response: dict, elapsed: float) -> None:
-    """Emit a compact one-line summary of an analyze exchange to the log."""
+    """Emit a compact one-line summary of an analyze exchange."""
     state = payload.get("state", {})
     hand = state.get("hand", [])
-    monsters = [(m.get("name", "?"), m.get("hp", "?"), m.get("intent")) for m in state.get("monsters", [])]
+    monsters = [
+        f"{m.get('name','?')}({m.get('hp','?')}/{m.get('max_hp','?')} {m.get('intent','')})"
+        for m in state.get("monsters", [])
+    ]
     vals = response.get("values", {})
     best_action = max(vals, key=vals.get) if vals else "none"
     best_val = vals.get(best_action, 0.0)
-    ranking = " ".join(
-        f"{a.replace('PlayCard:', '')}={v:+.3f}"
+    # Show overlay-style deltas: best at 0.00, rest negative — matches the
+    # overlay panel exactly so you can compare log to display directly.
+    ranking = " | ".join(
+        f"{a.replace('PlayCard:', '')}: {v - best_val:+.2f}"
         for a, v in sorted(vals.items(), key=lambda x: -x[1])
     )
-    _log.info(
-        "analyze  hand=%s  monsters=%s  best=%s(%.3f)  ranking=[%s]  %.0fms",
-        hand, monsters, best_action, best_val, ranking, elapsed * 1000,
+    ts = time.strftime("%H:%M:%S")
+    _emit(
+        f"[{ts}] analyze {elapsed*1000:.0f}ms"
+        f"  hand={hand}"
+        f"  vs {monsters}"
+        f"  overlay: [{ranking}]"
     )
 
 
@@ -388,13 +407,8 @@ def make_server(host="127.0.0.1", port=DEFAULT_PORT):
     return Server((host, port), _Handler)
 
 
-def serve(host="127.0.0.1", port=DEFAULT_PORT, log_level: str = "INFO") -> None:
+def serve(host="127.0.0.1", port=DEFAULT_PORT) -> None:
     """Bind and serve forever. The CLI entry point."""
-    logging.basicConfig(
-        level=getattr(logging, log_level.upper(), logging.INFO),
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-        datefmt="%H:%M:%S",
-    )
     with make_server(host, port) as server:
         host, port = server.server_address
         print(f"sts_sim analysis server listening on {host}:{port}", flush=True)
@@ -405,9 +419,8 @@ def main():
     parser = argparse.ArgumentParser(description="sts_sim TCP/JSON analysis server")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
-    parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING"])
     args = parser.parse_args()
-    serve(args.host, args.port, args.log_level)
+    serve(args.host, args.port)
 
 
 if __name__ == "__main__":
