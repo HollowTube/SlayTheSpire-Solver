@@ -279,3 +279,90 @@ def unknown_cards(bridge_names: list[str]) -> list[str]:
 def unknown_monsters(bridge_names: list[str]) -> list[str]:
     """Return bridge monster names not in the explicit map."""
     return [n for n in bridge_names if n not in _MONSTER_MAP]
+
+
+# ── STS2 id → sim monster normalization ──────────────────────────────────────
+
+# The mod sends raw STS2 SCREAMING_SNAKE_CASE ids (creature.ModelId.Entry).
+# Maps those to the sim's friendly names used as keys in _INTENT_MAP below.
+_MONSTER_STS2_MAP: dict[str, str] = {
+    "FUZZY_WURM_CRAWLER": MonsterName.FUZZY_WURM_CRAWLER,
+    "NIBBIT": MonsterName.NIBBIT,
+    "SHRINKER_BEETLE": MonsterName.SHRINKER_BEETLE,
+    "LEAF_SLIME_S": MonsterName.LEAF_SLIME_S,
+    "LEAF_SLIME_M": MonsterName.LEAF_SLIME_M,
+    "TWIG_SLIME_S": MonsterName.TWIG_SLIME_S,
+    "TWIG_SLIME_M": MonsterName.TWIG_SLIME_M,
+    "BYRDONIS": MonsterName.BYRDONIS,
+    "INKLET": MonsterName.INKLET,
+    "VANTOM": MonsterName.VANTOM,
+}
+
+
+# ── STS2 move id → sim move name ─────────────────────────────────────────────
+
+# The mod sends raw STS2 move ids (move.Id). Maps them to the move name strings
+# monsters.rs uses in its `monster_move` match arms. Keyed by sim friendly
+# monster name (from MonsterName), then STS2 move id → monsters.rs move name.
+# Without this translation, the first simulated turn for a reconstructed monster
+# doesn't match any monster_move arm and is silently dropped (0 damage).
+_INTENT_MAP: dict[str, dict[str, str]] = {
+    MonsterName.FUZZY_WURM_CRAWLER: {
+        "FIRST_ACID_GOOP": "Acid Goop",
+        "ACID_GOOP": "Acid Goop",
+        "INHALE": "Inhale",
+    },
+    MonsterName.NIBBIT: {
+        "BUTT_MOVE": "Butt",
+        "SLICE_MOVE": "Hesitant Slice",
+        "HISS_MOVE": "Hiss",
+    },
+    MonsterName.SHRINKER_BEETLE: {
+        "SHRINKER_MOVE": "Shrink",
+        "CHOMP_MOVE": "Chomp",
+        "STOMP_MOVE": "Stomp",
+    },
+    MonsterName.LEAF_SLIME_S: {
+        "BUTT_MOVE": "Tackle",
+        "GOOP_MOVE": "Goop",
+    },
+    MonsterName.LEAF_SLIME_M: {
+        "CLUMP_SHOT": "ClumpShot",
+        "STICKY_SHOT": "StickyShot",
+    },
+    MonsterName.TWIG_SLIME_S: {
+        "BUTT_MOVE": "Tackle",
+    },
+    MonsterName.TWIG_SLIME_M: {
+        "CLUMP_SHOT_MOVE": "ClumpShot",
+        "STICKY_SHOT_MOVE": "StickyShot",
+    },
+    MonsterName.BYRDONIS: {
+        "SWOOP_MOVE": "Swoop",
+        "PECK_MOVE": "Peck",
+    },
+    MonsterName.INKLET: {
+        "JAB_MOVE": "Jab",
+        "PIERCING_GAZE_MOVE": "Piercing Gaze",
+        "WHIRLWIND_MOVE": "Windup Punch",
+    },
+    MonsterName.VANTOM: {
+        "INK_BLOT_MOVE": "Ink Blot",
+        "INKY_LANCE_MOVE": "Inky Lance",
+        "DISMEMBER_MOVE": "Dismember",
+        "PREPARE_MOVE": "Prepare",
+    },
+}
+
+
+def intent(monster_name: str, sts2_move_id: str | None) -> str | None:
+    """Map a raw STS2 move id to the move name monsters.rs expects.
+
+    ``monster_name`` may be a friendly sim name ("Shrinker Beetle") or a raw
+    STS2 id ("SHRINKER_BEETLE") — both are accepted. Unknown monsters or move
+    ids pass through unchanged so the sim can handle them gracefully.
+    """
+    if sts2_move_id is None:
+        return None
+    friendly = _MONSTER_STS2_MAP.get(monster_name, monster_name)
+    return _INTENT_MAP.get(friendly, {}).get(sts2_move_id, sts2_move_id)

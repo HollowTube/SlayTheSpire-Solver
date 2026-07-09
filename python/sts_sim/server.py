@@ -71,6 +71,7 @@ import time
 
 from . import CombatState, Monster, apply, evaluate, legal_actions, simulate_hp_lost
 from . import mcts as _mcts
+from . import names as _names
 
 DEFAULT_PORT = 8765
 
@@ -108,93 +109,6 @@ def _hand_costs(hand: list) -> dict:
     return result
 
 
-# The bridge mod sends each monster's `intent` as the raw STS2 MoveState id
-# (e.g. "ACID_GOOP", "BUTT_MOVE"), but src/monsters.rs's `monster_move` and
-# `select_next_intent` key on the display-style move names it generates
-# itself (e.g. "Acid Goop", "Butt"). Without this translation, the FIRST
-# simulated turn for a freshly-reconstructed monster never matches any
-# `monster_move` arm, so that turn's attack is silently dropped (0 damage)
-# before `select_next_intent` falls back to its own correctly-named moves for
-# subsequent turns. Keyed by sts_sim monster name (post-NameMap.MonsterNameMap
-# translation), then raw STS2 move id -> monsters.rs move name.
-
-# Maps raw STS2 monster ids (sent by the mod) to sts_sim friendly names (keys
-# in INTENT_NAME_MAP). Allows _translate_intent to work regardless of which
-# form the mod sends.
-_MONSTER_STS2_TO_FRIENDLY: dict[str, str] = {
-    "FUZZY_WURM_CRAWLER": "Fuzzy Wurm Crawler",
-    "NIBBIT": "Nibbit",
-    "SHRINKER_BEETLE": "Shrinker Beetle",
-    "LEAF_SLIME_S": "Leaf Slime (S)",
-    "LEAF_SLIME_M": "Leaf Slime (M)",
-    "TWIG_SLIME_S": "Twig Slime (S)",
-    "TWIG_SLIME_M": "Twig Slime (M)",
-    "BYRDONIS": "Byrdonis",
-    "INKLET": "Inklet",
-    "VANTOM": "Vantom",
-}
-
-INTENT_NAME_MAP = {
-    "Fuzzy Wurm Crawler": {
-        "FIRST_ACID_GOOP": "Acid Goop",
-        "ACID_GOOP": "Acid Goop",
-        "INHALE": "Inhale",
-    },
-    "Nibbit": {
-        "BUTT_MOVE": "Butt",
-        "SLICE_MOVE": "Hesitant Slice",
-        "HISS_MOVE": "Hiss",
-    },
-    "Shrinker Beetle": {
-        "SHRINKER_MOVE": "Shrink",
-        "CHOMP_MOVE": "Chomp",
-        "STOMP_MOVE": "Stomp",
-    },
-    "Leaf Slime (S)": {
-        "BUTT_MOVE": "Tackle",
-        "GOOP_MOVE": "Goop",
-    },
-    "Leaf Slime (M)": {
-        "CLUMP_SHOT": "ClumpShot",
-        "STICKY_SHOT": "StickyShot",
-    },
-    "Twig Slime (S)": {
-        "BUTT_MOVE": "Tackle",
-    },
-    "Twig Slime (M)": {
-        "CLUMP_SHOT_MOVE": "ClumpShot",
-        "STICKY_SHOT_MOVE": "StickyShot",
-    },
-    "Byrdonis": {
-        "SWOOP_MOVE": "Swoop",
-        "PECK_MOVE": "Peck",
-    },
-    "Inklet": {
-        "JAB_MOVE": "Jab",
-        "PIERCING_GAZE_MOVE": "Piercing Gaze",
-        "WHIRLWIND_MOVE": "Windup Punch",
-    },
-    "Vantom": {
-        "INK_BLOT_MOVE": "Ink Blot",
-        "INKY_LANCE_MOVE": "Inky Lance",
-        "DISMEMBER_MOVE": "Dismember",
-        "PREPARE_MOVE": "Prepare",
-    },
-}
-
-
-def _translate_intent(monster_name, intent):
-    """Map a raw STS2 move id to the move name monsters.rs expects.
-
-    Accepts both friendly names ("Shrinker Beetle") and raw STS2 ids
-    ("SHRINKER_BEETLE") for `monster_name`. Unmapped monsters/intents pass
-    through unchanged."""
-    if intent is None:
-        return None
-    friendly = _MONSTER_STS2_TO_FRIENDLY.get(monster_name, monster_name)
-    return INTENT_NAME_MAP.get(friendly, {}).get(intent, intent)
-
-
 def build_state(payload):
     """Reconstruct a `CombatState` from an "analyze" request's `state` dict."""
     state = payload["state"]
@@ -207,7 +121,7 @@ def build_state(payload):
             name=m.get("name"),
             block=m.get("block", 0),
             statuses=_statuses(m.get("statuses", [])),
-            intent=_translate_intent(m.get("name"), m.get("intent")),
+            intent=_names.intent(m.get("name"), m.get("intent")),
             last_move=m.get("last_move"),
             move_streak=m.get("move_streak", 0),
         )
@@ -331,7 +245,7 @@ def handle_request(payload):
                     {
                         "name": name,
                         "hp": hp,
-                        "intent": _translate_intent(name, m.get("intent")),
+                        "intent": _names.intent(name, m.get("intent")),
                         "statuses": _statuses(m.get("statuses", [])),
                     }
                 )

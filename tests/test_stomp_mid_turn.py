@@ -89,9 +89,9 @@ def test_stomp_cost_after_two_attacks():
 def test_strike_beats_whirlwind_raw_sts2_ids():
     """Regression: MCTS should pick Strike even when the mod sends raw STS2
     monster name ("SHRINKER_BEETLE") and intent ("CHOMP_MOVE") instead of the
-    friendly forms. build_state's _translate_intent must normalise them before
-    constructing the Monster, otherwise Chomp is unrecognised and the beetle
-    appears harmless — making Whirlwind look deceptively attractive."""
+    friendly forms. names.intent() must normalise them before constructing the
+    Monster, otherwise Chomp is unrecognised and the beetle appears harmless —
+    making Whirlwind look deceptively attractive."""
     from sts_sim.server import build_state
 
     payload = {
@@ -135,7 +135,7 @@ def test_strike_beats_whirlwind_raw_sts2_ids():
 
     state = build_state(payload)
     assert state.monsters[0].intent == "Chomp", (
-        f"_translate_intent should have mapped CHOMP_MOVE → Chomp, got {state.monsters[0].intent!r}"
+        f"names.intent() should have mapped CHOMP_MOVE → Chomp, got {state.monsters[0].intent!r}"
     )
     vals = mcts.action_values(state, iterations=2000, determinizations=8)
     # The regression: with Chomp correctly modelled (7 dmg), kill-focused plays
