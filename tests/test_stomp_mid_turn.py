@@ -13,7 +13,6 @@ With Shrink:
   Stomp costs max(3 - attacks_played, 0); after 2 Strikes → costs 1.
 """
 
-import pytest
 from sts_sim import CombatState, Monster
 from sts_sim import mcts
 
@@ -57,7 +56,9 @@ def _state(attacks_played=0):
 def test_strike_beats_whirlwind_with_shrink():
     """Strike should be recommended over Whirlwind when Shrink makes Whirlwind
     unable to kill the beetle but Strike+Strike+Stomp can."""
-    vals = mcts.action_values(_state(attacks_played=0), iterations=2000, determinizations=8)
+    vals = mcts.action_values(
+        _state(attacks_played=0), iterations=2000, determinizations=8
+    )
     best = max(vals, key=vals.get)
     # Strike is the correct first move; Whirlwind only does 9 dmg (no kill)
     assert best == "PlayCard:Strike", (
@@ -80,6 +81,64 @@ def test_stomp_cost_after_two_attacks():
     actions = [str(a) for a in legal_actions(state)]
     assert any("Stomp" in a for a in actions), (
         f"Stomp should be legal after 2 Strikes (costs 1), got: {actions}"
+    )
+
+
+def test_strike_beats_whirlwind_raw_sts2_ids():
+    """Regression: MCTS should pick Strike even when the mod sends raw STS2
+    monster name ("SHRINKER_BEETLE") and intent ("CHOMP_MOVE") instead of the
+    friendly forms. build_state's _translate_intent must normalise them before
+    constructing the Monster, otherwise Chomp is unrecognised and the beetle
+    appears harmless — making Whirlwind look deceptively attractive."""
+    from sts_sim.server import build_state
+
+    payload = {
+        "cmd": "analyze",
+        "iterations": 2000,
+        "seed": 42,
+        "state": {
+            "player": {
+                "hp": 80,
+                "max_hp": 80,
+                "energy": 3,
+                "max_energy": 3,
+                "block": 0,
+                "statuses": [["SHRINK_POWER", -1]],
+            },
+            "hand": [
+                "DEFEND_IRONCLAD",
+                "WHIRLWIND",
+                "STOMP",
+                "STRIKE_IRONCLAD",
+                "STRIKE_IRONCLAD",
+            ],
+            "draw_pile": [],
+            "discard_pile": [],
+            "exhaust_pile": [],
+            "turn": 2,
+            "attacks_played_this_turn": 0,
+            "monsters": [
+                {
+                    "name": "SHRINKER_BEETLE",
+                    "hp": 13,
+                    "max_hp": 39,
+                    "block": 0,
+                    "intent": "CHOMP_MOVE",
+                    "attack": 7,
+                    "statuses": [],
+                }
+            ],
+        },
+    }
+
+    state = build_state(payload)
+    assert state.monsters[0].intent == "Chomp", (
+        f"_translate_intent should have mapped CHOMP_MOVE → Chomp, got {state.monsters[0].intent!r}"
+    )
+    vals = mcts.action_values(state, iterations=2000, determinizations=8)
+    best = max(vals, key=vals.get)
+    assert best == "PlayCard:Strike", (
+        f"Expected Strike as best first move (beetle Chomp should be modelled), got {best}. Values: {vals}"
     )
 
 

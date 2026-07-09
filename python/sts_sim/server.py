@@ -117,6 +117,23 @@ def _hand_costs(hand: list) -> dict:
 # before `select_next_intent` falls back to its own correctly-named moves for
 # subsequent turns. Keyed by sts_sim monster name (post-NameMap.MonsterNameMap
 # translation), then raw STS2 move id -> monsters.rs move name.
+
+# Maps raw STS2 monster ids (sent by the mod) to sts_sim friendly names (keys
+# in INTENT_NAME_MAP). Allows _translate_intent to work regardless of which
+# form the mod sends.
+_MONSTER_STS2_TO_FRIENDLY: dict[str, str] = {
+    "FUZZY_WURM_CRAWLER": "Fuzzy Wurm Crawler",
+    "NIBBIT": "Nibbit",
+    "SHRINKER_BEETLE": "Shrinker Beetle",
+    "LEAF_SLIME_S": "Leaf Slime (S)",
+    "LEAF_SLIME_M": "Leaf Slime (M)",
+    "TWIG_SLIME_S": "Twig Slime (S)",
+    "TWIG_SLIME_M": "Twig Slime (M)",
+    "BYRDONIS": "Byrdonis",
+    "INKLET": "Inklet",
+    "VANTOM": "Vantom",
+}
+
 INTENT_NAME_MAP = {
     "Fuzzy Wurm Crawler": {
         "FIRST_ACID_GOOP": "Acid Goop",
@@ -167,13 +184,15 @@ INTENT_NAME_MAP = {
 
 
 def _translate_intent(monster_name, intent):
-    """Map a raw STS2 move id to the move name monsters.rs expects, for the
-    monster names listed in `INTENT_NAME_MAP`. Unmapped monsters/intents pass
-    through unchanged (monsters.rs's `monster_move` returns `None` for them
-    either way, same as before this translation existed)."""
+    """Map a raw STS2 move id to the move name monsters.rs expects.
+
+    Accepts both friendly names ("Shrinker Beetle") and raw STS2 ids
+    ("SHRINKER_BEETLE") for `monster_name`. Unmapped monsters/intents pass
+    through unchanged."""
     if intent is None:
         return None
-    return INTENT_NAME_MAP.get(monster_name, {}).get(intent, intent)
+    friendly = _MONSTER_STS2_TO_FRIENDLY.get(monster_name, monster_name)
+    return INTENT_NAME_MAP.get(friendly, {}).get(intent, intent)
 
 
 def build_state(payload):
