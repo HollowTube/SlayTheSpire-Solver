@@ -78,7 +78,6 @@ stop_game() {
 CMD="${1:-server}"
 case "$CMD" in
     build)   build_mod ;;
-    server)  start_server ;;
     launch)  launch_game ;;
     stop)    stop_game ;;
     fresh)
@@ -90,8 +89,13 @@ case "$CMD" in
         launch_game
         echo "==> Waiting for game to start..."
         sleep 25
-        start_server
+        _write_host_file
+        echo "==> Starting sts-sim analysis server (detached) on 0.0.0.0:8765..."
+        nohup "$REPO_ROOT/.venv/bin/sts-sim-server" --host 0.0.0.0 \
+            >> "$REPO_ROOT/sts-sim-server.log" 2>&1 &
+        echo "    Server PID $! — log at $REPO_ROOT/sts-sim-server.log"
         ;;
+    server)  start_server ;;
     *)
         echo "Usage: $0 [build|server|launch|stop|fresh]" >&2
         exit 1
