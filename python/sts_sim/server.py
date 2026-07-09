@@ -507,11 +507,14 @@ def _log_analyze(payload: dict, response: dict, elapsed: float) -> None:
         for a, v in sorted(vals.items(), key=lambda x: -x[1])
     )
     ts = time.strftime("%H:%M:%S")
+    attacks_played = state.get("attacks_played_this_turn", 0)
     status_str = f"  player_statuses={player_statuses}" if player_statuses else ""
+    atk_str = f"  attacks_played={attacks_played}" if attacks_played else ""
     _emit(
         f"[{ts}] analyze {elapsed * 1000:.0f}ms"
         f"  hand={hand}"
         f"{status_str}"
+        f"{atk_str}"
         f"  vs {monsters}"
         f"  overlay: [{ranking}]"
     )
