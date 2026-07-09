@@ -71,7 +71,6 @@ import time
 
 from . import CombatState, Monster, apply, evaluate, legal_actions, simulate_hp_lost
 from . import mcts as _mcts
-from . import names as _names
 
 DEFAULT_PORT = 8765
 
@@ -121,7 +120,7 @@ def build_state(payload):
             name=m.get("name"),
             block=m.get("block", 0),
             statuses=_statuses(m.get("statuses", [])),
-            intent=_names.intent(m.get("name"), m.get("intent")),
+            intent=m.get("intent"),
             last_move=m.get("last_move"),
             move_streak=m.get("move_streak", 0),
         )
@@ -245,7 +244,7 @@ def handle_request(payload):
                     {
                         "name": name,
                         "hp": hp,
-                        "intent": _names.intent(name, m.get("intent")),
+                        "intent": m.get("intent"),
                         "statuses": _statuses(m.get("statuses", [])),
                     }
                 )

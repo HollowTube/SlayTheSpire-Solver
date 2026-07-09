@@ -394,6 +394,43 @@ fn max_streak(monster_id: MonsterId, move_name: &str) -> u32 {
     }
 }
 
+/// Translate a raw STS2 move id (e.g. `"CHOMP_MOVE"`) to the move name string
+/// `monster_move` and `select_next_intent` use internally (e.g. `"Chomp"`).
+///
+/// Called from `Monster::new()` so callers can pass either form — the same
+/// pattern `CardId::from_sts2` establishes for card names.  Returns `None` for
+/// unknown ids (the caller should keep the original string as-is).
+pub(crate) fn move_from_sts2(monster_id: MonsterId, sts2_id: &str) -> Option<&'static str> {
+    match (monster_id, sts2_id) {
+        (MonsterId::FuzzyWurmCrawler, "FIRST_ACID_GOOP") => Some("Acid Goop"),
+        (MonsterId::FuzzyWurmCrawler, "ACID_GOOP") => Some("Acid Goop"),
+        (MonsterId::FuzzyWurmCrawler, "INHALE") => Some("Inhale"),
+        (MonsterId::Nibbit, "BUTT_MOVE") => Some("Butt"),
+        (MonsterId::Nibbit, "SLICE_MOVE") => Some("Hesitant Slice"),
+        (MonsterId::Nibbit, "HISS_MOVE") => Some("Hiss"),
+        (MonsterId::ShrinkerBeetle, "SHRINKER_MOVE") => Some("Shrink"),
+        (MonsterId::ShrinkerBeetle, "CHOMP_MOVE") => Some("Chomp"),
+        (MonsterId::ShrinkerBeetle, "STOMP_MOVE") => Some("Stomp"),
+        (MonsterId::LeafSlimeS, "BUTT_MOVE") => Some("Tackle"),
+        (MonsterId::LeafSlimeS, "GOOP_MOVE") => Some("Goop"),
+        (MonsterId::LeafSlimeM, "CLUMP_SHOT") => Some("ClumpShot"),
+        (MonsterId::LeafSlimeM, "STICKY_SHOT") => Some("StickyShot"),
+        (MonsterId::TwigSlimeS, "BUTT_MOVE") => Some("Tackle"),
+        (MonsterId::TwigSlimeM, "CLUMP_SHOT_MOVE") => Some("ClumpShot"),
+        (MonsterId::TwigSlimeM, "STICKY_SHOT_MOVE") => Some("StickyShot"),
+        (MonsterId::Byrdonis, "SWOOP_MOVE") => Some("Swoop"),
+        (MonsterId::Byrdonis, "PECK_MOVE") => Some("Peck"),
+        (MonsterId::Inklet, "JAB_MOVE") => Some("Jab"),
+        (MonsterId::Inklet, "PIERCING_GAZE_MOVE") => Some("Piercing Gaze"),
+        (MonsterId::Inklet, "WHIRLWIND_MOVE") => Some("Windup Punch"),
+        (MonsterId::Vantom, "INK_BLOT_MOVE") => Some("Ink Blot"),
+        (MonsterId::Vantom, "INKY_LANCE_MOVE") => Some("Inky Lance"),
+        (MonsterId::Vantom, "DISMEMBER_MOVE") => Some("Dismember"),
+        (MonsterId::Vantom, "PREPARE_MOVE") => Some("Prepare"),
+        _ => None,
+    }
+}
+
 /// Whether a move can only be used once across the entire combat (not just
 /// "not twice in a row"). Once executed, the move is added to the monster's
 /// `moves_used` set and `select_next_intent` will never return it again.
