@@ -1,6 +1,6 @@
 use crate::ids::{CardId, MonsterId};
 use crate::engine::{Actor, Status};
-use crate::monsters::opening_intent;
+use crate::monsters::{move_from_sts2, opening_intent};
 use pyo3::prelude::*;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
@@ -168,10 +168,17 @@ impl Monster {
         moves_used: Vec<String>,
     ) -> Self {
         let name_id: Option<MonsterId> = name.as_deref().and_then(|s| MonsterId::from_str(s).or_else(|| MonsterId::from_sts2(s)));
-        // `intent` lets a reconstructed monster show its *actual* current
-        // telegraph rather than the species' opener — defaults to the opener
-        // (today's behavior) when not given.
-        let intent = intent.or_else(|| name_id.and_then(opening_intent));
+        // Translate raw STS2 move ids (e.g. "CHOMP_MOVE") to the friendly names
+        // monster_move expects (e.g. "Chomp") — same pattern as CardId::from_sts2.
+        // Friendly names and unknown ids pass through unchanged.
+        let intent = intent
+            .map(|s| {
+                name_id
+                    .and_then(|id| move_from_sts2(id, &s))
+                    .map(|t| t.to_string())
+                    .unwrap_or(s)
+            })
+            .or_else(|| name_id.and_then(opening_intent));
         Monster {
             fighter: Fighter {
                 hp,
