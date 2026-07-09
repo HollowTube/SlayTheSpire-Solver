@@ -185,6 +185,7 @@ fn resolve_combat(state: &RunState, iterations: u32) -> PyResult<RunState> {
         Vec::new(),
         Vec::new(),
         Vec::new(),
+        0,
     );
 
     let (hp_lost, _turns) = simulate_fight_outcome(&combat, iterations, combat_seed, true, 8, 1000);

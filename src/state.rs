@@ -302,7 +302,7 @@ pub struct CombatState {
 #[pymethods]
 impl CombatState {
     #[new]
-    #[pyo3(signature = (player_hp, player_energy, monsters, seed, hand=Vec::new(), deck=None, player_max_hp=None, player_max_energy=None, player_block=0, player_statuses=Vec::new(), turn=0, draw_pile=Vec::new(), discard_pile=Vec::new(), exhaust_pile=Vec::new()))]
+    #[pyo3(signature = (player_hp, player_energy, monsters, seed, hand=Vec::new(), deck=None, player_max_hp=None, player_max_energy=None, player_block=0, player_statuses=Vec::new(), turn=0, draw_pile=Vec::new(), discard_pile=Vec::new(), exhaust_pile=Vec::new(), attacks_played_this_turn=0))]
     pub(crate) fn new(
         player_hp: i32,
         player_energy: i32,
@@ -318,6 +318,7 @@ impl CombatState {
         draw_pile: Vec<String>,
         discard_pile: Vec<String>,
         exhaust_pile: Vec<String>,
+        attacks_played_this_turn: i32,
     ) -> Self {
         let mut rng = Pcg32::seed_from_u64(seed);
         // A `deck` shuffles into the draw pile and deals an opening hand —
@@ -355,7 +356,7 @@ impl CombatState {
             discard_pile,
             exhaust_pile,
             cards_played_this_turn: 0,
-            attacks_played_this_turn: 0,
+            attacks_played_this_turn,
             player_times_damaged_this_combat: 0,
             player_hp_lost_this_turn: false,
             player_exhausted_card_this_turn: false,

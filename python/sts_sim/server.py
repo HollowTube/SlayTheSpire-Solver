@@ -208,6 +208,7 @@ def build_state(payload):
         draw_pile=state.get("draw_pile", []),
         discard_pile=state.get("discard_pile", []),
         exhaust_pile=state.get("exhaust_pile", []),
+        attacks_played_this_turn=state.get("attacks_played_this_turn", 0),
     )
 
 

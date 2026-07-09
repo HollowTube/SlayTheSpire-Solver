@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Nodes;
 using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
@@ -83,15 +84,21 @@ public static class StateBuilder
         var pcs = player.PlayerCombatState;
         var creature = player.Creature;
 
+        var attacksPlayed = CombatManager.Instance.History.CardPlaysStarted.Count(
+            e => e.CardPlay.Card.Type == CardType.Attack
+              && e.CardPlay.Card.Owner.Creature == creature
+              && e.HappenedThisTurn(combatState));
+
         var state = new JsonObject
         {
             ["player"] = BuildPlayer(creature, pcs),
-            ["hand"] = HandCards(pcs?.Hand),
+            ["hand"] = CardNames(pcs?.Hand),
             ["draw_pile"] = CardNames(pcs?.DrawPile),
             ["discard_pile"] = CardNames(pcs?.DiscardPile),
             ["exhaust_pile"] = CardNames(pcs?.ExhaustPile),
             ["turn"] = combatState.RoundNumber,
             ["monsters"] = BuildMonsters(combatState),
+            ["attacks_played_this_turn"] = attacksPlayed,
         };
         return state;
     }
