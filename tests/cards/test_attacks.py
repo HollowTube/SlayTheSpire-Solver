@@ -509,7 +509,9 @@ def test_stomp_deals_12_damage_to_all_enemies():
 
 
 def test_stomp_costs_1_less_per_attack_played():
-    state = _jaw_worm_state(["Strike", "Stomp", "Strike", "Strike", "Defend"], energy=2)
+    # Stomp base cost=3, minus attacks_played. After 1 Strike: max(3-1,0)=2.
+    # Need at least 3 energy so 2 remain after the Strike (cost 1).
+    state = _jaw_worm_state(["Strike", "Stomp", "Strike", "Strike", "Defend"], energy=3)
     after_strike = apply(apply(state, PlayCardAction("Strike")), SelectTargetAction(0))
     legal = legal_actions(after_strike)
     assert "PlayCard:Stomp" in legal
