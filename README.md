@@ -33,12 +33,38 @@ maturin develop      # faster than a full re-install
 pytest tests/
 ```
 
+## Code generation
+
+`data/cards.toml` and `data/monsters.toml` are the single source of truth for
+card and monster IDs. Three files are generated from them:
+
+| File | What's generated |
+|---|---|
+| `src/ids.rs` | `define_ids!(CardId { … })` and `define_ids!(MonsterId { … })` blocks |
+| `python/sts_sim/names.py` | `CardName` enum, `MonsterName` enum, `_MONSTER_MAP` dict |
+| `src/cards.rs` | `ALL_CARD_NAMES` array |
+
+**Don't edit those regions by hand.** Edit the TOML file instead, then run:
+
+```bash
+python scripts/gen_ids.py
+```
+
+To check that committed files are up to date without changing anything (also runs in CI):
+
+```bash
+python scripts/gen_ids.py --check
+```
+
 ## Run the CI checks locally
 
 CI (`.github/workflows/ci.yml`) runs the following checks against every push and
 pull request. Run them yourself before pushing to catch issues early:
 
 ```bash
+# Generated regions must match TOML source of truth
+python scripts/gen_ids.py --check
+
 # Rust: must build with no warnings
 cargo check
 
