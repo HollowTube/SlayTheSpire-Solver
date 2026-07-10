@@ -1,0 +1,261 @@
+# Single source of truth for monster registration.
+# When adding a new monster, add an entry here first, then add the Rust enum
+# variant + AI in ids.rs/monsters.rs. The CI test test_monster_registration.py
+# validates all 5 catalogues are in sync with this file.
+#
+# Fields:
+#   variant       — Rust enum variant name (MonsterId::Xxx)
+#   display_name  — Canonical sim display name (matches MonsterId::as_str())
+#   sts2_id       — STS2 model ID (SCREAMING_SNAKE_CASE)
+#   bridge_names  — Bridge C# class name(s) for _MONSTER_MAP
+#   hp            — Canonical starting HP (omit for summoned/spawned minions)
+#   encounter     — bench Encounter key (omit if no standalone scenario)
+
+[[monster]]
+variant = "JawWorm"
+display_name = "Jaw Worm"
+sts2_id = "JAW_WORM"
+bridge_names = ["JawWorm"]
+hp = 44
+encounter = "jaw-worm"
+
+[[monster]]
+variant = "GremlinNob"
+display_name = "Gremlin Nob"
+sts2_id = "GREMLIN_NOB"
+bridge_names = ["GremlinNob"]
+hp = 85
+encounter = "gremlin-nob"
+
+[[monster]]
+variant = "Nibbit"
+display_name = "Nibbit"
+sts2_id = "NIBBIT"
+bridge_names = ["Nibbit"]
+hp = 44
+encounter = "nibbit"
+
+[[monster]]
+variant = "FuzzyWurmCrawler"
+display_name = "Fuzzy Wurm Crawler"
+sts2_id = "FUZZY_WURM_CRAWLER"
+bridge_names = ["FuzzyWurmCrawler"]
+hp = 56
+encounter = "fuzzy-wurm-crawler"
+
+[[monster]]
+variant = "TwigSlimeS"
+display_name = "Twig Slime (S)"
+sts2_id = "TWIG_SLIME_S"
+bridge_names = ["TwigSlime_S"]
+hp = 11
+encounter = "twig-slime-s"
+
+[[monster]]
+variant = "ShrinkerBeetle"
+display_name = "Shrinker Beetle"
+sts2_id = "SHRINKER_BEETLE"
+bridge_names = ["ShrinkerBeetle"]
+hp = 38
+encounter = "shrinker-beetle"
+
+[[monster]]
+variant = "LeafSlimeS"
+display_name = "Leaf Slime (S)"
+sts2_id = "LEAF_SLIME_S"
+bridge_names = ["LeafSlime_S"]
+hp = 13
+encounter = "leaf-slime-s"
+
+[[monster]]
+variant = "LeafSlimeM"
+display_name = "Leaf Slime (M)"
+sts2_id = "LEAF_SLIME_M"
+bridge_names = ["LeafSlime_M"]
+hp = 33
+encounter = "leaf-slime-m"
+
+[[monster]]
+variant = "TwigSlimeM"
+display_name = "Twig Slime (M)"
+sts2_id = "TWIG_SLIME_M"
+bridge_names = ["TwigSlime_M"]
+hp = 27
+encounter = "twig-slime-m"
+
+[[monster]]
+variant = "Byrdonis"
+display_name = "Byrdonis"
+sts2_id = "BYRDONIS"
+bridge_names = ["Byrdonis"]
+hp = 84
+encounter = "byrdonis"
+
+[[monster]]
+variant = "Inklet"
+display_name = "Inklet"
+sts2_id = "INKLET"
+bridge_names = ["Inklet"]
+hp = 15
+encounter = "inklet"
+
+[[monster]]
+variant = "Vantom"
+display_name = "Vantom"
+sts2_id = "VANTOM"
+bridge_names = ["Vantom"]
+hp = 173
+encounter = "vantom"
+
+[[monster]]
+variant = "SnappingJaxfruit"
+display_name = "Snapping Jaxfruit"
+sts2_id = "SNAPPING_JAXFRUIT"
+bridge_names = ["SnappingJaxfruit"]
+hp = 31
+encounter = "snapping-jaxfruit"
+
+[[monster]]
+variant = "AxeRubyRaider"
+display_name = "Axe Ruby Raider"
+sts2_id = "AXE_RUBY_RAIDER"
+bridge_names = ["AxeRubyRaider"]
+hp = 20
+encounter = "axe-ruby-raider"
+
+[[monster]]
+variant = "AssassinRubyRaider"
+display_name = "Assassin Ruby Raider"
+sts2_id = "ASSASSIN_RUBY_RAIDER"
+bridge_names = ["AssassinRubyRaider"]
+hp = 18
+encounter = "assassin-ruby-raider"
+
+[[monster]]
+variant = "BruteRubyRaider"
+display_name = "Brute Ruby Raider"
+sts2_id = "BRUTE_RUBY_RAIDER"
+bridge_names = ["BruteRubyRaider"]
+hp = 30
+encounter = "brute-ruby-raider"
+
+[[monster]]
+variant = "CrossbowRubyRaider"
+display_name = "Crossbow Ruby Raider"
+sts2_id = "CROSSBOW_RUBY_RAIDER"
+bridge_names = ["CrossbowRubyRaider"]
+hp = 18
+encounter = "crossbow-ruby-raider"
+
+[[monster]]
+variant = "SlitheringStrangler"
+display_name = "Slithering Strangler"
+sts2_id = "SLITHERING_STRANGLER"
+bridge_names = [
+    "SlitheriingStrangler",
+    "SlitheringSstrangler",
+    "SlithingStrangler",
+    "SliteringStrangler",
+    "SliteheringStrangler",
+]
+hp = 54
+encounter = "slithering-strangler"
+
+[[monster]]
+variant = "CubexConstruct"
+display_name = "Cubex Construct"
+sts2_id = "CUBEX_CONSTRUCT"
+bridge_names = ["CubexConstruct"]
+hp = 65
+encounter = "cubex-construct"
+
+[[monster]]
+variant = "KinPriest"
+display_name = "Kin Priest"
+sts2_id = "KIN_PRIEST"
+bridge_names = ["KinPriest"]
+hp = 190
+
+[[monster]]
+variant = "KinFollower"
+display_name = "Kin Follower"
+sts2_id = "KIN_FOLLOWER"
+bridge_names = ["KinFollower"]
+hp = 59
+
+[[monster]]
+variant = "PhrogParasite"
+display_name = "Phrog Parasite"
+sts2_id = "PHROG_PARASITE"
+bridge_names = ["PhrogParasite"]
+hp = 64
+encounter = "phrog-parasite"
+
+[[monster]]
+variant = "Wriggler"
+display_name = "Wriggler"
+sts2_id = "WRIGGLER"
+bridge_names = ["Wriggler"]
+hp = 21
+
+[[monster]]
+variant = "TrackerRubyRaider"
+display_name = "Tracker Ruby Raider"
+sts2_id = "TRACKER_RUBY_RAIDER"
+bridge_names = ["TrackerRubyRaider"]
+hp = 21
+encounter = "tracker-ruby-raider"
+
+[[monster]]
+variant = "Mawler"
+display_name = "Mawler"
+sts2_id = "MAWLER"
+bridge_names = ["Mawler"]
+hp = 72
+encounter = "mawler"
+
+[[monster]]
+variant = "VineShambler"
+display_name = "Vine Shambler"
+sts2_id = "VINE_SHAMBLER"
+bridge_names = ["VineShambler"]
+hp = 64
+encounter = "vine-shambler"
+
+[[monster]]
+variant = "BygoneEffigy"
+display_name = "Bygone Effigy"
+sts2_id = "BYGONE_EFFIGY"
+bridge_names = ["BygoneEffigy"]
+hp = 132
+encounter = "bygone-effigy"
+
+[[monster]]
+variant = "Flyconid"
+display_name = "Flyconid"
+sts2_id = "FLYCONID"
+bridge_names = ["Flyconid"]
+hp = 49
+encounter = "flyconid"
+
+[[monster]]
+variant = "Fogmog"
+display_name = "Fogmog"
+sts2_id = "FOGMOG"
+bridge_names = ["Fogmog"]
+hp = 76
+encounter = "fogmog"
+
+[[monster]]
+variant = "CeremonialBeast"
+display_name = "Ceremonial Beast"
+sts2_id = "CEREMONIAL_BEAST"
+bridge_names = ["CeremonialBeast"]
+hp = 252
+encounter = "ceremonial-beast"
+
+[[monster]]
+variant = "EyeWithTeeth"
+display_name = "Eye With Teeth"
+sts2_id = "EYE_WITH_TEETH"
+bridge_names = []

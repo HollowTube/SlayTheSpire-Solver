@@ -24,12 +24,17 @@ if TYPE_CHECKING:
 from ..scenarios import (
     PLAYER_STARTING_HP,
     CardName,
+    ironclad_starter_deck_vs_assassin_ruby_raider,
+    ironclad_starter_deck_vs_axe_ruby_raider,
+    ironclad_starter_deck_vs_brute_ruby_raider,
     ironclad_starter_deck_vs_bygone_effigy,
     ironclad_starter_deck_vs_byrdonis,
+    ironclad_starter_deck_vs_ceremonial_beast,
+    ironclad_starter_deck_vs_crossbow_ruby_raider,
+    ironclad_starter_deck_vs_cubex_construct,
     ironclad_starter_deck_vs_flyconid,
     ironclad_starter_deck_vs_fogmog,
     ironclad_starter_deck_vs_fuzzy_wurm_crawler,
-    ironclad_starter_deck_vs_ceremonial_beast,
     ironclad_starter_deck_vs_gremlin_nob,
     ironclad_starter_deck_vs_inklet,
     ironclad_starter_deck_vs_inklets,
@@ -38,9 +43,14 @@ from ..scenarios import (
     ironclad_starter_deck_vs_leaf_slime_s,
     ironclad_starter_deck_vs_mawler,
     ironclad_starter_deck_vs_nibbit,
+    ironclad_starter_deck_vs_phrog_parasite,
+    ironclad_starter_deck_vs_ruby_raiders,
     ironclad_starter_deck_vs_shrinker_beetle,
     ironclad_starter_deck_vs_slimes_weak,
     ironclad_starter_deck_vs_slimes_weak_twig,
+    ironclad_starter_deck_vs_slithering_strangler,
+    ironclad_starter_deck_vs_snapping_jaxfruit,
+    ironclad_starter_deck_vs_the_kin,
     ironclad_starter_deck_vs_tracker_ruby_raider,
     ironclad_starter_deck_vs_twig_slime_m,
     ironclad_starter_deck_vs_twig_slime_s,
@@ -69,9 +79,19 @@ class Encounter(str, Enum):
     TWIG_SLIME_M = "twig-slime-m"
     SLIMES_WEAK = "slimes-weak"
     SLIMES_WEAK_TWIG = "slimes-weak-twig"
+    ASSASSIN_RUBY_RAIDER = "assassin-ruby-raider"
+    AXE_RUBY_RAIDER = "axe-ruby-raider"
+    BRUTE_RUBY_RAIDER = "brute-ruby-raider"
     BYRDONIS = "byrdonis"
+    CROSSBOW_RUBY_RAIDER = "crossbow-ruby-raider"
+    CUBEX_CONSTRUCT = "cubex-construct"
     INKLET = "inklet"
     INKLETS = "inklets"
+    PHROG_PARASITE = "phrog-parasite"
+    RUBY_RAIDERS = "ruby-raiders"
+    SLITHERING_STRANGLER = "slithering-strangler"
+    SNAPPING_JAXFRUIT = "snapping-jaxfruit"
+    THE_KIN = "the-kin"
     VANTOM = "vantom"
     TRACKER_RUBY_RAIDER = "tracker-ruby-raider"
     MAWLER = "mawler"
@@ -83,28 +103,38 @@ class Encounter(str, Enum):
 
 
 _SCENARIOS = {
-    Encounter.JAW_WORM: ironclad_starter_deck_vs_jaw_worm,
-    Encounter.GREMLIN_NOB: ironclad_starter_deck_vs_gremlin_nob,
-    Encounter.NIBBIT: ironclad_starter_deck_vs_nibbit,
-    Encounter.FUZZY_WURM_CRAWLER: ironclad_starter_deck_vs_fuzzy_wurm_crawler,
-    Encounter.TWIG_SLIME_S: ironclad_starter_deck_vs_twig_slime_s,
-    Encounter.SHRINKER_BEETLE: ironclad_starter_deck_vs_shrinker_beetle,
-    Encounter.LEAF_SLIME_S: ironclad_starter_deck_vs_leaf_slime_s,
-    Encounter.LEAF_SLIME_M: ironclad_starter_deck_vs_leaf_slime_m,
-    Encounter.TWIG_SLIME_M: ironclad_starter_deck_vs_twig_slime_m,
-    Encounter.SLIMES_WEAK: ironclad_starter_deck_vs_slimes_weak,
-    Encounter.SLIMES_WEAK_TWIG: ironclad_starter_deck_vs_slimes_weak_twig,
+    Encounter.ASSASSIN_RUBY_RAIDER: ironclad_starter_deck_vs_assassin_ruby_raider,
+    Encounter.AXE_RUBY_RAIDER: ironclad_starter_deck_vs_axe_ruby_raider,
+    Encounter.BRUTE_RUBY_RAIDER: ironclad_starter_deck_vs_brute_ruby_raider,
+    Encounter.BYGONE_EFFIGY: ironclad_starter_deck_vs_bygone_effigy,
     Encounter.BYRDONIS: ironclad_starter_deck_vs_byrdonis,
+    Encounter.CEREMONIAL_BEAST: ironclad_starter_deck_vs_ceremonial_beast,
+    Encounter.CROSSBOW_RUBY_RAIDER: ironclad_starter_deck_vs_crossbow_ruby_raider,
+    Encounter.CUBEX_CONSTRUCT: ironclad_starter_deck_vs_cubex_construct,
+    Encounter.FLYCONID: ironclad_starter_deck_vs_flyconid,
+    Encounter.FOGMOG: ironclad_starter_deck_vs_fogmog,
+    Encounter.FUZZY_WURM_CRAWLER: ironclad_starter_deck_vs_fuzzy_wurm_crawler,
+    Encounter.GREMLIN_NOB: ironclad_starter_deck_vs_gremlin_nob,
     Encounter.INKLET: ironclad_starter_deck_vs_inklet,
     Encounter.INKLETS: ironclad_starter_deck_vs_inklets,
-    Encounter.VANTOM: ironclad_starter_deck_vs_vantom,
-    Encounter.TRACKER_RUBY_RAIDER: ironclad_starter_deck_vs_tracker_ruby_raider,
+    Encounter.JAW_WORM: ironclad_starter_deck_vs_jaw_worm,
+    Encounter.LEAF_SLIME_M: ironclad_starter_deck_vs_leaf_slime_m,
+    Encounter.LEAF_SLIME_S: ironclad_starter_deck_vs_leaf_slime_s,
     Encounter.MAWLER: ironclad_starter_deck_vs_mawler,
+    Encounter.NIBBIT: ironclad_starter_deck_vs_nibbit,
+    Encounter.PHROG_PARASITE: ironclad_starter_deck_vs_phrog_parasite,
+    Encounter.RUBY_RAIDERS: ironclad_starter_deck_vs_ruby_raiders,
+    Encounter.SHRINKER_BEETLE: ironclad_starter_deck_vs_shrinker_beetle,
+    Encounter.SLIMES_WEAK: ironclad_starter_deck_vs_slimes_weak,
+    Encounter.SLIMES_WEAK_TWIG: ironclad_starter_deck_vs_slimes_weak_twig,
+    Encounter.SLITHERING_STRANGLER: ironclad_starter_deck_vs_slithering_strangler,
+    Encounter.SNAPPING_JAXFRUIT: ironclad_starter_deck_vs_snapping_jaxfruit,
+    Encounter.THE_KIN: ironclad_starter_deck_vs_the_kin,
+    Encounter.TRACKER_RUBY_RAIDER: ironclad_starter_deck_vs_tracker_ruby_raider,
+    Encounter.TWIG_SLIME_M: ironclad_starter_deck_vs_twig_slime_m,
+    Encounter.TWIG_SLIME_S: ironclad_starter_deck_vs_twig_slime_s,
+    Encounter.VANTOM: ironclad_starter_deck_vs_vantom,
     Encounter.VINE_SHAMBLER: ironclad_starter_deck_vs_vine_shambler,
-    Encounter.BYGONE_EFFIGY: ironclad_starter_deck_vs_bygone_effigy,
-    Encounter.FLYCONID: ironclad_starter_deck_vs_flyconid,
-    Encounter.CEREMONIAL_BEAST: ironclad_starter_deck_vs_ceremonial_beast,
-    Encounter.FOGMOG: ironclad_starter_deck_vs_fogmog,
 }
 
 # Act 1 "easy pool" encounters — every non-elite, non-boss scenario (i.e.
