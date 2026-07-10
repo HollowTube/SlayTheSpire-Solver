@@ -186,9 +186,7 @@ def test_encounter_enum_covers_all_toml_monsters_with_encounter():
 
 def test_single_monster_encounters_have_toml_entry():
     toml = _toml_by_display()
-    toml_encounters = {
-        m["encounter"] for m in toml.values() if m.get("encounter")
-    }
+    toml_encounters = {m["encounter"] for m in toml.values() if m.get("encounter")}
     all_encounters = _encounter_values()
     single = all_encounters - _MULTI_MONSTER_ENCOUNTERS
     orphaned = single - toml_encounters
