@@ -108,6 +108,8 @@ class CardName(str, Enum):
     BATTLE_TRANCE = "BattleTrance"
     WHIRLWIND = "Whirlwind"
     CASCADE = "Cascade"
+
+
 # END GENERATED CardName
 
 
@@ -152,6 +154,8 @@ class MonsterName(str, Enum):
     FOGMOG = "Fogmog"
     CEREMONIAL_BEAST = "Ceremonial Beast"
     EYE_WITH_TEETH = "Eye With Teeth"
+
+
 # END GENERATED MonsterName
 
 
@@ -243,7 +247,7 @@ _MONSTER_MAP: dict[str, str] = {
     "Fogmog": MonsterName.FOGMOG,
     "CeremonialBeast": MonsterName.CEREMONIAL_BEAST,
     "EyeWithTeeth": MonsterName.EYE_WITH_TEETH,
-# END GENERATED _MONSTER_MAP
+    # END GENERATED _MONSTER_MAP
     # Acid slime variants — bridge class names not yet confirmed
     "AcidSlime_L": "Acid Slime (L)",
     "AcidSlime_S": "Acid Slime (S)",

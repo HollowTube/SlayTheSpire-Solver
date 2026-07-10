@@ -52,7 +52,7 @@ def _replace_region(text: str, new_content: str, comment_char: str, tag: str = "
     begin_marker = f"{comment_char} {BEGIN}{tag_suffix}"
     end_marker = f"{comment_char} {END}{tag_suffix}"
     pattern = re.compile(
-        rf"({re.escape(begin_marker)}[^\n]*\n).*?({re.escape(end_marker)})",
+        rf"({re.escape(begin_marker)}[^\n]*\n).*?([ \t]*{re.escape(end_marker)})",
         re.DOTALL,
     )
     if not pattern.search(text):
@@ -99,7 +99,9 @@ def _gen_card_name_enum(cards: list[dict]) -> str:
     for c in cards:
         member = _display_to_py_member(c["display"])
         lines.append(f'    {member} = "{c["display"]}"')
-    return "\n".join(lines) + "\n"
+    # Two blank lines required before the unindented # END GENERATED marker
+    # so ruff format doesn't add them and make --check fail.
+    return "\n".join(lines) + "\n\n\n"
 
 
 def _gen_monster_name_enum(monsters: list[dict]) -> str:
@@ -108,7 +110,7 @@ def _gen_monster_name_enum(monsters: list[dict]) -> str:
     for m in monsters:
         member = _display_to_py_member(m["display"])
         lines.append(f'    {member} = "{m["display"]}"')
-    return "\n".join(lines) + "\n"
+    return "\n".join(lines) + "\n\n\n"
 
 
 def _gen_monster_map(monsters: list[dict]) -> str:
