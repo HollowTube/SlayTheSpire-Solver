@@ -1,0 +1,406 @@
+# Card catalogue — single source of truth for ids.rs, names.py, and cards.rs.
+#
+# Each entry:
+#   variant      — Rust enum variant name (also used to derive Python enum member)
+#   display      — canonical sim display string (what as_str() returns)
+#   sts2_id      — STS2 ModelId screaming-snake (what sts2_id() returns)
+#   in_card_pool — if false, excluded from ALL_CARD_NAMES in cards.rs (default true)
+#
+# Adding a new card: add one [[cards]] entry here, then run scripts/gen_ids.py,
+# then implement card_data() in src/cards.rs and the card logic in src/cards.rs.
+
+[[cards]]
+variant = "StrikeIronclad"
+display = "Strike"
+sts2_id = "STRIKE_IRONCLAD"
+
+[[cards]]
+variant = "DefendIronclad"
+display = "Defend"
+sts2_id = "DEFEND_IRONCLAD"
+
+[[cards]]
+variant = "Bash"
+display = "Bash"
+sts2_id = "BASH"
+
+[[cards]]
+variant = "IronWave"
+display = "Iron Wave"
+sts2_id = "IRON_WAVE"
+
+[[cards]]
+variant = "Inflame"
+display = "Inflame"
+sts2_id = "INFLAME"
+
+[[cards]]
+variant = "SwordBoomerang"
+display = "Sword Boomerang"
+sts2_id = "SWORD_BOOMERANG"
+
+[[cards]]
+variant = "Thunderclap"
+display = "Thunderclap"
+sts2_id = "THUNDERCLAP"
+
+[[cards]]
+variant = "Rage"
+display = "Rage"
+sts2_id = "RAGE"
+
+[[cards]]
+variant = "DemonForm"
+display = "DemonForm"
+sts2_id = "DEMON_FORM"
+
+[[cards]]
+variant = "CrimsonMantle"
+display = "CrimsonMantle"
+sts2_id = "CRIMSON_MANTLE"
+
+[[cards]]
+variant = "Inferno"
+display = "Inferno"
+sts2_id = "INFERNO"
+
+[[cards]]
+variant = "Aggression"
+display = "Aggression"
+sts2_id = "AGGRESSION"
+
+[[cards]]
+variant = "DarkEmbrace"
+display = "DarkEmbrace"
+sts2_id = "DARK_EMBRACE"
+
+[[cards]]
+variant = "FeelNoPain"
+display = "FeelNoPain"
+sts2_id = "FEEL_NO_PAIN"
+
+[[cards]]
+variant = "Barricade"
+display = "Barricade"
+sts2_id = "BARRICADE"
+
+[[cards]]
+variant = "Juggernaut"
+display = "Juggernaut"
+sts2_id = "JUGGERNAUT"
+
+[[cards]]
+variant = "FlameBarrier"
+display = "FlameBarrier"
+sts2_id = "FLAME_BARRIER"
+
+[[cards]]
+variant = "Colossus"
+display = "Colossus"
+sts2_id = "COLOSSUS"
+
+[[cards]]
+variant = "Corruption"
+display = "Corruption"
+sts2_id = "CORRUPTION"
+
+[[cards]]
+variant = "Cruelty"
+display = "Cruelty"
+sts2_id = "CRUELTY"
+
+[[cards]]
+variant = "Mangle"
+display = "Mangle"
+sts2_id = "MANGLE"
+
+[[cards]]
+variant = "OneTwoPunch"
+display = "OneTwoPunch"
+sts2_id = "ONE_TWO_PUNCH"
+
+[[cards]]
+variant = "PommelStrike"
+display = "Pommel Strike"
+sts2_id = "POMMEL_STRIKE"
+
+[[cards]]
+variant = "Bloodletting"
+display = "Bloodletting"
+sts2_id = "BLOODLETTING"
+
+[[cards]]
+variant = "BloodWall"
+display = "BloodWall"
+sts2_id = "BLOOD_WALL"
+
+[[cards]]
+variant = "Hemokinesis"
+display = "Hemokinesis"
+sts2_id = "HEMOKINESIS"
+
+[[cards]]
+variant = "Offering"
+display = "Offering"
+sts2_id = "OFFERING"
+
+[[cards]]
+variant = "Tremble"
+display = "Tremble"
+sts2_id = "TREMBLE"
+
+[[cards]]
+variant = "Impervious"
+display = "Impervious"
+sts2_id = "IMPERVIOUS"
+
+[[cards]]
+variant = "NotYet"
+display = "NotYet"
+sts2_id = "NOT_YET"
+
+[[cards]]
+variant = "AscendersBane"
+display = "Ascender's Bane"
+sts2_id = "ASCENDERS_BANE"
+in_card_pool = false
+
+[[cards]]
+variant = "Slimed"
+display = "Slimed"
+sts2_id = "SLIMED"
+
+[[cards]]
+variant = "Wound"
+display = "Wound"
+sts2_id = "WOUND"
+
+[[cards]]
+variant = "Infection"
+display = "Infection"
+sts2_id = "INFECTION"
+
+[[cards]]
+variant = "Dazed"
+display = "Dazed"
+sts2_id = "DAZED"
+
+[[cards]]
+variant = "Cinder"
+display = "Cinder"
+sts2_id = "CINDER"
+
+[[cards]]
+variant = "TrueGrit"
+display = "TrueGrit"
+sts2_id = "TRUE_GRIT"
+
+[[cards]]
+variant = "BurningPact"
+display = "BurningPact"
+sts2_id = "BURNING_PACT"
+
+[[cards]]
+variant = "Thrash"
+display = "Thrash"
+sts2_id = "THRASH"
+
+[[cards]]
+variant = "SecondWind"
+display = "SecondWind"
+sts2_id = "SECOND_WIND"
+
+[[cards]]
+variant = "Headbutt"
+display = "Headbutt"
+sts2_id = "HEADBUTT"
+
+[[cards]]
+variant = "FiendFire"
+display = "FiendFire"
+sts2_id = "FIEND_FIRE"
+
+[[cards]]
+variant = "InfernalBlade"
+display = "InfernalBlade"
+sts2_id = "INFERNAL_BLADE"
+
+[[cards]]
+variant = "Bludgeon"
+display = "Bludgeon"
+sts2_id = "BLUDGEON"
+
+[[cards]]
+variant = "TwinStrike"
+display = "TwinStrike"
+sts2_id = "TWIN_STRIKE"
+
+[[cards]]
+variant = "Break"
+display = "Break"
+sts2_id = "BREAK"
+
+[[cards]]
+variant = "ShrugItOff"
+display = "ShrugItOff"
+sts2_id = "SHRUG_IT_OFF"
+
+[[cards]]
+variant = "Taunt"
+display = "Taunt"
+sts2_id = "TAUNT"
+
+[[cards]]
+variant = "Uppercut"
+display = "Uppercut"
+sts2_id = "UPPERCUT"
+
+[[cards]]
+variant = "BodySlam"
+display = "BodySlam"
+sts2_id = "BODY_SLAM"
+
+[[cards]]
+variant = "PerfectedStrike"
+display = "PerfectedStrike"
+sts2_id = "PERFECTED_STRIKE"
+
+[[cards]]
+variant = "AshenStrike"
+display = "AshenStrike"
+sts2_id = "ASHEN_STRIKE"
+
+[[cards]]
+variant = "Bully"
+display = "Bully"
+sts2_id = "BULLY"
+
+[[cards]]
+variant = "Conflagration"
+display = "Conflagration"
+sts2_id = "CONFLAGRATION"
+
+[[cards]]
+variant = "TearAsunder"
+display = "TearAsunder"
+sts2_id = "TEAR_ASUNDER"
+
+[[cards]]
+variant = "Spite"
+display = "Spite"
+sts2_id = "SPITE"
+
+[[cards]]
+variant = "Dismantle"
+display = "Dismantle"
+sts2_id = "DISMANTLE"
+
+[[cards]]
+variant = "MoltenFist"
+display = "MoltenFist"
+sts2_id = "MOLTEN_FIST"
+
+[[cards]]
+variant = "Dominate"
+display = "Dominate"
+sts2_id = "DOMINATE"
+
+[[cards]]
+variant = "Breakthrough"
+display = "Breakthrough"
+sts2_id = "BREAKTHROUGH"
+
+[[cards]]
+variant = "SetupStrike"
+display = "Setup Strike"
+sts2_id = "SETUP_STRIKE"
+
+[[cards]]
+variant = "Unrelenting"
+display = "Unrelenting"
+sts2_id = "UNRELENTING"
+
+[[cards]]
+variant = "EvilEye"
+display = "Evil Eye"
+sts2_id = "EVIL_EYE"
+
+[[cards]]
+variant = "ForgottenRitual"
+display = "Forgotten Ritual"
+sts2_id = "FORGOTTEN_RITUAL"
+
+[[cards]]
+variant = "Pyre"
+display = "Pyre"
+sts2_id = "PYRE"
+
+[[cards]]
+variant = "Anger"
+display = "Anger"
+sts2_id = "ANGER"
+
+[[cards]]
+variant = "DrumOfBattle"
+display = "DrumOfBattle"
+sts2_id = "DRUM_OF_BATTLE"
+
+[[cards]]
+variant = "Stomp"
+display = "Stomp"
+sts2_id = "STOMP"
+
+[[cards]]
+variant = "FightMe"
+display = "FightMe"
+sts2_id = "FIGHT_ME"
+
+[[cards]]
+variant = "StoneArmor"
+display = "StoneArmor"
+sts2_id = "STONE_ARMOR"
+
+[[cards]]
+variant = "Vicious"
+display = "Vicious"
+sts2_id = "VICIOUS"
+
+[[cards]]
+variant = "Juggling"
+display = "Juggling"
+sts2_id = "JUGGLING"
+
+[[cards]]
+variant = "Unmovable"
+display = "Unmovable"
+sts2_id = "UNMOVABLE"
+
+[[cards]]
+variant = "PactsEnd"
+display = "PactsEnd"
+sts2_id = "PACTS_END"
+
+[[cards]]
+variant = "HowlFromBeyond"
+display = "HowlFromBeyond"
+sts2_id = "HOWL_FROM_BEYOND"
+
+[[cards]]
+variant = "Havoc"
+display = "Havoc"
+sts2_id = "HAVOC"
+
+[[cards]]
+variant = "BattleTrance"
+display = "BattleTrance"
+sts2_id = "BATTLE_TRANCE"
+
+[[cards]]
+variant = "Whirlwind"
+display = "Whirlwind"
+sts2_id = "WHIRLWIND"
+
+[[cards]]
+variant = "Cascade"
+display = "Cascade"
+sts2_id = "CASCADE"
