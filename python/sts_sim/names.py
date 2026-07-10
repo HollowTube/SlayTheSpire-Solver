@@ -157,6 +157,7 @@ class MonsterName(str, Enum):
     FLYCONID = "Flyconid"
     FOGMOG = "Fogmog"
     CEREMONIAL_BEAST = "Ceremonial Beast"
+    EYE_WITH_TEETH = "Eye With Teeth"
 
 
 # ── Bridge → sim card normalization ──────────────────────────────────────────
@@ -245,6 +246,7 @@ _MONSTER_MAP: dict[str, str] = {
     "Flyconid": MonsterName.FLYCONID,
     "Fogmog": MonsterName.FOGMOG,
     "CeremonialBeast": MonsterName.CEREMONIAL_BEAST,
+    "EyeWithTeeth": MonsterName.EYE_WITH_TEETH,
     # Acid slime variants — bridge class names not yet confirmed
     "AcidSlime_L": "Acid Slime (L)",
     "AcidSlime_S": "Acid Slime (S)",
