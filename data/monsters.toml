@@ -1,0 +1,204 @@
+# Monster catalogue — single source of truth for ids.rs and names.py.
+#
+# Each entry:
+#   variant        — Rust enum variant name
+#   display        — canonical sim display string (what as_str() returns)
+#   sts2_id        — STS2 ModelId screaming-snake (what sts2_id() returns)
+#   bridge_classes — C# bridge class names that map to this monster in _MONSTER_MAP
+#   bridge_note    — optional comment emitted above bridge_classes entries in names.py
+#
+# Adding a new monster: add one [[monsters]] entry here, then run scripts/gen_ids.py,
+# then implement the monster's AI in src/monsters.rs.
+
+[[monsters]]
+variant = "JawWorm"
+display = "Jaw Worm"
+sts2_id = "JAW_WORM"
+bridge_classes = ["JawWorm"]
+
+[[monsters]]
+variant = "GremlinNob"
+display = "Gremlin Nob"
+sts2_id = "GREMLIN_NOB"
+bridge_classes = ["GremlinNob"]
+
+[[monsters]]
+variant = "Nibbit"
+display = "Nibbit"
+sts2_id = "NIBBIT"
+bridge_classes = ["Nibbit"]
+
+[[monsters]]
+variant = "FuzzyWurmCrawler"
+display = "Fuzzy Wurm Crawler"
+sts2_id = "FUZZY_WURM_CRAWLER"
+bridge_classes = ["FuzzyWurmCrawler"]
+
+[[monsters]]
+variant = "TwigSlimeS"
+display = "Twig Slime (S)"
+sts2_id = "TWIG_SLIME_S"
+bridge_classes = ["TwigSlime_S"]
+
+[[monsters]]
+variant = "ShrinkerBeetle"
+display = "Shrinker Beetle"
+sts2_id = "SHRINKER_BEETLE"
+bridge_classes = ["ShrinkerBeetle"]
+
+[[monsters]]
+variant = "LeafSlimeS"
+display = "Leaf Slime (S)"
+sts2_id = "LEAF_SLIME_S"
+bridge_classes = ["LeafSlime_S"]
+
+[[monsters]]
+variant = "LeafSlimeM"
+display = "Leaf Slime (M)"
+sts2_id = "LEAF_SLIME_M"
+bridge_classes = ["LeafSlime_M"]
+
+[[monsters]]
+variant = "TwigSlimeM"
+display = "Twig Slime (M)"
+sts2_id = "TWIG_SLIME_M"
+bridge_classes = ["TwigSlime_M"]
+
+[[monsters]]
+variant = "Byrdonis"
+display = "Byrdonis"
+sts2_id = "BYRDONIS"
+bridge_classes = ["Byrdonis"]
+
+[[monsters]]
+variant = "Inklet"
+display = "Inklet"
+sts2_id = "INKLET"
+bridge_classes = ["Inklet"]
+
+[[monsters]]
+variant = "Vantom"
+display = "Vantom"
+sts2_id = "VANTOM"
+bridge_classes = ["Vantom"]
+
+[[monsters]]
+variant = "SnappingJaxfruit"
+display = "Snapping Jaxfruit"
+sts2_id = "SNAPPING_JAXFRUIT"
+bridge_classes = ["SnappingJaxfruit"]
+
+[[monsters]]
+variant = "AxeRubyRaider"
+display = "Axe Ruby Raider"
+sts2_id = "AXE_RUBY_RAIDER"
+bridge_classes = ["AxeRubyRaider"]
+
+[[monsters]]
+variant = "AssassinRubyRaider"
+display = "Assassin Ruby Raider"
+sts2_id = "ASSASSIN_RUBY_RAIDER"
+bridge_classes = ["AssassinRubyRaider"]
+
+[[monsters]]
+variant = "BruteRubyRaider"
+display = "Brute Ruby Raider"
+sts2_id = "BRUTE_RUBY_RAIDER"
+bridge_classes = ["BruteRubyRaider"]
+
+[[monsters]]
+variant = "CrossbowRubyRaider"
+display = "Crossbow Ruby Raider"
+sts2_id = "CROSSBOW_RUBY_RAIDER"
+bridge_classes = ["CrossbowRubyRaider"]
+
+[[monsters]]
+variant = "SlitheringStrangler"
+display = "Slithering Strangler"
+sts2_id = "SLITHERING_STRANGLER"
+bridge_note = "Multiple possible spellings until confirmed against live bridge"
+bridge_classes = [
+    "SlitheriingStrangler",
+    "SlitheringSstrangler",
+    "SlithingStrangler",
+    "SliteringStrangler",
+    "SliteheringStrangler",
+]
+
+[[monsters]]
+variant = "CubexConstruct"
+display = "Cubex Construct"
+sts2_id = "CUBEX_CONSTRUCT"
+bridge_classes = ["CubexConstruct"]
+
+[[monsters]]
+variant = "KinPriest"
+display = "Kin Priest"
+sts2_id = "KIN_PRIEST"
+bridge_classes = ["KinPriest"]
+
+[[monsters]]
+variant = "KinFollower"
+display = "Kin Follower"
+sts2_id = "KIN_FOLLOWER"
+bridge_classes = ["KinFollower"]
+
+[[monsters]]
+variant = "PhrogParasite"
+display = "Phrog Parasite"
+sts2_id = "PHROG_PARASITE"
+bridge_classes = ["PhrogParasite"]
+
+[[monsters]]
+variant = "Wriggler"
+display = "Wriggler"
+sts2_id = "WRIGGLER"
+bridge_classes = ["Wriggler"]
+
+[[monsters]]
+variant = "TrackerRubyRaider"
+display = "Tracker Ruby Raider"
+sts2_id = "TRACKER_RUBY_RAIDER"
+bridge_classes = ["TrackerRubyRaider"]
+
+[[monsters]]
+variant = "Mawler"
+display = "Mawler"
+sts2_id = "MAWLER"
+bridge_classes = ["Mawler"]
+
+[[monsters]]
+variant = "VineShambler"
+display = "Vine Shambler"
+sts2_id = "VINE_SHAMBLER"
+bridge_classes = ["VineShambler"]
+
+[[monsters]]
+variant = "BygoneEffigy"
+display = "Bygone Effigy"
+sts2_id = "BYGONE_EFFIGY"
+bridge_classes = ["BygoneEffigy"]
+
+[[monsters]]
+variant = "Flyconid"
+display = "Flyconid"
+sts2_id = "FLYCONID"
+bridge_classes = ["Flyconid"]
+
+[[monsters]]
+variant = "Fogmog"
+display = "Fogmog"
+sts2_id = "FOGMOG"
+bridge_classes = ["Fogmog"]
+
+[[monsters]]
+variant = "CeremonialBeast"
+display = "Ceremonial Beast"
+sts2_id = "CEREMONIAL_BEAST"
+bridge_classes = ["CeremonialBeast"]
+
+[[monsters]]
+variant = "EyeWithTeeth"
+display = "Eye With Teeth"
+sts2_id = "EYE_WITH_TEETH"
+bridge_classes = ["EyeWithTeeth"]

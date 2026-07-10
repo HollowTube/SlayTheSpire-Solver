@@ -1,16 +1,16 @@
-"""Single source of truth for all sim-known card and monster names.
+"""Canonical card and monster name enums + bridge normalization.
 
 Provides:
-  - ``CardName``   — enum of every card implemented in ``cards.rs``
-  - ``MonsterName`` — enum of every monster implemented in ``monsters.rs``
-  - ``card()``     — normalise a bridge C# card class name → sim string
-  - ``monster()``  — normalise a bridge C# monster class name → sim string
+  - ``CardName``    — enum of every card in ``cards.rs`` / ``data/cards.toml``
+  - ``MonsterName`` — enum of every monster in ``monsters.rs`` / ``data/monsters.toml``
+  - ``card()``      — normalise a bridge C# card class name → sim string
+  - ``monster()``   — normalise a bridge C# monster class name → sim string
 
 Bridge returns C# class names (e.g. ``StrikeIronclad``, ``FuzzyWurmCrawler``).
 Sim uses display strings (e.g. ``"Strike"``, ``"Fuzzy Wurm Crawler"``).
-Adding a new card or monster: add it to the enum here, add a bridge mapping
-if the default suffix-strip / CamelCase heuristic doesn't produce the right
-name, and update ``cards.rs`` / ``monsters.rs`` in Rust.
+
+**Do not edit the generated regions by hand.** Edit ``data/cards.toml`` or
+``data/monsters.toml`` and run ``python scripts/gen_ids.py``.
 """
 
 from __future__ import annotations
@@ -28,94 +28,89 @@ class CardName(str, Enum):
     compare equal to plain strings everywhere in the codebase.
     """
 
-    # ── Ironclad starter ──
+    # BEGIN GENERATED CardName
     STRIKE = "Strike"
     DEFEND = "Defend"
     BASH = "Bash"
-
-    # ── Common attacks ──
-    ANGER = "Anger"
-    ASHEN_STRIKE = "AshenStrike"
-    BATTLE_TRANCE = "BattleTrance"
-    BLUDGEON = "Bludgeon"
-    BODY_SLAM = "BodySlam"
-    BREAKTHROUGH = "Breakthrough"
-    CASCADE = "Cascade"
-    HEADBUTT = "Headbutt"
-    HAVOC = "Havoc"
-    HEMOKINESIS = "Hemokinesis"
-    HOWL_FROM_BEYOND = "HowlFromBeyond"
     IRON_WAVE = "Iron Wave"
-    MANGLE = "Mangle"
-    MOLTEN_FIST = "MoltenFist"
-    ONE_TWO_PUNCH = "OneTwoPunch"
-    PERFECTED_STRIKE = "PerfectedStrike"
-    POMMEL_STRIKE = "Pommel Strike"
-    SETUP_STRIKE = "Setup Strike"
-    SWORD_BOOMERANG = "Sword Boomerang"
-    THRASH = "Thrash"
-    THUNDERCLAP = "Thunderclap"
-    TWIN_STRIKE = "TwinStrike"
-    UPPERCUT = "Uppercut"
-    WHIRLWIND = "Whirlwind"
-    VICIOUS = "Vicious"
-
-    # ── Common skills ──
-    AGGRESSION = "Aggression"
-    BARRICADE = "Barricade"
-    BLOOD_WALL = "BloodWall"
-    BLOODLETTING = "Bloodletting"
-    BREAK = "Break"
-    BULLY = "Bully"
-    BURNING_PACT = "BurningPact"
-    CINDER = "Cinder"
-    COLOSSUS = "Colossus"
-    CONFLAGRATION = "Conflagration"
-    CORRUPTION = "Corruption"
-    CRIMSON_MANTLE = "CrimsonMantle"
-    CRUELTY = "Cruelty"
-    DARK_EMBRACE = "DarkEmbrace"
-    DISMANTLE = "Dismantle"
-    DOMINATE = "Dominate"
-    DRUM_OF_BATTLE = "DrumOfBattle"
-    EVIL_EYE = "Evil Eye"
-    FEEL_NO_PAIN = "FeelNoPain"
-    FIEND_FIRE = "FiendFire"
-    FIGHT_ME = "FightMe"
-    FLAME_BARRIER = "FlameBarrier"
-    FORGOTTEN_RITUAL = "Forgotten Ritual"
-    IMPERVIOUS = "Impervious"
-    INFECTION = "Infection"
-    INFERNAL_BLADE = "InfernalBlade"
-    INFERNO = "Inferno"
     INFLAME = "Inflame"
-    JUGGERNAUT = "Juggernaut"
-    JUGGLING = "Juggling"
-    NOT_YET = "NotYet"
-    OFFERING = "Offering"
-    PACTS_END = "PactsEnd"
-    PYRE = "Pyre"
+    SWORD_BOOMERANG = "Sword Boomerang"
+    THUNDERCLAP = "Thunderclap"
     RAGE = "Rage"
-    SECOND_WIND = "SecondWind"
-    SHRUG_IT_OFF = "ShrugItOff"
-    SPITE = "Spite"
-    STONE_ARMOR = "StoneArmor"
-    STOMP = "Stomp"
-    TAUNT = "Taunt"
-    TEAR_ASUNDER = "TearAsunder"
-    TREMBLE = "Tremble"
-    TRUE_GRIT = "TrueGrit"
-    UNMOVABLE = "Unmovable"
-    UNRELENTING = "Unrelenting"
-
-    # ── Powers ──
     DEMON_FORM = "DemonForm"
-
-    # ── Status / Curse cards (added to hand/deck by game effects or ascension) ──
-    DAZED = "Dazed"
+    CRIMSON_MANTLE = "CrimsonMantle"
+    INFERNO = "Inferno"
+    AGGRESSION = "Aggression"
+    DARK_EMBRACE = "DarkEmbrace"
+    FEEL_NO_PAIN = "FeelNoPain"
+    BARRICADE = "Barricade"
+    JUGGERNAUT = "Juggernaut"
+    FLAME_BARRIER = "FlameBarrier"
+    COLOSSUS = "Colossus"
+    CORRUPTION = "Corruption"
+    CRUELTY = "Cruelty"
+    MANGLE = "Mangle"
+    ONE_TWO_PUNCH = "OneTwoPunch"
+    POMMEL_STRIKE = "Pommel Strike"
+    BLOODLETTING = "Bloodletting"
+    BLOOD_WALL = "BloodWall"
+    HEMOKINESIS = "Hemokinesis"
+    OFFERING = "Offering"
+    TREMBLE = "Tremble"
+    IMPERVIOUS = "Impervious"
+    NOT_YET = "NotYet"
+    ASCENDERS_BANE = "Ascender's Bane"
     SLIMED = "Slimed"
     WOUND = "Wound"
-    ASCENDERS_BANE = "Ascender's Bane"
+    INFECTION = "Infection"
+    DAZED = "Dazed"
+    CINDER = "Cinder"
+    TRUE_GRIT = "TrueGrit"
+    BURNING_PACT = "BurningPact"
+    THRASH = "Thrash"
+    SECOND_WIND = "SecondWind"
+    HEADBUTT = "Headbutt"
+    FIEND_FIRE = "FiendFire"
+    INFERNAL_BLADE = "InfernalBlade"
+    BLUDGEON = "Bludgeon"
+    TWIN_STRIKE = "TwinStrike"
+    BREAK = "Break"
+    SHRUG_IT_OFF = "ShrugItOff"
+    TAUNT = "Taunt"
+    UPPERCUT = "Uppercut"
+    BODY_SLAM = "BodySlam"
+    PERFECTED_STRIKE = "PerfectedStrike"
+    ASHEN_STRIKE = "AshenStrike"
+    BULLY = "Bully"
+    CONFLAGRATION = "Conflagration"
+    TEAR_ASUNDER = "TearAsunder"
+    SPITE = "Spite"
+    DISMANTLE = "Dismantle"
+    MOLTEN_FIST = "MoltenFist"
+    DOMINATE = "Dominate"
+    BREAKTHROUGH = "Breakthrough"
+    SETUP_STRIKE = "Setup Strike"
+    UNRELENTING = "Unrelenting"
+    EVIL_EYE = "Evil Eye"
+    FORGOTTEN_RITUAL = "Forgotten Ritual"
+    PYRE = "Pyre"
+    ANGER = "Anger"
+    DRUM_OF_BATTLE = "DrumOfBattle"
+    STOMP = "Stomp"
+    FIGHT_ME = "FightMe"
+    STONE_ARMOR = "StoneArmor"
+    VICIOUS = "Vicious"
+    JUGGLING = "Juggling"
+    UNMOVABLE = "Unmovable"
+    PACTS_END = "PactsEnd"
+    HOWL_FROM_BEYOND = "HowlFromBeyond"
+    HAVOC = "Havoc"
+    BATTLE_TRANCE = "BattleTrance"
+    WHIRLWIND = "Whirlwind"
+    CASCADE = "Cascade"
+
+
+# END GENERATED CardName
 
 
 # ── Monster catalogue ─────────────────────────────────────────────────────────
@@ -127,15 +122,16 @@ class MonsterName(str, Enum):
     A ``str`` subclass so ``MonsterName.JAW_WORM == "Jaw Worm"`` is true.
     """
 
+    # BEGIN GENERATED MonsterName
     JAW_WORM = "Jaw Worm"
     GREMLIN_NOB = "Gremlin Nob"
     NIBBIT = "Nibbit"
     FUZZY_WURM_CRAWLER = "Fuzzy Wurm Crawler"
     TWIG_SLIME_S = "Twig Slime (S)"
-    TWIG_SLIME_M = "Twig Slime (M)"
     SHRINKER_BEETLE = "Shrinker Beetle"
     LEAF_SLIME_S = "Leaf Slime (S)"
     LEAF_SLIME_M = "Leaf Slime (M)"
+    TWIG_SLIME_M = "Twig Slime (M)"
     BYRDONIS = "Byrdonis"
     INKLET = "Inklet"
     VANTOM = "Vantom"
@@ -158,6 +154,9 @@ class MonsterName(str, Enum):
     FOGMOG = "Fogmog"
     CEREMONIAL_BEAST = "Ceremonial Beast"
     EYE_WITH_TEETH = "Eye With Teeth"
+
+
+# END GENERATED MonsterName
 
 
 # ── Bridge → sim card normalization ──────────────────────────────────────────
@@ -211,15 +210,16 @@ def card(bridge_name: str) -> str:
 # Explicit map: bridge class name → sim display name.
 # The bridge uses CamelCase or CamelCase_Size (e.g. TwigSlime_S).
 _MONSTER_MAP: dict[str, str] = {
+    # BEGIN GENERATED _MONSTER_MAP
     "JawWorm": MonsterName.JAW_WORM,
     "GremlinNob": MonsterName.GREMLIN_NOB,
     "Nibbit": MonsterName.NIBBIT,
     "FuzzyWurmCrawler": MonsterName.FUZZY_WURM_CRAWLER,
     "TwigSlime_S": MonsterName.TWIG_SLIME_S,
-    "TwigSlime_M": MonsterName.TWIG_SLIME_M,
     "ShrinkerBeetle": MonsterName.SHRINKER_BEETLE,
     "LeafSlime_S": MonsterName.LEAF_SLIME_S,
     "LeafSlime_M": MonsterName.LEAF_SLIME_M,
+    "TwigSlime_M": MonsterName.TWIG_SLIME_M,
     "Byrdonis": MonsterName.BYRDONIS,
     "Inklet": MonsterName.INKLET,
     "Vantom": MonsterName.VANTOM,
@@ -247,6 +247,7 @@ _MONSTER_MAP: dict[str, str] = {
     "Fogmog": MonsterName.FOGMOG,
     "CeremonialBeast": MonsterName.CEREMONIAL_BEAST,
     "EyeWithTeeth": MonsterName.EYE_WITH_TEETH,
+    # END GENERATED _MONSTER_MAP
     # Acid slime variants — bridge class names not yet confirmed
     "AcidSlime_L": "Acid Slime (L)",
     "AcidSlime_S": "Acid Slime (S)",

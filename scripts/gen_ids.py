@@ -1,240 +1,206 @@
 #!/usr/bin/env python3
-"""Generate src/ids.rs from cards.rs, monsters.rs, and NameMap.cs."""
+"""Generate ids.rs, names.py, and cards.rs regions from data/cards.toml + data/monsters.toml.
 
+Usage:
+    python scripts/gen_ids.py          # regenerate in place
+    python scripts/gen_ids.py --check  # fail if committed files differ from generated output
+"""
+
+from __future__ import annotations
+
+import argparse
 import re
 import sys
+import tomllib
 from pathlib import Path
 
-REPO = Path(__file__).parent.parent  # repo root — scripts/ is one level down
+REPO_ROOT = Path(__file__).parent.parent
+
+BEGIN = "BEGIN GENERATED"
+END = "END GENERATED"
 
 
-def display_to_variant(display: str) -> str:
-    """'Iron Wave' → 'IronWave', 'Evil Eye' → 'EvilEye'"""
-    parts = re.sub(r"[^a-zA-Z0-9 ]", " ", display).split()
-    return "".join(p[0].upper() + p[1:] for p in parts)
+# ── helpers ──────────────────────────────────────────────────────────────────
 
 
-def to_screaming_snake(s: str) -> str:
-    """CamelCase or display name → SCREAMING_SNAKE_CASE."""
-    s = s.replace(" ", "_")
-    s = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", s)
-    return s.upper()
+def _display_to_py_member(display: str) -> str:
+    """Convert a display name to a Python SCREAMING_SNAKE enum member name.
+
+    "Iron Wave"        -> IRON_WAVE
+    "DemonForm"        -> DEMON_FORM  (camel split)
+    "Twig Slime (S)"   -> TWIG_SLIME_S
+    "Ascender's Bane"  -> ASCENDERS_BANE
+    """
+    s = display
+    s = s.replace("'", "")
+    s = re.sub(r"\((\w+)\)", r"_\1", s)          # (S) → _S
+    s = re.sub(r"(?<=[a-z])(?=[A-Z])", "_", s)   # camelCase → camel_Case
+    s = re.sub(r"[^A-Za-z0-9]+", "_", s)         # spaces/misc → _
+    s = re.sub(r"_+", "_", s)
+    return s.strip("_").upper()
 
 
-def cards_from_rust() -> list[str]:
-    src = (REPO / "src/cards.rs").read_text()
-    return re.findall(r'^\s+"([^"]+)"\s*=>\s*Some\(CardData', src, re.MULTILINE)
+def _replace_region(text: str, new_content: str, comment_char: str, tag: str = "") -> str:
+    """Replace the content between BEGIN/END GENERATED markers.
+
+    If `tag` is given (e.g. "CardName"), markers must include it:
+        # BEGIN GENERATED CardName
+        # END GENERATED CardName
+    Otherwise matches the first untagged BEGIN/END pair.
+    """
+    tag_suffix = f" {tag}" if tag else ""
+    begin_marker = f"{comment_char} {BEGIN}{tag_suffix}"
+    end_marker = f"{comment_char} {END}{tag_suffix}"
+    pattern = re.compile(
+        rf"({re.escape(begin_marker)}[^\n]*\n).*?([ \t]*{re.escape(end_marker)})",
+        re.DOTALL,
+    )
+    if not pattern.search(text):
+        raise ValueError(f"Could not find {begin_marker!r} / {end_marker!r} markers")
+    return pattern.sub(rf"\g<1>{new_content}\g<2>", text)
 
 
-def monsters_from_rust() -> list[str]:
-    src = (REPO / "src/monsters.rs").read_text()
-    # opening_intent function has one match arm per monster
-    m = re.search(r"fn opening_intent\([^)]+\)[^{]*\{(.*?)\n    \}", src, re.DOTALL)
-    if not m:
-        print("ERROR: could not find opening_intent", file=sys.stderr)
-        sys.exit(1)
-    return re.findall(r'"([^"]+)"\s*=>', m.group(1))
+# ── generators ───────────────────────────────────────────────────────────────
 
 
-def sts2_maps_from_namemap() -> tuple[dict, dict]:
-    """Returns (card_map, monster_map) where each is {sim_name: sts2_id}."""
-    src = (REPO / "bridge_mod/Code/NameMap.cs").read_text()
+def _gen_ids_rs(cards: list[dict], monsters: list[dict]) -> str:
+    """Content between the markers in src/ids.rs (two define_ids! blocks)."""
+    col = 16  # alignment column for display strings
 
-    def extract_section(name: str) -> dict:
-        m = re.search(rf"{name}\s*=\s*new\(\)\s*\{{(.*?)\}};", src, re.DOTALL)
-        if not m:
-            return {}
-        result = {}
-        for entry in re.finditer(r'\["([A-Z_]+)"\]\s*=\s*"([^"]+)"', m.group(1)):
-            sts2_id, sim_name = entry.group(1), entry.group(2)
-            result[sim_name] = sts2_id
-        return result
+    def fmt_card(c: dict) -> str:
+        v = c["variant"]
+        d = c["display"]
+        s = c["sts2_id"]
+        pad = " " * max(1, col - len(v))
+        return f'    {v}{pad}=> "{d}"{" " * max(1, col - len(d))}/ "{s}",'
 
-    return extract_section("CardNameMap"), extract_section("MonsterNameMap")
+    def fmt_monster(m: dict) -> str:
+        v = m["variant"]
+        d = m["display"]
+        s = m["sts2_id"]
+        pad = " " * max(1, col + 4 - len(v))
+        return f'    {v}{pad}=> "{d}"{" " * max(1, col + 4 - len(d))}/ "{s}",'
+
+    card_lines = "\n".join(fmt_card(c) for c in cards)
+    monster_lines = "\n".join(fmt_monster(m) for m in monsters)
+
+    return (
+        f"define_ids!(CardId {{\n{card_lines}\n}});\n"
+        f"\n"
+        f"// ── MonsterId ────────────────────────────────────────────────────────────────\n"
+        f"\n"
+        f"define_ids!(MonsterId {{\n{monster_lines}\n}});\n"
+    )
 
 
-def generate() -> str:
-    cards = cards_from_rust()
-    monsters = monsters_from_rust()
-    card_sts2, monster_sts2 = sts2_maps_from_namemap()
+def _gen_card_name_enum(cards: list[dict]) -> str:
+    """CardName enum body (indented lines between the markers in names.py)."""
+    lines = []
+    for c in cards:
+        member = _display_to_py_member(c["display"])
+        lines.append(f'    {member} = "{c["display"]}"')
+    # Two blank lines required before the unindented # END GENERATED marker
+    # so ruff format doesn't add them and make --check fail.
+    return "\n".join(lines) + "\n\n\n"
 
-    # ── Card variant info ─────────────────────────────────────────────────────
-    # Special case: Strike/Defend are shared cards; use Ironclad suffix for now.
-    CHAR_RENAMES = {
-        "Strike": "StrikeIronclad",
-        "Defend": "DefendIronclad",
-    }
-    CARD_STS2_OVERRIDES = {
-        "Strike": "STRIKE_IRONCLAD",
-        "Defend": "DEFEND_IRONCLAD",
-    }
 
-    card_rows: list[tuple[str, str, str]] = []  # (variant, display, sts2_id)
-    seen_variants: set[str] = set()
-    for display in cards:
-        variant = CHAR_RENAMES.get(display, display_to_variant(display))
-        sts2_id = CARD_STS2_OVERRIDES.get(display) or card_sts2.get(display)
-        if sts2_id is None:
-            # Derive from display name
-            sts2_id = to_screaming_snake(display_to_variant(display))
-        if variant in seen_variants:
-            print(f"WARNING: duplicate card variant {variant!r}", file=sys.stderr)
-        seen_variants.add(variant)
-        card_rows.append((variant, display, sts2_id))
+def _gen_monster_name_enum(monsters: list[dict]) -> str:
+    """MonsterName enum body."""
+    lines = []
+    for m in monsters:
+        member = _display_to_py_member(m["display"])
+        lines.append(f'    {member} = "{m["display"]}"')
+    return "\n".join(lines) + "\n\n\n"
 
-    # ── Monster variant info ──────────────────────────────────────────────────
-    monster_rows: list[tuple[str, str, str]] = []
-    seen_m: set[str] = set()
-    for display in monsters:
-        variant = display_to_variant(display)
-        sts2_id = monster_sts2.get(display) or to_screaming_snake(variant)
-        if variant in seen_m:
-            continue  # skip duplicates
-        seen_m.add(variant)
-        monster_rows.append((variant, display, sts2_id))
 
-    # ── Generate Rust ─────────────────────────────────────────────────────────
-    lines: list[str] = []
-    W = lines.append
-
-    W("//! Typed identifiers for cards and monsters.")
-    W("//! This file is generated by scripts/gen_ids.py — do not edit directly.")
-    W("//! Re-run `cargo run --bin gen_ids` (or `python scripts/gen_ids.py`) to regenerate.")
-    W("")
-    W("// ── CardId ───────────────────────────────────────────────────────────────────")
-    W("")
-    W("#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]")
-    W("pub enum CardId {")
-    for variant, display, _ in card_rows:
-        W(f'    {variant}, // "{display}"')
-    W("}")
-    W("")
-    W("impl CardId {")
-
-    # as_str
-    W("    /// Canonical sim display name.")
-    W("    pub fn as_str(self) -> &'static str {")
-    W("        match self {")
-    for variant, display, _ in card_rows:
-        W(f'            CardId::{variant} => "{display}",')
-    W("        }")
-    W("    }")
-    W("")
-
-    # from_str
-    W("    /// Parse from sim display name. Returns `None` for unknown names.")
-    W("    pub fn from_str(s: &str) -> Option<Self> {")
-    W("        match s {")
-    # Need to handle cases where multiple variants share a display name (Strike/Defend currently only Ironclad)
-    seen_displays: set[str] = set()
-    for variant, display, _ in card_rows:
-        if display not in seen_displays:
-            W(f'            "{display}" => Some(CardId::{variant}),')
-            seen_displays.add(display)
-    W("            _ => None,")
-    W("        }")
-    W("    }")
-    W("")
-
-    # sts2_id
-    W("    /// STS2 model ID (e.g. `STRIKE_IRONCLAD`).")
-    W("    pub fn sts2_id(self) -> &'static str {")
-    W("        match self {")
-    for variant, _, sts2_id in card_rows:
-        W(f'            CardId::{variant} => "{sts2_id}",')
-    W("        }")
-    W("    }")
-    W("")
-
-    # from_sts2
-    W("    /// Parse from STS2 model ID. Returns `None` for unknown IDs.")
-    W("    pub fn from_sts2(s: &str) -> Option<Self> {")
-    W("        match s {")
-    seen_sts2: set[str] = set()
-    for variant, _, sts2_id in card_rows:
-        if sts2_id not in seen_sts2:
-            W(f'            "{sts2_id}" => Some(CardId::{variant}),')
-            seen_sts2.add(sts2_id)
-    W("            _ => None,")
-    W("        }")
-    W("    }")
-    W("")
-
-    # all
-    W("    /// Every `CardId` variant.")
-    W("    pub fn all() -> &'static [CardId] {")
-    W("        &[")
-    for variant, _, _ in card_rows:
-        W(f"            CardId::{variant},")
-    W("        ]")
-    W("    }")
-    W("}")
-    W("")
-    W("// ── MonsterId ────────────────────────────────────────────────────────────────")
-    W("")
-    W("#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]")
-    W("pub enum MonsterId {")
-    for variant, display, _ in monster_rows:
-        W(f'    {variant}, // "{display}"')
-    W("}")
-    W("")
-    W("impl MonsterId {")
-
-    W("    /// Canonical sim display name.")
-    W("    pub fn as_str(self) -> &'static str {")
-    W("        match self {")
-    for variant, display, _ in monster_rows:
-        W(f'            MonsterId::{variant} => "{display}",')
-    W("        }")
-    W("    }")
-    W("")
-
-    W("    /// Parse from sim display name.")
-    W("    pub fn from_str(s: &str) -> Option<Self> {")
-    W("        match s {")
-    for variant, display, _ in monster_rows:
-        W(f'            "{display}" => Some(MonsterId::{variant}),')
-    W("            _ => None,")
-    W("        }")
-    W("    }")
-    W("")
-
-    W("    /// STS2 model ID (e.g. `JAW_WORM`).")
-    W("    pub fn sts2_id(self) -> &'static str {")
-    W("        match self {")
-    for variant, _, sts2_id in monster_rows:
-        W(f'            MonsterId::{variant} => "{sts2_id}",')
-    W("        }")
-    W("    }")
-    W("")
-
-    W("    /// Parse from STS2 model ID.")
-    W("    pub fn from_sts2(s: &str) -> Option<Self> {")
-    W("        match s {")
-    seen_sts2_m: set[str] = set()
-    for variant, _, sts2_id in monster_rows:
-        if sts2_id not in seen_sts2_m:
-            W(f'            "{sts2_id}" => Some(MonsterId::{variant}),')
-            seen_sts2_m.add(sts2_id)
-    W("            _ => None,")
-    W("        }")
-    W("    }")
-    W("")
-
-    W("    /// Every `MonsterId` variant.")
-    W("    pub fn all() -> &'static [MonsterId] {")
-    W("        &[")
-    for variant, _, _ in monster_rows:
-        W(f"            MonsterId::{variant},")
-    W("        ]")
-    W("    }")
-    W("}")
-
+def _gen_monster_map(monsters: list[dict]) -> str:
+    """_MONSTER_MAP entries (between the markers, before the acid-slime section)."""
+    lines = []
+    for m in monsters:
+        member = _display_to_py_member(m["display"])
+        note = m.get("bridge_note")
+        if note:
+            lines.append(f"    # {note}")
+        for bc in m["bridge_classes"]:
+            lines.append(f'    "{bc}": MonsterName.{member},')
     return "\n".join(lines) + "\n"
 
 
+def _gen_all_card_names(cards: list[dict]) -> str:
+    """ALL_CARD_NAMES array body, sorted case-insensitively."""
+    pool = sorted(
+        (c["display"] for c in cards if c.get("in_card_pool", True)),
+        key=str.casefold,
+    )
+    lines = [f'    "{d}",' for d in pool]
+    return "\n".join(lines) + "\n"
+
+
+# ── main ─────────────────────────────────────────────────────────────────────
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Exit non-zero if any file would be changed (for CI)",
+    )
+    args = parser.parse_args()
+
+    cards_toml = REPO_ROOT / "data" / "cards.toml"
+    monsters_toml = REPO_ROOT / "data" / "monsters.toml"
+
+    with cards_toml.open("rb") as f:
+        cards = tomllib.load(f)["cards"]
+    with monsters_toml.open("rb") as f:
+        monsters = tomllib.load(f)["monsters"]
+
+    # (path, new_content, comment_char, region_tag)
+    # names.py has three distinct regions, disambiguated by tag.
+    targets: list[tuple[Path, str, str, str]] = [
+        (REPO_ROOT / "src" / "ids.rs",               _gen_ids_rs(cards, monsters),       "//", ""),
+        (REPO_ROOT / "python" / "sts_sim" / "names.py", _gen_card_name_enum(cards),       "#",  "CardName"),
+        (REPO_ROOT / "python" / "sts_sim" / "names.py", _gen_monster_name_enum(monsters), "#",  "MonsterName"),
+        (REPO_ROOT / "python" / "sts_sim" / "names.py", _gen_monster_map(monsters),       "#",  "_MONSTER_MAP"),
+        (REPO_ROOT / "src" / "cards.rs",              _gen_all_card_names(cards),         "//", ""),
+    ]
+
+    # For files with multiple regions we apply them sequentially so each
+    # replacement operates on the already-updated text.
+    file_texts: dict[Path, str] = {}
+    changed: list[Path] = []
+
+    for path, content, comment_char, tag in targets:
+        if path not in file_texts:
+            file_texts[path] = path.read_text()
+        try:
+            updated = _replace_region(file_texts[path], content, comment_char, tag)
+        except ValueError as e:
+            print(f"ERROR in {path.relative_to(REPO_ROOT)}: {e}", file=sys.stderr)
+            sys.exit(1)
+        if updated != file_texts[path]:
+            if path not in changed:
+                changed.append(path)
+            file_texts[path] = updated
+
+    if args.check:
+        if changed:
+            for p in changed:
+                print(f"STALE: {p.relative_to(REPO_ROOT)}", file=sys.stderr)
+            print("\nRun `python scripts/gen_ids.py` to regenerate.", file=sys.stderr)
+            sys.exit(1)
+        print("OK: all generated regions are up to date.")
+        return
+
+    for path, text in file_texts.items():
+        if path in changed:
+            path.write_text(text)
+            print(f"Updated {path.relative_to(REPO_ROOT)}")
+
+    if not changed:
+        print("Nothing to do — all generated regions are already up to date.")
+
+
 if __name__ == "__main__":
-    code = generate()
-    out = REPO / "src" / "ids.rs"
-    out.write_text(code)
-    print(f"Written {out} ({code.count(chr(10))} lines)")
+    main()
