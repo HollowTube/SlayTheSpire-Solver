@@ -67,6 +67,28 @@ def test_card_normalisation_round_trips():
 # ── monster tests ─────────────────────────────────────────────────────────────
 
 
+def test_monster_name_enum_covers_all_rust_monsters():
+    """Every monster in ids.rs must have a MonsterName entry."""
+    rust_monsters = _monsters_from_rust()
+    enum_values = {m.value for m in MonsterName}
+    missing = rust_monsters - enum_values
+    assert not missing, (
+        "Monsters in ids.rs but missing from MonsterName enum in names.py:\n"
+        + "\n".join(f"  {m}" for m in sorted(missing))
+        + "\n\nAdd them to the MonsterName enum in python/sts_sim/names.py."
+    )
+
+
+def test_monster_name_enum_has_no_stale_entries():
+    """Every MonsterName value must exist in ids.rs (no orphans)."""
+    rust_monsters = _monsters_from_rust()
+    for m in MonsterName:
+        assert m.value in rust_monsters, (
+            f"MonsterName.{m.name} = {m.value!r} is not in MonsterId::all() in ids.rs. "
+            "Remove it from the enum or add it to ids.rs."
+        )
+
+
 def test_monster_name_enum_covered_by_bridge_map():
     """Every MonsterName must have at least one entry in _MONSTER_MAP."""
     covered = set(_MONSTER_MAP.values())
