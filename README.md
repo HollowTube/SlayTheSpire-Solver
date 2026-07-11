@@ -183,6 +183,7 @@ All the moving parts (build, install, game launch, server) are managed by `scrip
 |---|---|
 | `./scripts/overlay.sh fresh` | **Full reset**: stop game → build mod → launch game → start server |
 | `./scripts/overlay.sh build` | Build and install the mod DLL (game must be off) |
+| `./scripts/overlay.sh hot_reload` | Build mod and hot-reload while game is running (no restart needed) |
 | `./scripts/overlay.sh server` | Refresh WSL IP and start the analysis server |
 | `./scripts/overlay.sh launch` | Launch STS2 via Steam |
 | `./scripts/overlay.sh stop` | Close STS2 gracefully |
@@ -225,7 +226,13 @@ and the overlay will appear.
 ./scripts/overlay.sh server
 ```
 
-**After merging a code change (Python or Rust), restart the analysis server:**
+**After merging a bridge mod code change, hot-reload without restarting the game:**
+
+```bash
+./scripts/overlay.sh hot_reload
+```
+
+**After merging a Python or Rust code change, restart the analysis server:**
 
 ```bash
 ./scripts/start-server.sh

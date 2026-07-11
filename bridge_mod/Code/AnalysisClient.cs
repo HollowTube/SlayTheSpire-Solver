@@ -15,7 +15,7 @@ namespace sts_sim_bridge_mod;
 /// </summary>
 public static class AnalysisClient
 {
-    private static readonly string Host = ResolveHost();
+    private static readonly string _host = ResolveHost();
 
     private static string ResolveHost()
     {
@@ -37,8 +37,13 @@ public static class AnalysisClient
     }
     private const int Port = 8765;
 
+    public static string ConnectTarget => $"{_host}:{Port}";
+
     private static TcpClient? _client;
     private static bool _loggedConnectFailure;
+
+    /// Last error message from a failed request; null when server is reachable.
+    public static string? LastError { get; private set; }
 
     // The connection is a single shared stream, so concurrent callers (e.g.
     // an "analyze" push racing a round-1 "deck_baseline" push) must take
@@ -73,12 +78,14 @@ public static class AnalysisClient
             using var cts = new CancellationTokenSource(ResponseTimeout);
             var responseLine = await reader.ReadLineAsync(cts.Token);
             _loggedConnectFailure = false;
+            LastError = null;
             return responseLine;
         }
         catch (Exception ex)
         {
             _client?.Dispose();
             _client = null;
+            LastError = ex.Message;
             if (!_loggedConnectFailure)
             {
                 Log.Warn($"[sts_sim_bridge_mod] analyze request failed: {ex.Message}");
@@ -99,7 +106,7 @@ public static class AnalysisClient
 
         _client?.Dispose();
         var client = new TcpClient();
-        await client.ConnectAsync(Host, Port);
+        await client.ConnectAsync(_host, Port);
         _client = client;
         return client;
     }
