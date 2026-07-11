@@ -547,6 +547,7 @@ def _default_host() -> str:
         return "0.0.0.0"
     try:
         import pathlib
+
         if "microsoft" in pathlib.Path("/proc/version").read_text().lower():
             return "0.0.0.0"
     except Exception:
