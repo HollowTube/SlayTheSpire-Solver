@@ -1,7 +1,7 @@
 import math
 import random
 
-from . import apply, is_terminal, legal_actions, optimal_value, random_rollout, redeterminized, reward
+from . import apply, is_terminal, legal_actions, random_rollout, redeterminized, reward
 
 # Standard UCB1 exploration constant (sqrt(2)) — balances exploiting the
 # best-known action against trying under-visited ones.
@@ -167,16 +167,13 @@ def action_values(
     if not determinize:
         return _single_tree_action_values(state, iterations, rng)
 
-    # Exact solve per action per determinization: average optimal_value(apply(sample, action))
-    # across `determinizations` independent draw-pile shuffles. This removes rollout noise
-    # (the source of HOL-93 where Whirlwind incorrectly ranked above Strike at 200 iters)
-    # while preserving non-clairvoyance — we don't assume a fixed draw pile order.
     totals: dict[str, float] = {}
     counts: dict[str, int] = {}
     for _ in range(determinizations):
         sample = redeterminized(state, rng.randint(0, 2**64 - 1))
-        for action in legal_actions(sample):
-            v = optimal_value(apply(sample, action))
-            totals[action] = totals.get(action, 0.0) + v
+        for action, value in _single_tree_action_values(
+            sample, iterations, rng
+        ).items():
+            totals[action] = totals.get(action, 0.0) + value
             counts[action] = counts.get(action, 0) + 1
     return {action: totals[action] / counts[action] for action in totals}
