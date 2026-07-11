@@ -279,9 +279,9 @@ impl Status {
             "Juggling" | "JUGGLING" => vec![Status::Juggling(amount)],
             "Unmovable" | "UNMOVABLE" => vec![Status::Unmovable(amount)],
             // Shrinker Beetle debuff: −30% damage dealt by the holder.
-            // STS2 power.Id.Entry is SHRINK; SHRINK_POWER is a fallback if
-            // the C# class name Slugify includes the Power suffix.
-            "Shrink" | "SHRINK" | "SHRINK_POWER" => vec![Status::Shrink; 1],
+            // STS2 power.Id.Entry is SHRINK; bridge reports it as "ShrinkPower"
+            // (camelCase class name) or SHRINK_POWER (slugified fallback).
+            "Shrink" | "SHRINK" | "ShrinkPower" | "SHRINK_POWER" => vec![Status::Shrink; 1],
             _ => Vec::new(),
         }
     }

@@ -37,6 +37,9 @@ _STATUS_MAP: dict[str, str] = {
     "Brutality": "Brutality",
     "DemonForm": "DemonForm",
     "Juggernaut": "Juggernaut",
+    # Shrinker Beetle debuff — bridge reports camelCase class name
+    "ShrinkPower": "Shrink",
+    "Shrink": "Shrink",
 }
 
 
