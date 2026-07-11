@@ -105,10 +105,8 @@ case "$CMD" in
         echo "==> Waiting for game to start..."
         sleep 25
         _write_host_file
-        echo "==> Starting sts-sim analysis server (detached) on 0.0.0.0:8765..."
-        nohup "$REPO_ROOT/.venv/bin/sts-sim-server" --host 0.0.0.0 \
-            >> "$REPO_ROOT/sts-sim-server.log" 2>&1 &
-        echo "    Server PID $! — log at $REPO_ROOT/sts-sim-server.log"
+        echo "==> Starting sts-sim analysis server..."
+        "$REPO_ROOT/scripts/start-server.sh" --no-pull
         ;;
     server)  start_server ;;
     *)
