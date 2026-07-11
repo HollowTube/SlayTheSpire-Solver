@@ -758,6 +758,26 @@ def ironclad_starter_deck_vs_flyconid(seed, deck=None):
     )
 
 
+def ironclad_starter_deck_vs_wriggler(seed, deck=None):
+    """Ironclad's starting loadout against a single Wriggler (Overgrowth
+    summoned minion). At index 0 (even) it opens with Wriggle (+2 Strength
+    + Infection card), then alternates Nasty Bite (6 damage) / Wriggle.
+    HP: 17-21 normal; 21 used as canonical (max)."""
+    return CombatState(
+        player_hp=PLAYER_STARTING_HP,
+        player_energy=3,
+        monsters=[
+            Monster(
+                hp=WRIGGLER_STARTING_HP,
+                name=MonsterName.WRIGGLER,
+                intent="Wriggle",
+            )
+        ],
+        seed=seed,
+        deck=list(deck if deck is not None else IRONCLAD_STARTING_DECK),
+    )
+
+
 def ironclad_starter_deck_vs_fogmog(seed, deck=None):
     """Ironclad's starting loadout against Fogmog (Overgrowth normal).
     HP: 74-78. AI: Illusion (spawn EyeWithTeeth) -> Swipe (8 dmg +1 Str),

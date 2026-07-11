@@ -3,7 +3,15 @@ constituent parts (HP/block/statuses/piles/turn/monster move-history) — the
 foundation an external analysis server needs to reconstruct a snapshot of a
 real, in-progress fight rather than only ever a fresh turn-0 combat."""
 
-from sts_sim import CombatState, EndTurnAction, Monster, PlayCardAction, SelectTargetAction, apply, legal_actions
+from sts_sim import (
+    CombatState,
+    EndTurnAction,
+    Monster,
+    PlayCardAction,
+    SelectTargetAction,
+    apply,
+    legal_actions,
+)
 from sts_sim.bridge import from_combat
 
 
