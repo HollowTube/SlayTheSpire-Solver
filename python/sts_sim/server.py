@@ -540,9 +540,23 @@ def serve(
         server.serve_forever()
 
 
+def _default_host() -> str:
+    """Return 0.0.0.0 when running inside WSL (game connects from Windows),
+    127.0.0.1 otherwise."""
+    if "WSL_DISTRO_NAME" in os.environ:
+        return "0.0.0.0"
+    try:
+        import pathlib
+        if "microsoft" in pathlib.Path("/proc/version").read_text().lower():
+            return "0.0.0.0"
+    except Exception:
+        pass
+    return "127.0.0.1"
+
+
 def main():
     parser = argparse.ArgumentParser(description="sts_sim TCP/JSON analysis server")
-    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--host", default=_default_host())
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--debug-port", type=int, default=DEFAULT_DEBUG_PORT)
     args = parser.parse_args()
