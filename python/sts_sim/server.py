@@ -69,7 +69,15 @@ import sys
 import threading
 import time
 
-from . import CombatState, Monster, apply, evaluate, legal_actions, mcts_action_values as _rust_mcts, simulate_hp_lost
+from . import (
+    CombatState,
+    Monster,
+    apply,
+    evaluate,
+    legal_actions,
+    mcts_action_values as _rust_mcts,
+    simulate_hp_lost,
+)
 from . import mcts as _mcts
 
 DEFAULT_MCTS_ITERATIONS = 2000
