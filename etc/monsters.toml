@@ -197,6 +197,7 @@ display_name = "Wriggler"
 sts2_id = "WRIGGLER"
 bridge_names = ["Wriggler"]
 hp = 21
+encounter = "wriggler"
 
 [[monster]]
 variant = "TrackerRubyRaider"
