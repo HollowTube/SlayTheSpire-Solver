@@ -16,6 +16,10 @@ Canonical role names are used as-is (`needs-triage`, `needs-info`, `ready-for-ag
 
 Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
+### Live game interaction
+
+Prefer the `sts2` CLI over `mcp__sts2-modding__*` tools for reading and controlling a live game. The CLI is the stable interface; the MCP tools are lower-level and more verbose. Use `sts2 combat`, `sts2 actions`, `sts2 act <n>` for the common play loop. Fall back to MCP tools only when the CLI doesn't expose what you need.
+
 ---
 
 ## Development workflow
@@ -125,6 +129,10 @@ python scripts/gen_ids.py           # regenerate in place
 
 # Cargo check (Rust only, no Python build)
 cargo check
+
+# Restart analysis server (pull latest, rebuild Rust if src/ changed, kill old, start fresh)
+./scripts/start-server.sh
+./scripts/start-server.sh --no-pull   # skip git pull during active development
 ```
 
 The `.venv` must be active for `pytest`, `ruff`, `mypy`, `sts-sim`, and `sts2`. The Rust extension (`_sts_sim.*.so`) is required to import `sts_sim` — tests fail at collection without it.
