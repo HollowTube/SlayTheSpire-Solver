@@ -183,9 +183,11 @@ All the moving parts (build, install, game launch, server) are managed by `scrip
 |---|---|
 | `./scripts/overlay.sh fresh` | **Full reset**: stop game → build mod → launch game → start server |
 | `./scripts/overlay.sh build` | Build and install the mod DLL (game must be off) |
+| `./scripts/overlay.sh hot_reload` | Build mod and hot-reload while game is running (no restart needed) |
 | `./scripts/overlay.sh server` | Refresh WSL IP and start the analysis server |
 | `./scripts/overlay.sh launch` | Launch STS2 via Steam |
 | `./scripts/overlay.sh stop` | Close STS2 gracefully |
+| `./scripts/start-server.sh` | **Pull + rebuild + restart**: update Python/Rust code and restart server |
 
 ### First-time setup
 
@@ -224,6 +226,22 @@ and the overlay will appear.
 ./scripts/overlay.sh server
 ```
 
+**After merging a bridge mod code change, hot-reload without restarting the game:**
+
+```bash
+./scripts/overlay.sh hot_reload
+```
+
+**After merging a Python or Rust code change, restart the analysis server:**
+
+```bash
+./scripts/start-server.sh
+```
+
+This pulls the latest `main`, rebuilds the Rust extension only if `src/` changed, kills the
+old server, and starts a fresh one. Pass `--no-pull` to skip the git pull during active
+development. Logs go to `~/.local/share/sts-sim/server.log`.
+
 **Updating the mod without a full restart (hot reload):**
 
 ```bash
@@ -245,7 +263,7 @@ The analysis server runs in WSL; the game runs on Windows. They can't reach each
 
 The script handles this automatically:
 
-1. **Server** is started with `--host 0.0.0.0` so it listens on all interfaces including the WSL virtual adapter.
+1. **Server** listens on `0.0.0.0` so it's reachable on the WSL virtual adapter. This is now the automatic default when running in WSL — no `--host` flag needed.
 2. **Mod** reads its server address from `<mod_dir>/sts_sim_host.txt` at startup. The script writes the current WSL IP (e.g. `172.26.188.154`) to this file every time it runs. Since WSL2 assigns a new IP on every reboot, this file is always refreshed before the game starts.
 
 ### `sts2` — bridge CLI
