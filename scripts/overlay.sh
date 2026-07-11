@@ -4,6 +4,7 @@
 # Usage:
 #   ./scripts/overlay.sh              # refresh WSL IP and start server
 #   ./scripts/overlay.sh build        # build and install mod (game must be off)
+#   ./scripts/overlay.sh hot_reload   # build mod and hot-reload while game is running
 #   ./scripts/overlay.sh server       # refresh WSL IP and start server
 #   ./scripts/overlay.sh launch       # launch STS2 via Steam
 #   ./scripts/overlay.sh stop         # close STS2 gracefully
@@ -75,11 +76,25 @@ stop_game() {
     fi
 }
 
+hot_reload_mod() {
+    echo "==> Building bridge mod..."
+    (cd "$REPO_ROOT/bridge_mod" && dotnet build -c Release)
+
+    # Load the new DLL directly from the build output via WSL UNC path — the
+    # installed DLL is locked by the running game so we can't overwrite it.
+    local dll_wsl="$REPO_ROOT/bridge_mod/bin/Release/net9.0/stssimbridgemod.dll"
+    local dll_win="\\\\wsl\$\\${WSL_DISTRO_NAME}$(echo "$dll_wsl" | sed 's|/|\\|g')"
+    echo "==> Hot-reloading mod from build output..."
+    echo "    $dll_win"
+    sts2 console "bridge_hot_reload $dll_win"
+}
+
 CMD="${1:-server}"
 case "$CMD" in
-    build)   build_mod ;;
-    launch)  launch_game ;;
-    stop)    stop_game ;;
+    build)      build_mod ;;
+    hot_reload) hot_reload_mod ;;
+    launch)     launch_game ;;
+    stop)       stop_game ;;
     fresh)
         _ensure_interop
         stop_game
@@ -97,7 +112,7 @@ case "$CMD" in
         ;;
     server)  start_server ;;
     *)
-        echo "Usage: $0 [build|server|launch|stop|fresh]" >&2
+        echo "Usage: $0 [build|hot_reload|server|launch|stop|fresh]" >&2
         exit 1
         ;;
 esac
