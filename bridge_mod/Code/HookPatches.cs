@@ -131,8 +131,13 @@ public static class HookPatches
                 var response = await AnalysisClient.SendAnalyzeRequestAsync(requestJson);
                 if (response != null)
                 {
+                    Overlay.SetServerStatus(true);
                     Log.Warn($"[sts_sim_bridge_mod] analyze response: {response}");
                     Overlay.UpdateValues(response, actualHpLostSoFar, player.Creature.CurrentHp, player.Creature.MaxHp);
+                }
+                else
+                {
+                    Overlay.SetServerStatus(false, AnalysisClient.LastError);
                 }
             }
             finally

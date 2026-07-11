@@ -35,6 +35,11 @@ public static class Overlay
     // (rather than going blank) until the fresh response arrives.
     private static Label? _statusLabel;
 
+    // Shown when the analysis server is unreachable. Kept as a separate field
+    // from _statusLabel so SetCalculating(false) (called in a finally block
+    // after every request) can't accidentally clear it on failure.
+    private static Label? _offlineLabel;
+
     /// Shows or hides a "calculating..." indicator below the current rows.
     /// Safe to call from a background thread. Called from
     /// <see cref="HookPatches"/> around each analyze request so the panel
@@ -62,6 +67,41 @@ public static class Overlay
                 _list.RemoveChild(_statusLabel);
                 _statusLabel.QueueFree();
                 _statusLabel = null;
+            }
+        }).CallDeferred();
+    }
+
+    /// Shows or clears a persistent "server offline" row in the panel.
+    /// Call with reachable=false (and the error) when a request gets null back;
+    /// call with reachable=true to remove the row once the server responds.
+    /// Safe to call from a background thread.
+    public static void SetServerStatus(bool reachable, string? error = null)
+    {
+        Callable.From(() =>
+        {
+            EnsureCreated();
+            if (_list == null)
+                return;
+
+            if (!reachable)
+            {
+                if (_offlineLabel == null)
+                {
+                    _offlineLabel = new Label();
+                    _offlineLabel.AddThemeColorOverride("font_color", ExplorerWarningColor);
+                    _list.AddChild(_offlineLabel);
+                }
+                var target = AnalysisClient.ConnectTarget;
+                _offlineLabel.Text = error != null
+                    ? $"sts_sim  server offline ({target})\n{error}"
+                    : $"sts_sim  server offline ({target})";
+                Log.Warn($"[sts_sim_bridge_mod] Overlay: server offline ({target}): {error}");
+            }
+            else if (_offlineLabel != null)
+            {
+                _list.RemoveChild(_offlineLabel);
+                _offlineLabel.QueueFree();
+                _offlineLabel = null;
             }
         }).CallDeferred();
     }
@@ -198,11 +238,11 @@ public static class Overlay
             _list.RemoveChild(child);
             child.QueueFree();
         }
-        // The "calculating..." label (if any) was just freed above along
-        // with everything else - drop our reference so SetCalculating(false)
-        // (called once the request that triggered this render completes)
-        // doesn't try to remove an already-freed node.
+        // The "calculating..." and "offline" labels (if any) were freed above
+        // along with everything else - drop our references so SetCalculating(false)
+        // and SetServerStatus don't try to remove already-freed nodes.
         _statusLabel = null;
+        _offlineLabel = null;
 
         // Headline: a chess-engine-style "if the fight ended right now given
         // optimal non-clairvoyant play from here" HP estimate, derived from
