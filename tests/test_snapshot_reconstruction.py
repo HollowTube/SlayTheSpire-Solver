@@ -3,7 +3,8 @@ constituent parts (HP/block/statuses/piles/turn/monster move-history) — the
 foundation an external analysis server needs to reconstruct a snapshot of a
 real, in-progress fight rather than only ever a fresh turn-0 combat."""
 
-from sts_sim import CombatState, EndTurnAction, Monster, apply, legal_actions
+from sts_sim import CombatState, EndTurnAction, Monster, PlayCardAction, SelectTargetAction, apply, legal_actions
+from sts_sim.bridge import from_combat
 
 
 def test_reconstructing_player_block_and_statuses():
@@ -88,3 +89,52 @@ def test_reconstructing_a_monster_with_strength_affects_its_next_attack():
     after = apply(state, EndTurnAction())
 
     assert state.player_hp - after.player_hp == 16
+
+
+def test_shrink_reduces_player_damage_by_30_percent():
+    # Shrinker Beetle applies ShrinkPower: -30% damage dealt, rounded down.
+    # Strike (6 damage) → floor(6 * 0.7) = 4 with Shrink active.
+    state = CombatState(
+        player_hp=80,
+        player_energy=3,
+        monsters=[Monster(hp=44, name="Jaw Worm", intent="Chomp")],
+        seed=42,
+        hand=["Strike"],
+        player_statuses=[("Shrink", 1)],
+    )
+
+    after = apply(state, PlayCardAction("Strike"))
+    after = apply(after, SelectTargetAction(0))
+    assert state.monsters[0].hp - after.monsters[0].hp == 4
+
+
+def test_bridge_from_combat_maps_shrinkpower_to_shrink_status():
+    # The bridge reports the Shrinker Beetle debuff as "ShrinkPower" (camelCase
+    # C# class name). Verify it survives the bridge translation and reaches
+    # the sim as a Shrink status, so the -30% damage reduction is applied.
+    combat_snapshot = {
+        "players": [
+            {
+                "hp": 80,
+                "max_hp": 80,
+                "block": 0,
+                "energy": 3,
+                "hand": [{"name": "StrikeIronclad", "upgraded": False}],
+                "powers": [{"name": "ShrinkPower", "amount": -1}],
+            }
+        ],
+        "enemies": [
+            {
+                "name": "ShrinkerBeetle",
+                "hp": 13,
+                "max_hp": 39,
+                "block": 0,
+                "is_alive": True,
+                "intent": {"move_id": "CHOMP_MOVE"},
+                "powers": [],
+            }
+        ],
+    }
+
+    state = from_combat(combat_snapshot)
+    assert "Shrink" in state.player_statuses
