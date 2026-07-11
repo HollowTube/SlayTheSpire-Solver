@@ -69,8 +69,18 @@ import sys
 import threading
 import time
 
-from . import CombatState, Monster, apply, evaluate, legal_actions, simulate_hp_lost
+from . import (
+    CombatState,
+    Monster,
+    apply,
+    evaluate,
+    legal_actions,
+    mcts_action_values as _rust_mcts,
+    simulate_hp_lost,
+)
 from . import mcts as _mcts
+
+DEFAULT_MCTS_ITERATIONS = 2000
 
 DEFAULT_PORT = 8765
 
@@ -173,11 +183,11 @@ def handle_request(payload):
     cmd = payload.get("cmd")
     if cmd == "analyze":
         state = build_state(payload)
-        iterations = payload.get("iterations", _mcts.DEFAULT_ITERATIONS)
+        iterations = payload.get("iterations", DEFAULT_MCTS_ITERATIONS)
         seed = payload.get("seed", 0)
         playouts = payload.get("playouts", DEFAULT_PLAYOUTS)
         actions = legal_actions(state)
-        values = _mcts.action_values(state, iterations=iterations)
+        values = _rust_mcts(state, iterations=iterations, seed=seed)
         state_value = max(values.values()) if values else evaluate(state)
         # Per-target greedy evaluation for single-target cards in multi-monster
         # fights. MCTS action_values already fold in the optimal target
