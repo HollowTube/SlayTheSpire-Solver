@@ -56,6 +56,7 @@ from ..scenarios import (
     ironclad_starter_deck_vs_twig_slime_s,
     ironclad_starter_deck_vs_vantom,
     ironclad_starter_deck_vs_vine_shambler,
+    ironclad_starter_deck_vs_wriggler,
 )
 
 
@@ -96,6 +97,7 @@ class Encounter(str, Enum):
     TRACKER_RUBY_RAIDER = "tracker-ruby-raider"
     MAWLER = "mawler"
     VINE_SHAMBLER = "vine-shambler"
+    WRIGGLER = "wriggler"
     BYGONE_EFFIGY = "bygone-effigy"
     FLYCONID = "flyconid"
     FOGMOG = "fogmog"
@@ -135,6 +137,7 @@ _SCENARIOS = {
     Encounter.TWIG_SLIME_S: ironclad_starter_deck_vs_twig_slime_s,
     Encounter.VANTOM: ironclad_starter_deck_vs_vantom,
     Encounter.VINE_SHAMBLER: ironclad_starter_deck_vs_vine_shambler,
+    Encounter.WRIGGLER: ironclad_starter_deck_vs_wriggler,
 }
 
 # Act 1 "easy pool" encounters — every non-elite, non-boss scenario (i.e.
