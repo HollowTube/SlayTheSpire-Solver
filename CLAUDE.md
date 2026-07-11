@@ -129,6 +129,10 @@ python scripts/gen_ids.py           # regenerate in place
 
 # Cargo check (Rust only, no Python build)
 cargo check
+
+# Restart analysis server (pull latest, rebuild Rust if src/ changed, kill old, start fresh)
+./scripts/start-server.sh
+./scripts/start-server.sh --no-pull   # skip git pull during active development
 ```
 
 The `.venv` must be active for `pytest`, `ruff`, `mypy`, `sts-sim`, and `sts2`. The Rust extension (`_sts_sim.*.so`) is required to import `sts_sim` — tests fail at collection without it.
