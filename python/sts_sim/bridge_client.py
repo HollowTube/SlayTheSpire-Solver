@@ -7,11 +7,29 @@ import sys
 import time
 from typing import Any, Optional, Sequence
 
-# On WSL, the game runs on the Windows host and the bridge mod binds to all
-# interfaces (see ModEntry.cs), but WSL's 127.0.0.1 is a separate network
-# namespace from Windows'. Override with the WSL gateway IP (from `ip route`)
-# via STS2_BRIDGE_HOST when running this server inside WSL.
-BRIDGE_HOST = os.environ.get("STS2_BRIDGE_HOST", "127.0.0.1")
+# On WSL, the game runs on the Windows host. The bridge mod binds to all
+# interfaces, but WSL's 127.0.0.1 is a separate network namespace from Windows'.
+# Auto-detect the WSL default gateway (the Windows host IP) so no env var is
+# needed. Override via STS2_BRIDGE_HOST if the gateway detection is wrong.
+def _default_bridge_host() -> str:
+    explicit = os.environ.get("STS2_BRIDGE_HOST")
+    if explicit:
+        return explicit
+    try:
+        import subprocess
+        out = subprocess.check_output(
+            ["ip", "route", "show", "default"], text=True, timeout=2
+        )
+        # "default via 172.26.176.1 dev eth0 ..."
+        for token, nxt in zip(out.split(), out.split()[1:]):
+            if token == "via":
+                return nxt
+    except Exception:
+        pass
+    return "127.0.0.1"
+
+
+BRIDGE_HOST = _default_bridge_host()
 BRIDGE_PORT = 21337
 TIMEOUT = 12.0  # Must exceed MainThreadDispatcher.Invoke's 10s timeout
 MAX_RESPONSE_SIZE = 10 * 1024 * 1024  # 10 MB
