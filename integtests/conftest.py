@@ -68,26 +68,37 @@ class CombatFixture:
     """
 
     # Monster used as a test dummy — high enough HP that 8 damage (Bash) never kills it.
-    FIGHT_ID = "NIBBIT"
+    FIGHT_ID = "NIBBITS_WEAK"
 
     def setup_fight(self, timeout: int = 15) -> None:
-        """Jump directly into a fresh combat via the dev console.
+        """Start a fresh combat via the dev console.
 
-        If we're on the main menu we start a run first (one-time cost).
-        From anywhere else — map, Neow event, mid-combat — `fight` jumps
-        straight to a new encounter, bypassing all navigation.
+        Recipe: win any active fight → room MAP → fight <encounter>.
+        Works from COMBAT, REWARD, MAP, EVENT, or CARD_SELECTION.
         """
+        # Start a run if there is none yet
         screen = _screen()
         if "MAIN_MENU" in screen or "GAME_OVER" in screen:
             bc.start_run(character="Ironclad", ascension=0)
             deadline = time.monotonic() + 15
             while time.monotonic() < deadline:
                 s = _screen()
-                if "MAIN_MENU" not in s and "GAME_OVER" not in s and "LOADING" not in s:
+                if not any(k in s for k in ("MAIN_MENU", "GAME_OVER", "LOADING")):
                     break
                 time.sleep(0.5)
 
+        # Win any active combat to reach REWARD
+        if "COMBAT" in _screen() and "LOADING" not in _screen():
+            _console("win")
+            time.sleep(1.5)
+
+        # Navigate to MAP (works from REWARD, MAP, EVENT, CARD_SELECTION)
+        if _screen() != "MAP":
+            _console("room MAP")
+            time.sleep(1.5)
+
         _console(f"fight {self.FIGHT_ID}")
+        time.sleep(1.0)  # let the game start transitioning before polling
 
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
