@@ -7,6 +7,7 @@ import sys
 import time
 from typing import Any, Optional, Sequence
 
+
 # On WSL, the game runs on the Windows host. The bridge mod binds to all
 # interfaces, but WSL's 127.0.0.1 is a separate network namespace from Windows'.
 # Auto-detect the WSL default gateway (the Windows host IP) so no env var is
@@ -17,6 +18,7 @@ def _default_bridge_host() -> str:
         return explicit
     try:
         import subprocess
+
         out = subprocess.check_output(
             ["ip", "route", "show", "default"], text=True, timeout=2
         )
