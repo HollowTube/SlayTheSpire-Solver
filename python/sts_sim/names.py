@@ -362,31 +362,6 @@ CARD_STS2_ID: dict[str, str] = {
 }
 
 
-# ── Power names ───────────────────────────────────────────────────────────────
-
-
-class PowerName(str):
-    """Bridge power class names as string constants.
-
-    Use these with ``CombatFixture.has_power()`` instead of raw strings.
-    The values match what the bridge returns in the ``name`` field of power objects.
-    """
-
-    VULNERABLE = "VulnerablePower"
-    WEAK = "WeakPower"
-    STRENGTH = "StrengthPower"
-    SHRINK = "ShrinkPower"
-    RITUAL = "RitualPower"
-    FRAIL = "FrailPower"
-    NO_DRAW = "NoDrawPower"
-    REGENERATION = "RegenerationPower"
-    METALLICIZE = "MetallicizePower"
-    DEMON_FORM = "DemonFormPower"
-    INFLAME = "InflamePower"
-    BARRICADE = "BarricadePower"
-    FEEL_NO_PAIN = "FeelNoPainPower"
-
-
 def unknown_cards(bridge_names: list[str]) -> list[str]:
     """Return bridge card names that don't normalise to a known ``CardName``."""
     known = {c.value for c in CardName}

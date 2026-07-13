@@ -9,7 +9,8 @@ Run with:
 
 import pytest
 
-from sts_sim.names import CardName, PowerName
+from sts_sim.bridge import StatusName
+from sts_sim.names import CardName
 
 
 pytestmark = pytest.mark.live
@@ -37,4 +38,4 @@ def test_bash_deals_8_damage_and_applies_2_vulnerable(fix):
     hp_before = fix.enemy_hp()
     assert fix.play(CardName.BASH), "Bash not found in available actions"
     assert hp_before - fix.enemy_hp() == 8
-    assert fix.has_power(PowerName.VULNERABLE, target="enemy") == 2
+    assert fix.has_power(StatusName.VULNERABLE, target="enemy") == 2

@@ -13,6 +13,7 @@ import time
 import pytest
 
 from sts_sim import bridge_client as bc
+from sts_sim.bridge import STATUS_MAP
 from sts_sim.names import CARD_STS2_ID, CardName
 
 
@@ -134,7 +135,13 @@ class CombatFixture:
     def player_block(self) -> int:
         return _combat()["player"].get("block", 0)
 
-    def has_power(self, power_name: str, target: str = "enemy", idx: int = 0) -> int:
+    def has_power(self, sim_name: str, target: str = "enemy", idx: int = 0) -> int:
+        """Return stack count of a status on the target, or 0 if absent.
+
+        ``sim_name`` is the canonical sim status name (e.g. ``"Vulnerable"``),
+        not the raw bridge class name.  Uses ``bridge.STATUS_MAP`` to translate
+        whatever the bridge reports into that canonical form.
+        """
         state = _combat()
         if target == "enemy":
             powers = (
@@ -145,7 +152,8 @@ class CombatFixture:
         else:
             powers = state["player"].get("powers", [])
         for p in powers:
-            if power_name.lower() in p.get("name", "").lower():
+            raw = p.get("name", "") or p.get("id", "") or p.get("power_id", "")
+            if STATUS_MAP.get(raw) == sim_name:
                 return p.get("amount", 0)
         return 0
 
