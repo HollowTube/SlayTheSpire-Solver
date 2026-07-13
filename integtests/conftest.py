@@ -67,93 +67,35 @@ class CombatFixture:
     mid-test — avoiding the REWARD screen entirely.
     """
 
-    def setup_fight(self, timeout: int = 90) -> None:
-        bc.start_run(character="Ironclad", ascension=0)
-        time.sleep(2.5)
+    # Monster used as a test dummy — high enough HP that 8 damage (Bash) never kills it.
+    FIGHT_ID = "NIBBIT"
+
+    def setup_fight(self, timeout: int = 15) -> None:
+        """Jump directly into a fresh combat via the dev console.
+
+        If we're on the main menu we start a run first (one-time cost).
+        From anywhere else — map, Neow event, mid-combat — `fight` jumps
+        straight to a new encounter, bypassing all navigation.
+        """
+        screen = _screen()
+        if "MAIN_MENU" in screen or "GAME_OVER" in screen:
+            bc.start_run(character="Ironclad", ascension=0)
+            deadline = time.monotonic() + 15
+            while time.monotonic() < deadline:
+                s = _screen()
+                if "MAIN_MENU" not in s and "GAME_OVER" not in s and "LOADING" not in s:
+                    break
+                time.sleep(0.5)
+
+        _console(f"fight {self.FIGHT_ID}")
 
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
-            screen = _screen()
-            if "COMBAT" in screen and "LOADING" not in screen:
+            s = _screen()
+            if "COMBAT" in s and "LOADING" not in s:
                 return
-            if "LOADING" in screen or "TRANSITION" in screen:
-                time.sleep(0.8)
-                continue
-            if screen == "EVENT":
-                avail = bc._payload(bc.get_available_actions())
-                actions = avail.get("actions", [])
-                opts = [a for a in actions if a.get("action") == "event_option"]
-                proceed = next(
-                    (a for a in opts if "proceed" in a.get("label", "").lower()), None
-                )
-                if proceed is not None:
-                    bc.make_event_choice(proceed["choice_index"])
-                    time.sleep(1.5)
-                elif opts:
-                    _bad = ("card", "curse")
-                    safe = next(
-                        (
-                            a
-                            for a in opts
-                            if "proceed" not in a.get("label", "").lower()
-                            and not any(k in a.get("label", "").lower() for k in _bad)
-                        ),
-                        opts[1] if len(opts) > 1 else opts[0],
-                    )
-                    bc.make_event_choice(safe["choice_index"])
-                    time.sleep(1.0)
-                else:
-                    time.sleep(0.5)
-                continue
-            if "REWARD" in screen:
-                bc.reward_proceed()
-                time.sleep(1.0)
-                continue
-            if "CARD_SELECTION" in screen or ("CARD" in screen and "SELECT" in screen):
-                bc.card_skip()
-                time.sleep(1.0)
-                if "CARD" in _screen():
-                    bc.card_confirm()
-                    time.sleep(0.8)
-                continue
-            if "TREASURE" in screen:
-                bc.treasure_proceed()
-                time.sleep(1.0)
-                continue
-            if "REST" in screen:
-                bc.rest_site_choice("rest")
-                time.sleep(0.8)
-                bc.rest_site_proceed()
-                time.sleep(0.8)
-                continue
-            if "SHOP" in screen or "MERCHANT" in screen:
-                bc.shop_proceed()
-                time.sleep(0.8)
-                continue
-            if screen == "MAP":
-                map_state = bc._payload(bc.get_map_state())
-                nodes = map_state.get("nodes", [])
-                target = next(
-                    (n for n in nodes if n.get("available") and n.get("type") == "Monster"),
-                    None,
-                ) or next((n for n in nodes if n.get("available")), None)
-                if target:
-                    bc.navigate_map(target["row"], target["col"])
-                    time.sleep(2.5)
-                else:
-                    time.sleep(1.0)
-                continue
-            if "GAME_OVER" in screen or "MAIN_MENU" in screen:
-                bc.start_run(character="Ironclad", ascension=0)
-                time.sleep(2.5)
-                continue
-            time.sleep(0.5)
-        raise RuntimeError(f"Could not reach combat in {timeout}s (last screen: {_screen()})")
-
-    def _ensure_in_combat(self) -> None:
-        screen = _screen()
-        if "COMBAT" not in screen or "LOADING" in screen:
-            self.setup_fight()
+            time.sleep(0.4)
+        raise RuntimeError(f"fight {self.FIGHT_ID} did not reach combat in {timeout}s (screen: {_screen()})")
 
     def set_hand(self, *card_ids: str) -> None:
         state = _combat()
@@ -163,18 +105,6 @@ class CombatFixture:
         time.sleep(0.2)
         for card_id in card_ids:
             _console(f"card {card_id} hand")
-
-    def pin_enemy_hp(self, target: int, idx: int = 0) -> None:
-        self._ensure_in_combat()
-        state = _combat()
-        enemies = state["enemies"]
-        if idx >= len(enemies) or enemies[idx]["hp"] <= target:
-            self.setup_fight()
-            state = _combat()
-            enemies = state["enemies"]
-        cur = enemies[idx]["hp"]
-        if cur > target:
-            _console(f"damage {cur - target} {idx + 1}")
 
     def enemy_hp(self, idx: int = 0) -> int:
         state = _combat()
@@ -213,9 +143,6 @@ class CombatFixture:
         return True
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def fix():
-    """CombatFixture scoped to the test module — one run per file."""
-    f = CombatFixture()
-    f.setup_fight()
-    return f
+    return CombatFixture()
