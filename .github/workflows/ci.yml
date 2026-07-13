@@ -42,8 +42,8 @@ jobs:
       - name: Lint with ruff
         run: |
           source .venv/bin/activate
-          ruff check python/ tests/
-          ruff format --check python/ tests/
+          ruff check python/ tests/ integtests/
+          ruff format --check python/ tests/ integtests/
 
       - name: Type-check with mypy
         run: |
