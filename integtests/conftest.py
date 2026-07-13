@@ -141,8 +141,7 @@ class CombatFixture:
                     bc.navigate_map(target["row"], target["col"])
                     time.sleep(2.5)
                 else:
-                    _console("fight JAW_WORM")
-                    time.sleep(2)
+                    time.sleep(1.0)
                 continue
             if "GAME_OVER" in screen or "MAIN_MENU" in screen:
                 bc.start_run(character="Ironclad", ascension=0)
