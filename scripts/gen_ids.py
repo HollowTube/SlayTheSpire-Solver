@@ -33,14 +33,16 @@ def _display_to_py_member(display: str) -> str:
     """
     s = display
     s = s.replace("'", "")
-    s = re.sub(r"\((\w+)\)", r"_\1", s)          # (S) → _S
-    s = re.sub(r"(?<=[a-z])(?=[A-Z])", "_", s)   # camelCase → camel_Case
-    s = re.sub(r"[^A-Za-z0-9]+", "_", s)         # spaces/misc → _
+    s = re.sub(r"\((\w+)\)", r"_\1", s)  # (S) → _S
+    s = re.sub(r"(?<=[a-z])(?=[A-Z])", "_", s)  # camelCase → camel_Case
+    s = re.sub(r"[^A-Za-z0-9]+", "_", s)  # spaces/misc → _
     s = re.sub(r"_+", "_", s)
     return s.strip("_").upper()
 
 
-def _replace_region(text: str, new_content: str, comment_char: str, tag: str = "") -> str:
+def _replace_region(
+    text: str, new_content: str, comment_char: str, tag: str = ""
+) -> str:
     """Replace the content between BEGIN/END GENERATED markers.
 
     If `tag` is given (e.g. "CardName"), markers must include it:
@@ -126,6 +128,36 @@ def _gen_monster_map(monsters: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _gen_card_sts2_id_map(cards: list[dict]) -> str:
+    """CARD_STS2_ID dict body — display name → STS2 console ID."""
+    lines = [f'    "{c["display"]}": "{c["sts2_id"]}",' for c in cards]
+    return "\n".join(lines) + "\n"
+
+
+# Character suffixes the bridge appends to card class names.
+_CHAR_SUFFIXES = ("Ironclad", "Silent", "Defect", "Watcher", "Huntress")
+
+
+def _gen_bridge_card_map(cards: list[dict]) -> str:
+    """_BRIDGE_CARD_MAP entries — bridge class name → sim display name.
+
+    Generates two entries per card:
+      - variant → display          (e.g. "PommelStrike" → "Pommel Strike")
+      - variant+suffix → display   (e.g. "PommelStrikeIronclad" → "Pommel Strike")
+    Skips variant+suffix when the variant already ends with that suffix to
+    avoid double-suffixing (e.g. "StrikeIronclad" would become "StrikeIroncladIronclad").
+    """
+    entries: dict[str, str] = {}
+    for c in cards:
+        v, d = c["variant"], c["display"]
+        entries[v] = d
+        for suffix in _CHAR_SUFFIXES:
+            if not v.endswith(suffix):
+                entries[v + suffix] = d
+    lines = [f'    "{k}": "{v}",' for k, v in sorted(entries.items())]
+    return "\n".join(lines) + "\n"
+
+
 def _gen_all_card_names(cards: list[dict]) -> str:
     """ALL_CARD_NAMES array body, sorted case-insensitively."""
     pool = sorted(
@@ -157,13 +189,40 @@ def main() -> None:
         monsters = tomllib.load(f)["monsters"]
 
     # (path, new_content, comment_char, region_tag)
-    # names.py has three distinct regions, disambiguated by tag.
+    # names.py has five distinct regions, disambiguated by tag.
     targets: list[tuple[Path, str, str, str]] = [
-        (REPO_ROOT / "src" / "ids.rs",               _gen_ids_rs(cards, monsters),       "//", ""),
-        (REPO_ROOT / "python" / "sts_sim" / "names.py", _gen_card_name_enum(cards),       "#",  "CardName"),
-        (REPO_ROOT / "python" / "sts_sim" / "names.py", _gen_monster_name_enum(monsters), "#",  "MonsterName"),
-        (REPO_ROOT / "python" / "sts_sim" / "names.py", _gen_monster_map(monsters),       "#",  "_MONSTER_MAP"),
-        (REPO_ROOT / "src" / "cards.rs",              _gen_all_card_names(cards),         "//", ""),
+        (REPO_ROOT / "src" / "ids.rs", _gen_ids_rs(cards, monsters), "//", ""),
+        (
+            REPO_ROOT / "python" / "sts_sim" / "names.py",
+            _gen_card_name_enum(cards),
+            "#",
+            "CardName",
+        ),
+        (
+            REPO_ROOT / "python" / "sts_sim" / "names.py",
+            _gen_monster_name_enum(monsters),
+            "#",
+            "MonsterName",
+        ),
+        (
+            REPO_ROOT / "python" / "sts_sim" / "names.py",
+            _gen_monster_map(monsters),
+            "#",
+            "_MONSTER_MAP",
+        ),
+        (
+            REPO_ROOT / "python" / "sts_sim" / "names.py",
+            _gen_card_sts2_id_map(cards),
+            "#",
+            "CARD_STS2_ID",
+        ),
+        (
+            REPO_ROOT / "python" / "sts_sim" / "names.py",
+            _gen_bridge_card_map(cards),
+            "#",
+            "_BRIDGE_CARD_MAP",
+        ),
+        (REPO_ROOT / "src" / "cards.rs", _gen_all_card_names(cards), "//", ""),
     ]
 
     # For files with multiple regions we apply them sequentially so each

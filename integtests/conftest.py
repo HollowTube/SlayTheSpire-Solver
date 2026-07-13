@@ -13,6 +13,8 @@ import time
 import pytest
 
 from sts_sim import bridge_client as bc
+from sts_sim.bridge import STATUS_MAP
+from sts_sim.names import CARD_STS2_ID, CardName
 
 
 def pytest_configure(config):
@@ -111,16 +113,19 @@ class CombatFixture:
             if "COMBAT" in s and "LOADING" not in s:
                 return
             time.sleep(0.4)
-        raise RuntimeError(f"fight {self.FIGHT_ID} did not reach combat in {timeout}s (screen: {_screen()})")
+        raise RuntimeError(
+            f"fight {self.FIGHT_ID} did not reach combat in {timeout}s (screen: {_screen()})"
+        )
 
-    def set_hand(self, *card_ids: str) -> None:
+    def set_hand(self, *cards: CardName | str) -> None:
         state = _combat()
         for card in state["hand"]:
             cid = _to_console_id(card["name"])
             _console(f"remove_card {cid} hand")
         time.sleep(0.2)
-        for card_id in card_ids:
-            _console(f"card {card_id} hand")
+        for card in cards:
+            console_id = CARD_STS2_ID.get(str(card), str(card))
+            _console(f"card {console_id} hand")
 
     def enemy_hp(self, idx: int = 0) -> int:
         state = _combat()
@@ -130,7 +135,13 @@ class CombatFixture:
     def player_block(self) -> int:
         return _combat()["player"].get("block", 0)
 
-    def has_power(self, power_name: str, target: str = "enemy", idx: int = 0) -> int:
+    def has_power(self, sim_name: str, target: str = "enemy", idx: int = 0) -> int:
+        """Return stack count of a status on the target, or 0 if absent.
+
+        ``sim_name`` is the canonical sim status name (e.g. ``"Vulnerable"``),
+        not the raw bridge class name.  Uses ``bridge.STATUS_MAP`` to translate
+        whatever the bridge reports into that canonical form.
+        """
         state = _combat()
         if target == "enemy":
             powers = (
@@ -141,7 +152,8 @@ class CombatFixture:
         else:
             powers = state["player"].get("powers", [])
         for p in powers:
-            if power_name.lower() in p.get("name", "").lower():
+            raw = p.get("name", "") or p.get("id", "") or p.get("power_id", "")
+            if STATUS_MAP.get(raw) == sim_name:
                 return p.get("amount", 0)
         return 0
 
