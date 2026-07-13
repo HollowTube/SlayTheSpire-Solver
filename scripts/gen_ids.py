@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Generate ids.rs, names.py, and cards.rs regions from data/cards.toml + data/monsters.toml.
 
+Status names live in python/sts_sim/data/statuses.toml and are loaded at runtime by bridge.py
+— no codegen step needed for statuses.
+
 Usage:
     python scripts/gen_ids.py          # regenerate in place
     python scripts/gen_ids.py --check  # fail if committed files differ from generated output
@@ -138,16 +141,6 @@ def _gen_card_sts2_id_map(cards: list[dict]) -> str:
 _CHAR_SUFFIXES = ("Ironclad", "Silent", "Defect", "Watcher", "Huntress")
 
 
-def _gen_status_map(statuses: list[dict]) -> str:
-    """STATUS_MAP dict body — bridge class name → sim status name."""
-    lines = []
-    for s in statuses:
-        sim = s["sim_name"]
-        for bc in s["bridge_classes"]:
-            lines.append(f'    "{bc}": "{sim}",')
-    return "\n".join(lines) + "\n"
-
-
 def _gen_bridge_card_map(cards: list[dict]) -> str:
     """_BRIDGE_CARD_MAP entries — bridge class name → sim display name.
 
@@ -192,14 +185,11 @@ def main() -> None:
 
     cards_toml = REPO_ROOT / "data" / "cards.toml"
     monsters_toml = REPO_ROOT / "data" / "monsters.toml"
-    statuses_toml = REPO_ROOT / "data" / "statuses.toml"
 
     with cards_toml.open("rb") as f:
         cards = tomllib.load(f)["cards"]
     with monsters_toml.open("rb") as f:
         monsters = tomllib.load(f)["monsters"]
-    with statuses_toml.open("rb") as f:
-        statuses = tomllib.load(f)["statuses"]
 
     # (path, new_content, comment_char, region_tag)
     # names.py has five distinct regions, disambiguated by tag.
@@ -236,12 +226,6 @@ def main() -> None:
             "_BRIDGE_CARD_MAP",
         ),
         (REPO_ROOT / "src" / "cards.rs", _gen_all_card_names(cards), "//", ""),
-        (
-            REPO_ROOT / "python" / "sts_sim" / "bridge.py",
-            _gen_status_map(statuses),
-            "#",
-            "STATUS_MAP",
-        ),
     ]
 
     # For files with multiple regions we apply them sequentially so each

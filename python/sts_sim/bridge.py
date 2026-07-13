@@ -15,6 +15,8 @@ Gaps (accepted, documented):
 from __future__ import annotations
 
 import re
+import tomllib
+from pathlib import Path
 from typing import Any
 
 from . import CombatState, Monster
@@ -26,43 +28,22 @@ def _to_screaming_snake(s: str) -> str:
     return re.sub(r"[^A-Za-z0-9]+", "_", s).upper()
 
 
+def _load_status_map() -> dict[str, str]:
+    toml_path = Path(__file__).parent / "data" / "statuses.toml"
+    with toml_path.open("rb") as f:
+        data = tomllib.load(f)
+    result: dict[str, str] = {}
+    for s in data["statuses"]:
+        for bc in s["bridge_classes"]:
+            result[bc] = s["sim_name"]
+    return result
+
+
 # Bridge power name → sim Status string.
-# Generated from data/statuses.toml — do not edit by hand.
-# To add a new status or bridge alias: edit statuses.toml, then run
-# python scripts/gen_ids.py.
-STATUS_MAP: dict[str, str] = {
-    # BEGIN GENERATED STATUS_MAP
-    "Vulnerable": "Vulnerable",
-    "VulnerablePower": "Vulnerable",
-    "Weak": "Weak",
-    "WeakPower": "Weak",
-    "Frail": "Frail",
-    "FrailPower": "Frail",
-    "Strength": "Strength",
-    "Dexterity": "Dexterity",
-    "Poison": "Poison",
-    "Thorns": "Thorns",
-    "Metallicize": "Metallicize",
-    "Ritual": "Ritual",
-    "Barricade": "Barricade",
-    "Plating": "Plating",
-    "Regen": "Regen",
-    "Brutality": "Brutality",
-    "DemonForm": "DemonForm",
-    "Juggernaut": "Juggernaut",
-    "Inflame": "Inflame",
-    "InflamePower": "Inflame",
-    "FeelNoPain": "FeelNoPain",
-    "FeelNoPainPower": "FeelNoPain",
-    "NoDraw": "NoDraw",
-    "NoDrawPower": "NoDraw",
-    "Shrink": "Shrink",
-    "ShrinkPower": "Shrink",
-    # END GENERATED STATUS_MAP
-}
+# Loaded at import time from python/sts_sim/data/statuses.toml.
+# To add a new status or bridge alias: edit that file — no codegen needed.
+STATUS_MAP: dict[str, str] = _load_status_map()
 
-
-# Constants derived from STATUS_MAP values — no separate source of truth.
 # e.g. StatusName.VULNERABLE == "Vulnerable", StatusName.FEEL_NO_PAIN == "FeelNoPain"
 StatusName = type(
     "StatusName",
