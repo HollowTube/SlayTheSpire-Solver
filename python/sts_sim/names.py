@@ -273,6 +273,120 @@ def monster(bridge_name: str) -> str:
     return spaced + size_suffix
 
 
+# ── Card → STS2 console ID ───────────────────────────────────────────────────
+
+# Maps CardName display value → STS2 console ID used by the dev console
+# (e.g. `card STRIKE_IRONCLAD hand`).  Generated from data/cards.toml.
+CARD_STS2_ID: dict[str, str] = {
+    # BEGIN GENERATED CARD_STS2_ID
+    "Strike": "STRIKE_IRONCLAD",
+    "Defend": "DEFEND_IRONCLAD",
+    "Bash": "BASH",
+    "Iron Wave": "IRON_WAVE",
+    "Inflame": "INFLAME",
+    "Sword Boomerang": "SWORD_BOOMERANG",
+    "Thunderclap": "THUNDERCLAP",
+    "Rage": "RAGE",
+    "DemonForm": "DEMON_FORM",
+    "CrimsonMantle": "CRIMSON_MANTLE",
+    "Inferno": "INFERNO",
+    "Aggression": "AGGRESSION",
+    "DarkEmbrace": "DARK_EMBRACE",
+    "FeelNoPain": "FEEL_NO_PAIN",
+    "Barricade": "BARRICADE",
+    "Juggernaut": "JUGGERNAUT",
+    "FlameBarrier": "FLAME_BARRIER",
+    "Colossus": "COLOSSUS",
+    "Corruption": "CORRUPTION",
+    "Cruelty": "CRUELTY",
+    "Mangle": "MANGLE",
+    "OneTwoPunch": "ONE_TWO_PUNCH",
+    "Pommel Strike": "POMMEL_STRIKE",
+    "Bloodletting": "BLOODLETTING",
+    "BloodWall": "BLOOD_WALL",
+    "Hemokinesis": "HEMOKINESIS",
+    "Offering": "OFFERING",
+    "Tremble": "TREMBLE",
+    "Impervious": "IMPERVIOUS",
+    "NotYet": "NOT_YET",
+    "Ascender's Bane": "ASCENDERS_BANE",
+    "Slimed": "SLIMED",
+    "Wound": "WOUND",
+    "Infection": "INFECTION",
+    "Dazed": "DAZED",
+    "Cinder": "CINDER",
+    "TrueGrit": "TRUE_GRIT",
+    "BurningPact": "BURNING_PACT",
+    "Thrash": "THRASH",
+    "SecondWind": "SECOND_WIND",
+    "Headbutt": "HEADBUTT",
+    "FiendFire": "FIEND_FIRE",
+    "InfernalBlade": "INFERNAL_BLADE",
+    "Bludgeon": "BLUDGEON",
+    "TwinStrike": "TWIN_STRIKE",
+    "Break": "BREAK",
+    "ShrugItOff": "SHRUG_IT_OFF",
+    "Taunt": "TAUNT",
+    "Uppercut": "UPPERCUT",
+    "BodySlam": "BODY_SLAM",
+    "PerfectedStrike": "PERFECTED_STRIKE",
+    "AshenStrike": "ASHEN_STRIKE",
+    "Bully": "BULLY",
+    "Conflagration": "CONFLAGRATION",
+    "TearAsunder": "TEAR_ASUNDER",
+    "Spite": "SPITE",
+    "Dismantle": "DISMANTLE",
+    "MoltenFist": "MOLTEN_FIST",
+    "Dominate": "DOMINATE",
+    "Breakthrough": "BREAKTHROUGH",
+    "Setup Strike": "SETUP_STRIKE",
+    "Unrelenting": "UNRELENTING",
+    "Evil Eye": "EVIL_EYE",
+    "Forgotten Ritual": "FORGOTTEN_RITUAL",
+    "Pyre": "PYRE",
+    "Anger": "ANGER",
+    "DrumOfBattle": "DRUM_OF_BATTLE",
+    "Stomp": "STOMP",
+    "FightMe": "FIGHT_ME",
+    "StoneArmor": "STONE_ARMOR",
+    "Vicious": "VICIOUS",
+    "Juggling": "JUGGLING",
+    "Unmovable": "UNMOVABLE",
+    "PactsEnd": "PACTS_END",
+    "HowlFromBeyond": "HOWL_FROM_BEYOND",
+    "Havoc": "HAVOC",
+    "BattleTrance": "BATTLE_TRANCE",
+    "Whirlwind": "WHIRLWIND",
+    "Cascade": "CASCADE",
+    # END GENERATED CARD_STS2_ID
+}
+
+
+# ── Power names ───────────────────────────────────────────────────────────────
+
+
+class PowerName(str):
+    """Bridge power class names as string constants.
+
+    Use these with ``CombatFixture.has_power()`` instead of raw strings.
+    The values match what the bridge returns in the ``name`` field of power objects.
+    """
+
+    VULNERABLE = "VulnerablePower"
+    WEAK = "WeakPower"
+    STRENGTH = "StrengthPower"
+    SHRINK = "ShrinkPower"
+    RITUAL = "RitualPower"
+    FRAIL = "FrailPower"
+    NO_DRAW = "NoDrawPower"
+    REGENERATION = "RegenerationPower"
+    METALLICIZE = "MetallicizePower"
+    DEMON_FORM = "DemonFormPower"
+    INFLAME = "InflamePower"
+    BARRICADE = "BarricadePower"
+    FEEL_NO_PAIN = "FeelNoPainPower"
+
+
 def unknown_cards(bridge_names: list[str]) -> list[str]:
     """Return bridge card names that don't normalise to a known ``CardName``."""
     known = {c.value for c in CardName}

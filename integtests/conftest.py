@@ -13,6 +13,7 @@ import time
 import pytest
 
 from sts_sim import bridge_client as bc
+from sts_sim.names import CARD_STS2_ID, CardName
 
 
 def pytest_configure(config):
@@ -111,16 +112,19 @@ class CombatFixture:
             if "COMBAT" in s and "LOADING" not in s:
                 return
             time.sleep(0.4)
-        raise RuntimeError(f"fight {self.FIGHT_ID} did not reach combat in {timeout}s (screen: {_screen()})")
+        raise RuntimeError(
+            f"fight {self.FIGHT_ID} did not reach combat in {timeout}s (screen: {_screen()})"
+        )
 
-    def set_hand(self, *card_ids: str) -> None:
+    def set_hand(self, *cards: CardName | str) -> None:
         state = _combat()
         for card in state["hand"]:
             cid = _to_console_id(card["name"])
             _console(f"remove_card {cid} hand")
         time.sleep(0.2)
-        for card_id in card_ids:
-            _console(f"card {card_id} hand")
+        for card in cards:
+            console_id = CARD_STS2_ID.get(str(card), str(card))
+            _console(f"card {console_id} hand")
 
     def enemy_hp(self, idx: int = 0) -> int:
         state = _combat()
