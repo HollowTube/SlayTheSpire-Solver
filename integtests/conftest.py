@@ -87,12 +87,17 @@ class CombatFixture:
                     break
                 time.sleep(0.5)
 
+        # Death overlay: player HP is 0; heal so fight initialises cleanly
+        if _screen() == "OVERLAY":
+            _console("heal 999")
+            time.sleep(0.5)
+
         # Win any active combat to reach REWARD
         if "COMBAT" in _screen() and "LOADING" not in _screen():
             _console("win")
             time.sleep(1.5)
 
-        # Navigate to MAP (works from REWARD, MAP, EVENT, CARD_SELECTION)
+        # Navigate to MAP (works from REWARD, OVERLAY, EVENT, CARD_SELECTION, etc.)
         if _screen() != "MAP":
             _console("room MAP")
             time.sleep(1.5)
