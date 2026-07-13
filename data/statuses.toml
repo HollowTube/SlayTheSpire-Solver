@@ -1,0 +1,86 @@
+# statuses.toml — canonical status / power definitions.
+#
+# Fields per entry:
+#   sim_name      — the string returned by Status::name() in engine.rs
+#   bridge_classes — every class name the bridge may report for this status.
+#                    Typically includes both the short name (matching sim_name)
+#                    and the Godot class name ("XxxPower").
+#
+# Adding a new status: add one [[statuses]] entry here, then run
+# scripts/gen_ids.py to regenerate STATUS_MAP in python/sts_sim/bridge.py.
+
+[[statuses]]
+sim_name = "Vulnerable"
+bridge_classes = ["Vulnerable", "VulnerablePower"]
+
+[[statuses]]
+sim_name = "Weak"
+bridge_classes = ["Weak", "WeakPower"]
+
+[[statuses]]
+sim_name = "Frail"
+bridge_classes = ["Frail", "FrailPower"]
+
+[[statuses]]
+sim_name = "Strength"
+bridge_classes = ["Strength"]
+
+[[statuses]]
+sim_name = "Dexterity"
+bridge_classes = ["Dexterity"]
+
+[[statuses]]
+sim_name = "Poison"
+bridge_classes = ["Poison"]
+
+[[statuses]]
+sim_name = "Thorns"
+bridge_classes = ["Thorns"]
+
+[[statuses]]
+sim_name = "Metallicize"
+bridge_classes = ["Metallicize"]
+
+[[statuses]]
+sim_name = "Ritual"
+bridge_classes = ["Ritual"]
+
+[[statuses]]
+sim_name = "Barricade"
+bridge_classes = ["Barricade"]
+
+[[statuses]]
+sim_name = "Plating"
+bridge_classes = ["Plating"]
+
+[[statuses]]
+sim_name = "Regen"
+bridge_classes = ["Regen"]
+
+[[statuses]]
+sim_name = "Brutality"
+bridge_classes = ["Brutality"]
+
+[[statuses]]
+sim_name = "DemonForm"
+bridge_classes = ["DemonForm"]
+
+[[statuses]]
+sim_name = "Juggernaut"
+bridge_classes = ["Juggernaut"]
+
+[[statuses]]
+sim_name = "Inflame"
+bridge_classes = ["Inflame", "InflamePower"]
+
+[[statuses]]
+sim_name = "FeelNoPain"
+bridge_classes = ["FeelNoPain", "FeelNoPainPower"]
+
+[[statuses]]
+sim_name = "NoDraw"
+bridge_classes = ["NoDraw", "NoDrawPower"]
+
+[[statuses]]
+sim_name = "Shrink"
+bridge_classes = ["Shrink", "ShrinkPower"]

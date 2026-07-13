@@ -27,20 +27,19 @@ def _to_screaming_snake(s: str) -> str:
 
 
 # Bridge power name → sim Status string.
-# Keys are whatever the bridge puts in the "name"/"id"/"power_id" field —
-# sometimes the short Godot class suffix ("Vulnerable"), sometimes the full
-# class name ("VulnerablePower").  Values are the canonical sim Status names
-# used by engine.rs and CombatState.  Add an alias whenever the bridge is
-# observed to use a different spelling.
+# Generated from data/statuses.toml — do not edit by hand.
+# To add a new status or bridge alias: edit statuses.toml, then run
+# python scripts/gen_ids.py.
 STATUS_MAP: dict[str, str] = {
-    "Strength": "Strength",
-    "Dexterity": "Dexterity",
+    # BEGIN GENERATED STATUS_MAP
     "Vulnerable": "Vulnerable",
     "VulnerablePower": "Vulnerable",
     "Weak": "Weak",
     "WeakPower": "Weak",
     "Frail": "Frail",
     "FrailPower": "Frail",
+    "Strength": "Strength",
+    "Dexterity": "Dexterity",
     "Poison": "Poison",
     "Thorns": "Thorns",
     "Metallicize": "Metallicize",
@@ -51,15 +50,15 @@ STATUS_MAP: dict[str, str] = {
     "Brutality": "Brutality",
     "DemonForm": "DemonForm",
     "Juggernaut": "Juggernaut",
-    "NoDraw": "NoDraw",
-    "NoDrawPower": "NoDraw",
     "Inflame": "Inflame",
     "InflamePower": "Inflame",
     "FeelNoPain": "FeelNoPain",
     "FeelNoPainPower": "FeelNoPain",
-    # Shrinker Beetle debuff
-    "ShrinkPower": "Shrink",
+    "NoDraw": "NoDraw",
+    "NoDrawPower": "NoDraw",
     "Shrink": "Shrink",
+    "ShrinkPower": "Shrink",
+    # END GENERATED STATUS_MAP
 }
 
 
