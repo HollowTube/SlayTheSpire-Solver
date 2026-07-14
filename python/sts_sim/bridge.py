@@ -189,11 +189,24 @@ def diff(predicted: CombatState, actual: dict) -> dict[str, Any]:
         result[f"{prefix}.block"] = _cmp(sim_m.block, act_e.get("block", 0))
         result[f"{prefix}.intent"] = {"skipped": True, "reason": "non-deterministic"}
 
-    # Hand size (not contents — draw order unknown)
-    sim_hand_size = len(predicted.hand)
-    act_hand_size = len(ap.get("hand", []))
-    result["hand_size"] = _cmp(sim_hand_size, act_hand_size)
-    result["hand_contents"] = {"skipped": True, "reason": "draw order unknown"}
+    # Hand (compare as sorted multiset — order within hand is stable after set_hand)
+    result["hand_cards"] = _cmp_pile(predicted.hand, _card_list(ap.get("hand", [])))
+
+    # Discard pile
+    act_discard_raw = actual.get("discard_pile", ap.get("discard", []))
+    result["discard_pile"] = _cmp_pile(
+        predicted.discard_pile, _card_list(act_discard_raw)
+    )
+
+    # Draw pile (order unknown — compare as multiset)
+    act_draw_raw = actual.get("draw_pile", ap.get("draw", []))
+    result["draw_pile"] = _cmp_pile(predicted.draw_pile, _card_list(act_draw_raw))
+
+    # Exhaust pile
+    act_exhaust_raw = actual.get("exhaust_pile", ap.get("exhaust", []))
+    result["exhaust_pile"] = _cmp_pile(
+        predicted.exhaust_pile, _card_list(act_exhaust_raw)
+    )
 
     # Player statuses
     sim_p_statuses = dict(predicted.player_statuses)
@@ -229,3 +242,9 @@ def _statuses_from_powers(powers: list[dict]) -> dict[str, int]:
 def _cmp(sim_val: Any, game_val: Any) -> dict[str, Any]:
     match = sim_val == game_val
     return {"match": match, "sim": sim_val, "game": game_val}
+
+
+def _cmp_pile(sim_pile: list[str], act_pile: list[str]) -> dict[str, Any]:
+    """Compare two card piles as sorted multisets (order-independent)."""
+    s, g = sorted(sim_pile), sorted(act_pile)
+    return {"match": s == g, "sim": s, "game": g}
