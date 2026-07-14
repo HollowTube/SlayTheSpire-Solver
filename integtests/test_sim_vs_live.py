@@ -8,6 +8,7 @@ Run with:
 """
 
 import time
+from typing import NamedTuple
 
 import pytest
 
@@ -20,22 +21,46 @@ from .conftest import CombatFixture
 
 pytestmark = pytest.mark.live
 
-# Cards to test — Ironclad base deck + commons.
+
+class CardSpec(NamedTuple):
+    """A card with an optional upgrade level for parametrized tests."""
+
+    card: CardName
+    upgraded: bool = False
+
+    @property
+    def sim_name(self) -> str:
+        return self.card.value + ("+" if self.upgraded else "")
+
+    def __str__(self) -> str:
+        return self.card.name + ("_PLUS" if self.upgraded else "")
+
+
+def _spec(card: CardName | CardSpec) -> CardSpec:
+    return card if isinstance(card, CardSpec) else CardSpec(card)
+
+
+# Cards to test — Ironclad base deck + commons, each at base and upgraded level.
 # INFLAME excluded: sim exhausts it (STS1 behaviour), but STS2 treats it as a
 # Power-type card that never leaves the hand into any pile.
-BASE_DECK = [
-    CardName.STRIKE,
-    CardName.DEFEND,
-    CardName.BASH,  # damage + 2 Vulnerable
-    CardName.IRON_WAVE,  # block + damage
-    CardName.TWIN_STRIKE,  # multi-hit
-    CardName.SHRUG_IT_OFF,  # block only (no target)
-    CardName.THUNDERCLAP,  # AoE damage + 1 Vulnerable
-    CardName.UPPERCUT,  # damage + 1 Weak + 1 Vulnerable
-    CardName.ANGER,  # damage + add copy to discard
-    CardName.IMPERVIOUS,  # 30 block, exhausts
-    CardName.BLUDGEON,  # heavy damage (32)
-    CardName.BREAK,  # apply 2 Frail to enemy
+def _both(card: CardName) -> list[CardSpec]:
+    return [CardSpec(card), CardSpec(card, upgraded=True)]
+
+
+BASE_DECK: list[CardName | CardSpec] = [
+    *_both(CardName.STRIKE),  # 6 / 9 damage
+    *_both(CardName.DEFEND),  # 5 / 8 block
+    *_both(CardName.BASH),  # 8 / 10 damage + 2 / 3 Vulnerable
+    *_both(CardName.IRON_WAVE),  # 5 / 7 block + 5 / 7 damage
+    *_both(CardName.TWIN_STRIKE),  # 5×2 / 7×2 damage
+    # SHRUG_IT_OFF excluded: draws a card, so hand/draw_pile distribution is
+    # non-deterministic — sim draw order doesn't match game RNG draw order.
+    *_both(CardName.THUNDERCLAP),  # 4 / 7 AoE + 1 Vulnerable
+    *_both(CardName.UPPERCUT),  # 13 / 17 damage + Weak + Vulnerable
+    *_both(CardName.ANGER),  # 6 / 8 damage + copy to discard
+    *_both(CardName.IMPERVIOUS),  # 30 / 40 block, exhausts
+    *_both(CardName.BLUDGEON),  # 32 / 42 damage
+    *_both(CardName.BREAK),  # 2 Frail / +10 damage (Break+)
 ]
 
 BYRDONIS_HP = 84
@@ -45,20 +70,44 @@ class ByrdonisFix(CombatFixture):
     FIGHT_ID = "BYRDONIS_ELITE"
 
 
-def _apply_card_in_sim(state, card: CardName):
+def _apply_card_in_sim(state, card: CardName | CardSpec):
     """Play a card in the sim, auto-selecting the first target if required."""
-    mid = apply(state, PlayCardAction(card.value))
+    spec = _spec(card)
+    mid = apply(state, PlayCardAction(spec.sim_name))
     if any("SelectTarget" in a for a in legal_actions(mid)):
         return apply(mid, SelectTargetAction(0))
     return mid
 
 
-def _play_in_game(card: CardName) -> bool:
+def _play_in_game(card: CardName | CardSpec) -> bool:
     """Play a card in the live game. Returns False if not available."""
+    spec = _spec(card)
     avail = bc._payload(bc.get_available_actions())
     actions = avail.get("actions", [])
-    # Strip spaces so "Iron Wave" matches "IronWave" etc.
-    needle = card.value.replace(" ", "").lower()
+    needle = spec.card.value.replace(" ", "").lower()
+
+    # Use hand state to find the exact card index (upgraded vs non-upgraded),
+    # then match the action by card_index rather than name alone.  This avoids
+    # playing the wrong copy when both an upgraded and non-upgraded version of
+    # the same card are present in hand.
+    hand = bc._payload(bc.get_combat_state())["players"][0]["hand"]
+    target_hand_idx = next(
+        (
+            c["index"]
+            for c in hand
+            if needle in c["name"].replace(" ", "").lower()
+            and c.get("upgraded", False) == spec.upgraded
+        ),
+        None,
+    )
+    if target_hand_idx is not None:
+        act = next((a for a in actions if a.get("card_index") == target_hand_idx), None)
+        if act:
+            bc.play_card(act["card_index"], act.get("target_index", -1))
+            time.sleep(0.5)
+            return True
+
+    # Fallback: match by name substring (e.g. when hand index lookup fails)
     act = next(
         (
             a
@@ -78,15 +127,16 @@ def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> dict:
     """Poll until two consecutive get_combat_state() calls agree on hand contents.
 
     Console commands are async; the state can be mid-transition immediately after
-    set_hand(). Waiting for two identical snapshots in a row ensures we read a
-    settled state before snapshotting for the sim.
+    set_hand() or upgrade_card(). The key includes the upgraded flag so an
+    in-flight upgrade doesn't produce a false-stable read.
     """
     prev_hand: tuple | None = None
     for _ in range(retries):
         raw = bc._payload(bc.get_combat_state())
         hand = tuple(
             sorted(
-                c.get("name", "") for c in raw.get("players", [{}])[0].get("hand", [])
+                (c.get("name", ""), c.get("upgraded", False))
+                for c in raw.get("players", [{}])[0].get("hand", [])
             )
         )
         if hand == prev_hand:
@@ -96,12 +146,28 @@ def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> dict:
     return bc._payload(bc.get_combat_state())
 
 
-@pytest.mark.parametrize("card", BASE_DECK, ids=lambda c: c.name)
+@pytest.mark.parametrize("card", BASE_DECK, ids=str)
 def test_sim_matches_live(card):
     """Sim prediction for playing ``card`` must match the live game result."""
+    spec = _spec(card)
     fix = ByrdonisFix()
     fix.setup_fight()
-    fix.set_hand(card)
+    fix.set_hand(spec.card)
+    if spec.upgraded:
+        # The card command appends to the rightmost slot; find its index
+        # so we upgrade the correct card rather than whatever is at index 0.
+        hand = bc._payload(bc.get_combat_state())["players"][0]["hand"]
+        needle = spec.card.value.replace(" ", "").lower()
+        idx = next(
+            (
+                c["index"]
+                for c in reversed(hand)
+                if needle in c["name"].replace(" ", "").lower()
+                and not c.get("upgraded")
+            ),
+            hand[-1]["index"] if hand else 0,
+        )
+        fix.upgrade_card(idx)
 
     # Wait for the game state to settle after set_hand (console cmds are async)
     raw_before = _stable_combat_state()
@@ -131,7 +197,7 @@ def test_sim_matches_live(card):
     }
 
     # Print full report regardless of outcome
-    print(f"\n--- {card} ---")
+    print(f"\n--- {spec} ---")
     for field, cmp in result.items():
         if cmp.get("skipped"):
             print(f"  {field}: skipped ({cmp['reason']})")
@@ -140,6 +206,6 @@ def test_sim_matches_live(card):
         else:
             print(f"  {field}: ✗  sim={cmp['sim']}  game={cmp['game']}")
 
-    assert not mismatches, f"{card} — sim diverged on: " + ", ".join(
+    assert not mismatches, f"{spec} — sim diverged on: " + ", ".join(
         f"{f}(sim={c['sim']} game={c['game']})" for f, c in mismatches.items()
     )

@@ -308,8 +308,11 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
         CardId::ShrugItOff => Some(UpgradeDelta { block_delta: 3, ..Default::default() }),
         // Taunt+: 7 block → 10 block.
         CardId::Taunt => Some(UpgradeDelta { block_delta: 3, ..Default::default() }),
-        // Uppercut+: 13 damage → 17 damage.
-        CardId::Uppercut => Some(UpgradeDelta { damage_delta: 4, ..Default::default() }),
+        // Uppercut+: STS2 keeps 13 damage but doubles statuses (2 Vuln + 2 Weak).
+        CardId::Uppercut => Some(UpgradeDelta {
+            extra_status_applications: vec![Status::Vulnerable, Status::Weak],
+            ..Default::default()
+        }),
         // PerfectedStrike+: 6 + 2*strikes → 6 + 3*strikes.
         CardId::PerfectedStrike => Some(UpgradeDelta { scaled_per_unit_delta: 1, ..Default::default() }),
         // TearAsunder+: 5 damage per hit → 7 damage per hit.

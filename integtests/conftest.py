@@ -127,6 +127,10 @@ class CombatFixture:
             console_id = CARD_STS2_ID.get(card, card)
             _console(f"card {console_id} hand")
 
+    def upgrade_card(self, index: int = 0) -> None:
+        """Upgrade the card at the given hand index via the dev console."""
+        _console(f"upgrade {index}")
+
     def enemy_hp(self, idx: int = 0) -> int:
         state = _combat()
         enemies = state["enemies"]
