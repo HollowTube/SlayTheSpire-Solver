@@ -15,7 +15,12 @@ import pytest
 from sts_sim import PlayCardAction, SelectTargetAction, apply, legal_actions
 from sts_sim import bridge_client as bc
 from sts_sim.bridge import diff, from_combat
-from sts_sim.bridge_types import parse_available_actions, parse_combat_snapshot
+from sts_sim.bridge_types import (
+    CombatSnapshot,
+    parse_available_actions,
+    parse_card_piles,
+    parse_combat_snapshot,
+)
 from sts_sim.names import CardName
 
 from .conftest import CombatFixture
@@ -118,7 +123,7 @@ def _play_in_game(card: CardName | CardSpec) -> bool:
     return True
 
 
-def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> dict:
+def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> CombatSnapshot:
     """Poll until two consecutive get_combat_state() calls agree on hand contents.
 
     Console commands are async; the state can be mid-transition immediately after
@@ -126,15 +131,15 @@ def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> dict:
     in-flight upgrade doesn't produce a false-stable read.
     """
     prev_hand: tuple | None = None
+    snapshot = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
     for _ in range(retries):
-        raw = bc._payload(bc.get_combat_state())
-        snapshot = parse_combat_snapshot(raw)
         hand = tuple(sorted((c.name, c.upgraded) for c in snapshot.player.hand))
         if hand == prev_hand:
-            return raw
+            return snapshot
         prev_hand = hand
         time.sleep(delay)
-    return bc._payload(bc.get_combat_state())
+        snapshot = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
+    return snapshot
 
 
 @pytest.mark.parametrize("card", BASE_DECK, ids=str)
@@ -161,16 +166,16 @@ def test_sim_matches_live(card):
         fix.upgrade_card(idx)
 
     # Wait for the game state to settle after set_hand (console cmds are async)
-    raw_before = _stable_combat_state()
-    piles_before = bc._payload(bc.get_card_piles())
-    state_before = from_combat(raw_before, card_piles=piles_before)
+    snapshot_before = _stable_combat_state()
+    piles_before = parse_card_piles(bc._payload(bc.get_card_piles()))
+    state_before = from_combat(snapshot_before, card_piles=piles_before)
 
     # Play in live game
     assert _play_in_game(card), f"{card} not found in available actions after set_hand"
 
     # Capture live state after play
-    raw_after = bc._payload(bc.get_combat_state())
-    piles_after = bc._payload(bc.get_card_piles())
+    snapshot_after = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
+    piles_after = parse_card_piles(bc._payload(bc.get_card_piles()))
 
     # Apply same card in sim
     try:
@@ -179,7 +184,7 @@ def test_sim_matches_live(card):
         pytest.skip(f"sim raised {type(exc).__name__}: {exc}")
 
     # Compare
-    result = diff(sim_result, raw_after, card_piles=piles_after)
+    result = diff(sim_result, snapshot_after, card_piles=piles_after)
 
     mismatches = {
         field: cmp

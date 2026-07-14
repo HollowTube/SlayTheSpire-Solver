@@ -14,10 +14,11 @@ Gaps (accepted, documented):
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Protocol, Sequence
 
 from . import CombatState, Monster
 from . import names as _names
+from .bridge_types import CardEntry, CardPiles, CombatSnapshot, Power
 from .names import StatusName
 
 # Derived from StatusName.bridge_classes — edit data/statuses.toml, not this line.
@@ -26,77 +27,73 @@ STATUS_MAP: dict[str, str] = {
 }
 
 
-def _map_statuses(powers: list[dict]) -> list[tuple[str, int]]:
-    """Convert bridge powers list to (status_name, stacks) pairs the sim knows."""
+class _CardLike(Protocol):
+    name: str
+    upgraded: bool
+
+
+def _map_statuses(powers: list[Power]) -> list[tuple[str, int]]:
+    """Convert typed Power list to (status_name, stacks) pairs the sim knows."""
     result = []
     for p in powers:
-        name = p.get("name") or p.get("id") or p.get("power_id", "")
-        stacks = int(p.get("stacks", p.get("amount", 1)))
-        mapped = STATUS_MAP.get(name)
+        mapped = STATUS_MAP.get(p.name)
         if mapped:
-            result.append((mapped, stacks))
+            result.append((mapped, p.amount))
     return result
 
 
-def _card_list(cards: list[dict]) -> list[str]:
-    """Convert a bridge card list to sim card strings (e.g. ``"Strike"`` / ``"Strike+"``).
+def _card_list(cards: Sequence[_CardLike]) -> list[str]:
+    """Convert a typed card list to sim card strings (e.g. ``"Strike"`` / ``"Strike+"``).
 
     Upgrade encoding: append ``"+"`` for each upgrade level, matching the
     sim's ``CardInstance::as_str`` format.
     """
     result = []
     for c in cards:
-        sim_name = _names.card(c.get("name", ""))
-        if c.get("upgraded"):
+        sim_name = _names.card(c.name)
+        if c.upgraded:
             sim_name += "+"
         result.append(sim_name)
     return result
 
 
 def from_combat(
-    combat: dict,
+    combat: CombatSnapshot,
     player_state: dict | None = None,
-    card_piles: dict | None = None,
+    card_piles: CardPiles | None = None,
 ) -> CombatState:
-    """Build a CombatState from bridge get_combat_state() output.
+    """Build a CombatState from a parsed CombatSnapshot.
 
     Args:
-        combat: Result of bridge_client.get_combat_state() (already unwrapped
-                from the ``result`` envelope).
-        player_state: Optional result of get_player_state() — used to populate
-                      the draw pile from the full deck when combat doesn't
-                      include it.
-        card_piles: Optional result of bridge_client.get_card_piles() — gives
-                    the actual draw/discard/exhaust card lists (more accurate).
+        combat: Parsed combat snapshot (from parse_combat_snapshot()).
+        player_state: Optional raw get_player_state() payload — used to
+                      reconstruct the draw pile from the full deck when
+                      card_piles is not available.
+        card_piles: Optional parsed CardPiles — gives the actual
+                    draw/discard/exhaust card lists (more accurate).
 
     Returns:
         A CombatState with all deterministic fields populated. Without
         card_piles the draw pile order is arbitrary; with it the order matches
         the live game.
     """
-    players = combat.get("players", [])
-    p = players[0] if players else {}
+    p = combat.player
 
-    def _pile_cards(key: str) -> list[dict]:
-        if card_piles:
-            return card_piles.get(key, {}).get("cards", [])
-        return []
+    hand = _card_list(p.hand)
+    discard = _card_list(card_piles.discard_pile.cards) if card_piles else []
+    exhaust = _card_list(card_piles.exhaust_pile.cards) if card_piles else []
 
-    # Hand comes from combat state (same snapshot as HP/energy/enemies)
-    hand = _card_list(p.get("hand", []))
-
-    discard = _card_list(_pile_cards("discard_pile"))
-    exhaust = _card_list(_pile_cards("exhaust_pile"))
-
-    # Draw pile: use card_piles if available, else reconstruct from deck
-    draw_raw_list = _pile_cards("draw_pile")
-    if draw_raw_list:
-        draw = _card_list(draw_raw_list)
+    if card_piles:
+        draw = _card_list(card_piles.draw_pile.cards)
     elif player_state:
         ps_players = player_state.get("players", [])
         ps_p = ps_players[0] if ps_players else {}
         deck_raw = ps_p.get("deck", [])
-        draw_raw_all = _card_list(deck_raw)
+        deck_entries = [
+            CardEntry(name=c.get("name", ""), upgraded=bool(c.get("upgraded", False)))
+            for c in deck_raw
+        ]
+        draw_raw_all = _card_list(deck_entries)
         # best-effort: subtract hand+discard counts
         hand_counts: dict[str, int] = {}
         for c in hand + discard:
@@ -110,23 +107,20 @@ def from_combat(
     else:
         draw = []
 
-    # Player statuses
-    p_statuses = _map_statuses(p.get("powers", []))
+    p_statuses = _map_statuses(p.powers)
 
-    # Monsters
     monsters = []
-    for e in combat.get("enemies", []):
-        if not e.get("is_alive", True):
+    for e in combat.enemies:
+        if not e.is_alive:
             continue
-        sim_name = _names.monster(e.get("name", ""))
-        intent_raw = e.get("intent")
-        intent_str = _fmt_intent(intent_raw)
-        m_statuses = _map_statuses(e.get("powers", []))
+        sim_name = _names.monster(e.name)
+        intent_str = _fmt_intent(e.intent)
+        m_statuses = _map_statuses(e.powers)
         monsters.append(
             Monster(
-                hp=e.get("hp", 0),
-                max_hp=e.get("max_hp", e.get("hp", 0)),
-                block=e.get("block", 0),
+                hp=e.hp,
+                max_hp=e.max_hp,
+                block=e.block,
                 attack=0,
                 name=sim_name,
                 intent=intent_str,
@@ -135,10 +129,10 @@ def from_combat(
         )
 
     return CombatState(
-        player_hp=p.get("hp", 0),
-        player_max_hp=p.get("max_hp", p.get("hp", 0)),
-        player_block=p.get("block", 0),
-        player_energy=p.get("energy", 3),
+        player_hp=p.hp,
+        player_max_hp=p.max_hp,
+        player_block=p.block,
+        player_energy=p.energy,
         player_statuses=p_statuses,
         monsters=monsters,
         hand=hand,
@@ -175,15 +169,15 @@ def _fmt_intent(intent: Any) -> str | None:
 
 def diff(
     predicted: CombatState,
-    actual: dict,
-    card_piles: dict | None = None,
+    actual: CombatSnapshot,
+    card_piles: CardPiles | None = None,
 ) -> dict[str, Any]:
-    """Compare a sim-predicted CombatState against a bridge combat snapshot.
+    """Compare a sim-predicted CombatState against a parsed combat snapshot.
 
     Args:
         predicted: Sim CombatState after applying the action.
-        actual: Raw get_combat_state() payload (already unwrapped).
-        card_piles: Optional get_card_piles() payload for pile comparisons.
+        actual: Parsed CombatSnapshot (from parse_combat_snapshot()).
+        card_piles: Optional parsed CardPiles for pile comparisons.
                     Without it, pile fields are marked skipped.
 
     Each entry is one of:
@@ -193,68 +187,46 @@ def diff(
     """
     result: dict[str, Any] = {}
 
-    actual_players = actual.get("players", [{}])
-    ap = actual_players[0] if actual_players else {}
+    ap = actual.player
 
-    # Player HP
-    result["player_hp"] = _cmp(predicted.player_hp, ap.get("hp"))
-    result["player_block"] = _cmp(predicted.player_block, ap.get("block", 0))
-    result["player_energy"] = _cmp(predicted.player_energy, ap.get("energy"))
+    result["player_hp"] = _cmp(predicted.player_hp, ap.hp)
+    result["player_block"] = _cmp(predicted.player_block, ap.block)
+    result["player_energy"] = _cmp(predicted.player_energy, ap.energy)
 
-    # Enemies
-    actual_enemies = [e for e in actual.get("enemies", []) if e.get("is_alive", True)]
+    actual_enemies = [e for e in actual.enemies if e.is_alive]
     for i, (sim_m, act_e) in enumerate(zip(predicted.monsters, actual_enemies)):
         prefix = f"enemy[{i}]"
-        result[f"{prefix}.hp"] = _cmp(sim_m.hp, act_e.get("hp"))
-        result[f"{prefix}.block"] = _cmp(sim_m.block, act_e.get("block", 0))
+        result[f"{prefix}.hp"] = _cmp(sim_m.hp, act_e.hp)
+        result[f"{prefix}.block"] = _cmp(sim_m.block, act_e.block)
         result[f"{prefix}.intent"] = {"skipped": True, "reason": "non-deterministic"}
 
-    def _pile_cards(key: str) -> list[dict] | None:
-        if card_piles is None:
-            return None
-        return card_piles.get(key, {}).get("cards", [])
+    result["hand_cards"] = _cmp_pile(predicted.hand, _card_list(ap.hand))
 
-    # Hand
-    # Hand comes from combat state (same snapshot as HP/energy) for consistency
-    result["hand_cards"] = _cmp_pile(predicted.hand, _card_list(ap.get("hand", [])))
-
-    # Discard pile
-    act_discard = _pile_cards("discard_pile")
-    if act_discard is not None:
+    if card_piles:
         result["discard_pile"] = _cmp_pile(
-            predicted.discard_pile, _card_list(act_discard)
+            predicted.discard_pile, _card_list(card_piles.discard_pile.cards)
+        )
+        result["draw_pile"] = _cmp_pile(
+            predicted.draw_pile, _card_list(card_piles.draw_pile.cards)
+        )
+        result["exhaust_pile"] = _cmp_pile(
+            predicted.exhaust_pile, _card_list(card_piles.exhaust_pile.cards)
         )
     else:
         result["discard_pile"] = {"skipped": True, "reason": "card_piles not provided"}
-
-    # Draw pile (order unknown — compare as multiset)
-    act_draw = _pile_cards("draw_pile")
-    if act_draw is not None:
-        result["draw_pile"] = _cmp_pile(predicted.draw_pile, _card_list(act_draw))
-    else:
         result["draw_pile"] = {"skipped": True, "reason": "card_piles not provided"}
-
-    # Exhaust pile
-    act_exhaust = _pile_cards("exhaust_pile")
-    if act_exhaust is not None:
-        result["exhaust_pile"] = _cmp_pile(
-            predicted.exhaust_pile, _card_list(act_exhaust)
-        )
-    else:
         result["exhaust_pile"] = {"skipped": True, "reason": "card_piles not provided"}
 
-    # Player statuses
     sim_p_statuses = _count_statuses(predicted.player_statuses)
-    act_p_statuses = _statuses_from_powers(ap.get("powers", []))
+    act_p_statuses = _statuses_from_powers(ap.powers)
     for status in sim_p_statuses.keys() | act_p_statuses.keys():
         result[f"player.{status}"] = _cmp(
             sim_p_statuses.get(status, 0), act_p_statuses.get(status, 0)
         )
 
-    # Enemy statuses
     for i, (sim_m, act_e) in enumerate(zip(predicted.monsters, actual_enemies)):
         sim_m_statuses = _count_statuses(sim_m.statuses)
-        act_m_statuses = _statuses_from_powers(act_e.get("powers", []))
+        act_m_statuses = _statuses_from_powers(act_e.powers)
         for status in sim_m_statuses.keys() | act_m_statuses.keys():
             result[f"enemy[{i}].{status}"] = _cmp(
                 sim_m_statuses.get(status, 0), act_m_statuses.get(status, 0)
@@ -276,14 +248,13 @@ def _count_statuses(statuses: list[str]) -> dict[str, int]:
     return result
 
 
-def _statuses_from_powers(powers: list[dict]) -> dict[str, int]:
-    """Convert bridge powers list to {sim_status_name: stacks} dict."""
+def _statuses_from_powers(powers: list[Power]) -> dict[str, int]:
+    """Convert typed Power list to {sim_status_name: stacks} dict."""
     out: dict[str, int] = {}
     for p in powers:
-        name = p.get("name") or p.get("id") or p.get("power_id", "")
-        mapped = STATUS_MAP.get(name)
+        mapped = STATUS_MAP.get(p.name)
         if mapped:
-            out[mapped] = out.get(mapped, 0) + int(p.get("stacks", p.get("amount", 1)))
+            out[mapped] = out.get(mapped, 0) + p.amount
     return out
 
 
