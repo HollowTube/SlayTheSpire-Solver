@@ -46,12 +46,6 @@ _ACTION_REQUIREMENTS = {
 }
 
 
-def _payload(response: dict) -> dict:
-    if isinstance(response, dict) and isinstance(response.get("result"), dict):
-        return response["result"]
-    return response
-
-
 def send_request(
     method: str,
     params: dict | None = None,
@@ -103,6 +97,9 @@ def send_request(
                     result = json.loads(result)
                 except json.JSONDecodeError:
                     pass  # keep the string as-is; callers will handle it
+            # Unwrap JSON-RPC envelope: {"id": N, "result": {...}} → {...}
+            if isinstance(result, dict) and isinstance(result.get("result"), dict):
+                return result["result"]
             return result
         except json.JSONDecodeError as e:
             return {"error": f"Invalid JSON from bridge: {e}"}
@@ -153,22 +150,20 @@ def get_full_state() -> dict:
     combat state (if fighting), and all available actions.
     """
     # Available actions includes screen info already
-    actions_raw = get_available_actions()
-    actions_result = _payload(actions_raw)
+    actions = get_available_actions()
 
     screen = "UNKNOWN"
     screen_context = None
-    if isinstance(actions_result, dict) and not actions_result.get("error"):
-        screen = actions_result.get("screen", "UNKNOWN")
-        screen_context = actions_result.get("screen_context_type")
+    if isinstance(actions, dict) and not actions.get("error"):
+        screen = actions.get("screen", "UNKNOWN")
+        screen_context = actions.get("screen_context_type")
 
     # If get_available_actions failed, fall back to get_screen
     if screen == "UNKNOWN":
-        screen_raw = get_screen()
-        screen_result = _payload(screen_raw)
+        screen_data = get_screen()
         screen = (
-            screen_result.get("screen", "UNKNOWN")
-            if isinstance(screen_result, dict)
+            screen_data.get("screen", "UNKNOWN")
+            if isinstance(screen_data, dict)
             else "UNKNOWN"
         )
 
@@ -201,17 +196,15 @@ def get_full_state() -> dict:
     # Add run + player info if in a run
     in_run = screen not in ("MAIN_MENU", "CHARACTER_SELECT", "UNKNOWN")
     if in_run:
-        player_raw = get_player_state()
-        player_result = _payload(player_raw)
-        if isinstance(player_result, dict) and not player_result.get("error"):
-            state["player"] = player_result
+        player = get_player_state()
+        if isinstance(player, dict) and not player.get("error"):
+            state["player"] = player
 
         # Always fetch run state for floor/act/seed (player_state may omit these)
-        run_raw = get_run_state()
-        run_result = _payload(run_raw)
-        if isinstance(run_result, dict) and not run_result.get("error"):
+        run = get_run_state()
+        if isinstance(run, dict) and not run.get("error"):
             state["run"] = {
-                k: run_result[k]
+                k: run[k]
                 for k in (
                     "act",
                     "floor",
@@ -222,19 +215,18 @@ def get_full_state() -> dict:
                     "ascension",
                     "seed",
                 )
-                if k in run_result
+                if k in run
             }
 
     # Add combat info if in combat
     if "COMBAT" in screen and "LOADING" not in screen:
-        combat_raw = get_combat_state()
-        combat_result = _payload(combat_raw)
-        if isinstance(combat_result, dict) and not combat_result.get("error"):
-            state["combat"] = combat_result
+        combat = get_combat_state()
+        if isinstance(combat, dict) and not combat.get("error"):
+            state["combat"] = combat
 
     # Available actions — the key to knowing what to do
-    if isinstance(actions_result, dict) and not actions_result.get("error"):
-        state["available_actions"] = actions_result
+    if isinstance(actions, dict) and not actions.get("error"):
+        state["available_actions"] = actions
     else:
         state["available_actions"] = {"actions": [], "error": "Could not fetch actions"}
 
@@ -326,7 +318,7 @@ def is_connected() -> bool:
     """Check if bridge is reachable."""
     try:
         result = ping()
-        return "error" not in result and result.get("result", {}).get("status") == "ok"
+        return "error" not in result and result.get("status") == "ok"
     except Exception:
         return False
 
@@ -366,7 +358,6 @@ def act_and_wait(action: str, settle_timeout: float = 5.0, **params: Any) -> dic
     else:
         action_result = execute_action(action, **params)
 
-    action_result = _payload(action_result)
     action_error = (
         action_result.get("error") if isinstance(action_result, dict) else None
     )
@@ -376,8 +367,7 @@ def act_and_wait(action: str, settle_timeout: float = 5.0, **params: Any) -> dic
     prev_screen = ""
     stable_count = 0
     while time.monotonic() < deadline:
-        raw = get_screen()
-        result = _payload(raw)
+        result = get_screen()
         current = (
             result.get("screen", "UNKNOWN") if isinstance(result, dict) else "UNKNOWN"
         )
@@ -578,10 +568,7 @@ def hot_reload(
     result: dict = {}
     for attempt in range(3):
         result = send_request("hot_reload", params, timeout=30.0)
-        payload = result
-        if isinstance(result, dict) and isinstance(result.get("result"), dict):
-            payload = result["result"]
-        error = payload.get("error", "") if isinstance(payload, dict) else ""
+        error = result.get("error", "") if isinstance(result, dict) else ""
         if any(msg in error.lower() for msg in _RETRYABLE_ERRORS) and attempt < 2:
             time.sleep(1 * (2**attempt))  # 1s, 2s
             continue
@@ -938,8 +925,7 @@ def wait_for_screen(
     deadline = time.monotonic() + timeout_seconds
     last_screen = "UNKNOWN"
     while time.monotonic() < deadline:
-        raw = get_screen()
-        result = _payload(raw)
+        result = get_screen()
         if isinstance(result, dict) and not result.get("error"):
             last_screen = result.get("screen", "UNKNOWN")
             if target_screen.upper() in last_screen.upper():
@@ -960,8 +946,7 @@ def wait_until_idle(
     deadline = time.monotonic() + timeout_seconds
     last_screen = "UNKNOWN"
     while time.monotonic() < deadline:
-        raw = get_screen()
-        result = _payload(raw)
+        result = get_screen()
         if isinstance(result, dict) and not result.get("error"):
             last_screen = result.get("screen", "UNKNOWN")
             if any(s in last_screen.upper() for s in _STABLE_SCREENS):
@@ -1088,8 +1073,7 @@ def navigate_to_combat(
         # Ensure game window has focus for scene transitions
         focus_game_window()
 
-        raw = get_screen()
-        result = _payload(raw)
+        result = get_screen()
         if isinstance(result, dict) and result.get("error"):
             time.sleep(1)
             continue
@@ -1138,7 +1122,7 @@ def navigate_to_combat(
             make_event_choice(neow_choice_index)
             time.sleep(2)
             # Check if we need to proceed or dismiss a sub-screen
-            check = _payload(get_screen()).get("screen", "").upper()
+            check = get_screen().get("screen", "").upper()
             if "EVENT" in check:
                 # Click Proceed button at bottom center
                 click_in_game(0.30, 0.92)
@@ -1150,7 +1134,7 @@ def navigate_to_combat(
         if "CARD" in screen or "TRANSFORM" in screen or "DECK" in screen:
             card_skip()
             time.sleep(1.5)
-            check = _payload(get_screen()).get("screen", "").upper()
+            check = get_screen().get("screen", "").upper()
             if "CARD" in check or "TRANSFORM" in check:
                 click_in_game(0.50, 0.83)
                 time.sleep(1.5)
@@ -1161,7 +1145,7 @@ def navigate_to_combat(
         if "REWARD" in screen:
             reward_proceed()
             time.sleep(1.5)
-            check = _payload(get_screen()).get("screen", "").upper()
+            check = get_screen().get("screen", "").upper()
             if "REWARD" in check:
                 click_in_game(0.85, 0.77)
                 time.sleep(1.5)
@@ -1172,7 +1156,7 @@ def navigate_to_combat(
         if "TREASURE" in screen:
             treasure_proceed()
             time.sleep(1)
-            check = _payload(get_screen()).get("screen", "").upper()
+            check = get_screen().get("screen", "").upper()
             if "TREASURE" in check:
                 click_in_game(0.50, 0.92)
                 time.sleep(1)
@@ -1197,7 +1181,7 @@ def navigate_to_combat(
 
         # ── Map screen — navigate to a combat node ──
         if "MAP" in screen:
-            map_state = _payload(get_map_state())
+            map_state = get_map_state()
             if isinstance(map_state, dict) and not map_state.get("error"):
                 nodes = map_state.get("nodes", [])
                 target = None
@@ -1216,7 +1200,7 @@ def navigate_to_combat(
                     navigate_map(chosen["row"], chosen["col"])
                     time.sleep(2)
                     # Check if we transitioned
-                    check = _payload(get_screen()).get("screen", "").upper()
+                    check = get_screen().get("screen", "").upper()
                     if "MAP" in check:
                         # Bridge navigate worked at data level but scene needs click
                         # Try clicking Proceed if it appeared
@@ -1227,7 +1211,7 @@ def navigate_to_combat(
             # Fallback: console fight
             execute_console_command("fight")
             time.sleep(2)
-            check = _payload(get_screen()).get("screen", "").upper()
+            check = get_screen().get("screen", "").upper()
             if "MAP" in check:
                 click_in_game(0.30, 0.92)
                 time.sleep(2)
@@ -1275,8 +1259,7 @@ def auto_proceed(
     stuck_count = 0
 
     while time.monotonic() < deadline:
-        raw = get_screen()
-        result = _payload(raw)
+        result = get_screen()
         screen = (
             result.get("screen", "UNKNOWN") if isinstance(result, dict) else "UNKNOWN"
         ).upper()
@@ -1338,8 +1321,7 @@ def auto_proceed(
                 steps.append("card_skip")
                 time.sleep(1)
                 # Card skip might not work (e.g. mandatory selection) — try confirm too
-                confirm_raw = get_screen()
-                confirm_result = _payload(confirm_raw)
+                confirm_result = get_screen()
                 still_on = (
                     confirm_result.get("screen", "")
                     if isinstance(confirm_result, dict)
