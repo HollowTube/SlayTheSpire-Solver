@@ -186,7 +186,7 @@ class StatusName(str, Enum):
     VULNERABLE = ("Vulnerable", ("Vulnerable", "VulnerablePower"))
     WEAK = ("Weak", ("Weak", "WeakPower"))
     FRAIL = ("Frail", ("Frail", "FrailPower"))
-    STRENGTH = ("Strength", ("Strength",))
+    STRENGTH = ("Strength", ("Strength", "StrengthPower"))
     DEXTERITY = ("Dexterity", ("Dexterity",))
     POISON = ("Poison", ("Poison",))
     THORNS = ("Thorns", ("Thorns",))

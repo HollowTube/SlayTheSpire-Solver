@@ -23,7 +23,7 @@ bridge_classes = ["Frail", "FrailPower"]
 
 [[statuses]]
 sim_name = "Strength"
-bridge_classes = ["Strength"]
+bridge_classes = ["Strength", "StrengthPower"]
 
 [[statuses]]
 sim_name = "Dexterity"
