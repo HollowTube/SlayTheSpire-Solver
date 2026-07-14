@@ -14,6 +14,12 @@ import pytest
 
 from sts_sim import bridge_client as bc
 from sts_sim.bridge import STATUS_MAP
+from sts_sim.bridge_types import (
+    AvailableActions,
+    CombatSnapshot,
+    parse_available_actions,
+    parse_combat_snapshot,
+)
 from sts_sim.names import CARD_STS2_ID, CardName
 
 
@@ -44,13 +50,8 @@ def _console(cmd: str) -> dict:
     return r
 
 
-def _combat() -> dict:
-    raw = bc._payload(bc.get_combat_state())
-    return {
-        "hand": raw.get("players", [{}])[0].get("hand", []),
-        "enemies": raw.get("enemies", []),
-        "player": raw.get("players", [{}])[0],
-    }
+def _combat() -> CombatSnapshot:
+    return parse_combat_snapshot(bc._payload(bc.get_combat_state()))
 
 
 def _screen() -> str:
@@ -118,9 +119,9 @@ class CombatFixture:
         )
 
     def set_hand(self, *cards: CardName | str) -> None:
-        state = _combat()
-        for card in state["hand"]:
-            cid = _to_console_id(card["name"])
+        snapshot = _combat()
+        for hcard in snapshot.player.hand:
+            cid = _to_console_id(hcard.name)
             _console(f"remove_card {cid} hand")
         time.sleep(0.2)
         for card in cards:
@@ -132,12 +133,11 @@ class CombatFixture:
         _console(f"upgrade {index}")
 
     def enemy_hp(self, idx: int = 0) -> int:
-        state = _combat()
-        enemies = state["enemies"]
-        return enemies[idx]["hp"] if idx < len(enemies) else -1
+        snapshot = _combat()
+        return snapshot.enemies[idx].hp if idx < len(snapshot.enemies) else -1
 
     def player_block(self) -> int:
-        return _combat()["player"].get("block", 0)
+        return _combat().player.block
 
     def has_power(self, sim_name: str, target: str = "enemy", idx: int = 0) -> int:
         """Return stack count of a status on the target, or 0 if absent.
@@ -146,31 +146,27 @@ class CombatFixture:
         not the raw bridge class name.  Uses ``bridge.STATUS_MAP`` to translate
         whatever the bridge reports into that canonical form.
         """
-        state = _combat()
+        snapshot = _combat()
         if target == "enemy":
-            powers = (
-                state["enemies"][idx].get("powers", [])
-                if idx < len(state["enemies"])
-                else []
-            )
+            powers = snapshot.enemies[idx].powers if idx < len(snapshot.enemies) else []
         else:
-            powers = state["player"].get("powers", [])
+            powers = snapshot.player.powers
         for p in powers:
-            raw = p.get("name", "") or p.get("id", "") or p.get("power_id", "")
-            if STATUS_MAP.get(raw) == sim_name:
-                return p.get("amount", 0)
+            if STATUS_MAP.get(p.name) == sim_name:
+                return p.amount
         return 0
 
     def play(self, keyword: str) -> bool:
-        avail = bc._payload(bc.get_available_actions())
-        actions = avail.get("actions", [])
+        avail: AvailableActions = parse_available_actions(
+            bc._payload(bc.get_available_actions())
+        )
         act = next(
-            (a for a in actions if keyword.lower() in a.get("card_name", "").lower()),
+            (a for a in avail.actions if keyword.lower() in a.card_name.lower()),
             None,
         )
         if act is None:
             return False
-        bc.play_card(act["card_index"], act.get("target_index", -1))
+        bc.play_card(act.card_index, act.target_index)
         time.sleep(0.5)
         return True
 

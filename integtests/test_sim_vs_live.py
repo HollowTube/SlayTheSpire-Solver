@@ -15,6 +15,7 @@ import pytest
 from sts_sim import PlayCardAction, SelectTargetAction, apply, legal_actions
 from sts_sim import bridge_client as bc
 from sts_sim.bridge import diff, from_combat
+from sts_sim.bridge_types import parse_available_actions, parse_combat_snapshot
 from sts_sim.names import CardName
 
 from .conftest import CombatFixture
@@ -82,43 +83,37 @@ def _apply_card_in_sim(state, card: CardName | CardSpec):
 def _play_in_game(card: CardName | CardSpec) -> bool:
     """Play a card in the live game. Returns False if not available."""
     spec = _spec(card)
-    avail = bc._payload(bc.get_available_actions())
-    actions = avail.get("actions", [])
+    avail = parse_available_actions(bc._payload(bc.get_available_actions()))
     needle = spec.card.value.replace(" ", "").lower()
 
     # Use hand state to find the exact card index (upgraded vs non-upgraded),
     # then match the action by card_index rather than name alone.  This avoids
     # playing the wrong copy when both an upgraded and non-upgraded version of
     # the same card are present in hand.
-    hand = bc._payload(bc.get_combat_state())["players"][0]["hand"]
+    combat = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
     target_hand_idx = next(
         (
-            c["index"]
-            for c in hand
-            if needle in c["name"].replace(" ", "").lower()
-            and c.get("upgraded", False) == spec.upgraded
+            c.index
+            for c in combat.player.hand
+            if needle in c.name.replace(" ", "").lower() and c.upgraded == spec.upgraded
         ),
         None,
     )
     if target_hand_idx is not None:
-        act = next((a for a in actions if a.get("card_index") == target_hand_idx), None)
+        act = next((a for a in avail.actions if a.card_index == target_hand_idx), None)
         if act:
-            bc.play_card(act["card_index"], act.get("target_index", -1))
+            bc.play_card(act.card_index, act.target_index)
             time.sleep(0.5)
             return True
 
     # Fallback: match by name substring (e.g. when hand index lookup fails)
     act = next(
-        (
-            a
-            for a in actions
-            if needle in a.get("card_name", "").replace(" ", "").lower()
-        ),
+        (a for a in avail.actions if needle in a.card_name.replace(" ", "").lower()),
         None,
     )
     if act is None:
         return False
-    bc.play_card(act["card_index"], act.get("target_index", -1))
+    bc.play_card(act.card_index, act.target_index)
     time.sleep(0.5)
     return True
 
@@ -133,12 +128,8 @@ def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> dict:
     prev_hand: tuple | None = None
     for _ in range(retries):
         raw = bc._payload(bc.get_combat_state())
-        hand = tuple(
-            sorted(
-                (c.get("name", ""), c.get("upgraded", False))
-                for c in raw.get("players", [{}])[0].get("hand", [])
-            )
-        )
+        snapshot = parse_combat_snapshot(raw)
+        hand = tuple(sorted((c.name, c.upgraded) for c in snapshot.player.hand))
         if hand == prev_hand:
             return raw
         prev_hand = hand
@@ -156,16 +147,16 @@ def test_sim_matches_live(card):
     if spec.upgraded:
         # The card command appends to the rightmost slot; find its index
         # so we upgrade the correct card rather than whatever is at index 0.
-        hand = bc._payload(bc.get_combat_state())["players"][0]["hand"]
+        combat = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
+        hand = combat.player.hand
         needle = spec.card.value.replace(" ", "").lower()
         idx = next(
             (
-                c["index"]
+                c.index
                 for c in reversed(hand)
-                if needle in c["name"].replace(" ", "").lower()
-                and not c.get("upgraded")
+                if needle in c.name.replace(" ", "").lower() and not c.upgraded
             ),
-            hand[-1]["index"] if hand else 0,
+            hand[-1].index if hand else 0,
         )
         fix.upgrade_card(idx)
 
