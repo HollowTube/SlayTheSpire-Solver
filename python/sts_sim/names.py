@@ -166,29 +166,40 @@ class MonsterName(str, Enum):
 class StatusName(str, Enum):
     """Canonical status/power names — one per status in ``data/statuses.toml``.
 
-    A ``str`` subclass so ``StatusName.VULNERABLE == "Vulnerable"`` is true.
+    Each member carries the bridge class aliases that map to it, so
+    ``STATUS_MAP`` in ``bridge.py`` can be derived without a separate
+    generated artifact.
+
+    ``StatusName.VULNERABLE == "Vulnerable"`` is true (str subclass).
+    ``StatusName.VULNERABLE.bridge_classes`` gives ``("Vulnerable", "VulnerablePower")``.
     """
 
+    def __new__(cls, value: str, bridge_classes: tuple[str, ...] = ()):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj.bridge_classes = bridge_classes  # type: ignore[attr-defined]
+        return obj
+
     # BEGIN GENERATED StatusName
-    VULNERABLE = "Vulnerable"
-    WEAK = "Weak"
-    FRAIL = "Frail"
-    STRENGTH = "Strength"
-    DEXTERITY = "Dexterity"
-    POISON = "Poison"
-    THORNS = "Thorns"
-    METALLICIZE = "Metallicize"
-    RITUAL = "Ritual"
-    BARRICADE = "Barricade"
-    PLATING = "Plating"
-    REGEN = "Regen"
-    BRUTALITY = "Brutality"
-    DEMON_FORM = "DemonForm"
-    JUGGERNAUT = "Juggernaut"
-    INFLAME = "Inflame"
-    FEEL_NO_PAIN = "FeelNoPain"
-    NO_DRAW = "NoDraw"
-    SHRINK = "Shrink"
+    VULNERABLE = ("Vulnerable", ("Vulnerable", "VulnerablePower"))
+    WEAK = ("Weak", ("Weak", "WeakPower"))
+    FRAIL = ("Frail", ("Frail", "FrailPower"))
+    STRENGTH = ("Strength", ("Strength",))
+    DEXTERITY = ("Dexterity", ("Dexterity",))
+    POISON = ("Poison", ("Poison",))
+    THORNS = ("Thorns", ("Thorns",))
+    METALLICIZE = ("Metallicize", ("Metallicize",))
+    RITUAL = ("Ritual", ("Ritual",))
+    BARRICADE = ("Barricade", ("Barricade",))
+    PLATING = ("Plating", ("Plating",))
+    REGEN = ("Regen", ("Regen",))
+    BRUTALITY = ("Brutality", ("Brutality",))
+    DEMON_FORM = ("DemonForm", ("DemonForm",))
+    JUGGERNAUT = ("Juggernaut", ("Juggernaut",))
+    INFLAME = ("Inflame", ("Inflame", "InflamePower"))
+    FEEL_NO_PAIN = ("FeelNoPain", ("FeelNoPain", "FeelNoPainPower"))
+    NO_DRAW = ("NoDraw", ("NoDraw", "NoDrawPower"))
+    SHRINK = ("Shrink", ("Shrink", "ShrinkPower"))
 
 
 # END GENERATED StatusName

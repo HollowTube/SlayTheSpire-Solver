@@ -18,40 +18,11 @@ from typing import Any
 
 from . import CombatState, Monster
 from . import names as _names
+from .names import StatusName
 
-# Bridge power name → sim Status string.
-# Generated from data/statuses.toml — do not edit by hand.
-# To add a new status or bridge alias: edit statuses.toml, then run
-# python scripts/gen_ids.py.
+# Derived from StatusName.bridge_classes — edit data/statuses.toml, not this line.
 STATUS_MAP: dict[str, str] = {
-    # BEGIN GENERATED STATUS_MAP
-    "Vulnerable": "Vulnerable",
-    "VulnerablePower": "Vulnerable",
-    "Weak": "Weak",
-    "WeakPower": "Weak",
-    "Frail": "Frail",
-    "FrailPower": "Frail",
-    "Strength": "Strength",
-    "Dexterity": "Dexterity",
-    "Poison": "Poison",
-    "Thorns": "Thorns",
-    "Metallicize": "Metallicize",
-    "Ritual": "Ritual",
-    "Barricade": "Barricade",
-    "Plating": "Plating",
-    "Regen": "Regen",
-    "Brutality": "Brutality",
-    "DemonForm": "DemonForm",
-    "Juggernaut": "Juggernaut",
-    "Inflame": "Inflame",
-    "InflamePower": "Inflame",
-    "FeelNoPain": "FeelNoPain",
-    "FeelNoPainPower": "FeelNoPain",
-    "NoDraw": "NoDraw",
-    "NoDrawPower": "NoDraw",
-    "Shrink": "Shrink",
-    "ShrinkPower": "Shrink",
-    # END GENERATED STATUS_MAP
+    bc: s.value for s in StatusName for bc in s.bridge_classes
 }
 
 

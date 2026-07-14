@@ -139,27 +139,24 @@ _CHAR_SUFFIXES = ("Ironclad", "Silent", "Defect", "Watcher", "Huntress")
 
 
 def _gen_status_name_enum(statuses: list[dict]) -> str:
-    """StatusName enum body — one member per unique sim_name in statuses.toml."""
-    seen: set[str] = set()
+    """StatusName enum body — one member per entry in statuses.toml.
+
+    Each member is a (sim_name, bridge_classes_tuple) pair so that STATUS_MAP
+    in bridge.py can be derived without a separate generated artifact.
+    """
     lines = []
     for s in statuses:
         sim = s["sim_name"]
-        if sim in seen:
-            continue
-        seen.add(sim)
         member = _display_to_py_member(sim)
-        lines.append(f'    {member} = "{sim}"')
+        bcs = s["bridge_classes"]
+        # Single-item tuple requires trailing comma; multi-item must NOT have one
+        # (ruff's magic-trailing-comma rule would expand it to multi-line otherwise).
+        if len(bcs) == 1:
+            bcs_str = f'("{bcs[0]}",)'
+        else:
+            bcs_str = "(" + ", ".join(f'"{bc}"' for bc in bcs) + ")"
+        lines.append(f'    {member} = ("{sim}", {bcs_str})')
     return "\n".join(lines) + "\n\n\n"
-
-
-def _gen_status_map(statuses: list[dict]) -> str:
-    """STATUS_MAP dict body — bridge class name → sim status name."""
-    lines = []
-    for s in statuses:
-        sim = s["sim_name"]
-        for bc in s["bridge_classes"]:
-            lines.append(f'    "{bc}": "{sim}",')
-    return "\n".join(lines) + "\n"
 
 
 def _gen_bridge_card_map(cards: list[dict]) -> str:
@@ -255,12 +252,6 @@ def main() -> None:
             _gen_status_name_enum(statuses),
             "#",
             "StatusName",
-        ),
-        (
-            REPO_ROOT / "python" / "sts_sim" / "bridge.py",
-            _gen_status_map(statuses),
-            "#",
-            "STATUS_MAP",
         ),
     ]
 
