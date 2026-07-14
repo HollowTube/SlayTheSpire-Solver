@@ -124,7 +124,7 @@ class CombatFixture:
             _console(f"remove_card {cid} hand")
         time.sleep(0.2)
         for card in cards:
-            console_id = CARD_STS2_ID.get(str(card), str(card))
+            console_id = CARD_STS2_ID.get(card, card)
             _console(f"card {console_id} hand")
 
     def enemy_hp(self, idx: int = 0) -> int:
