@@ -383,8 +383,14 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
             keywords_added: HashSet::from([CardKeyword::Innate]),
             ..Default::default()
         }),
-        // Anger+: 6 damage → 8 damage.
-        CardId::Anger => Some(UpgradeDelta { damage_delta: 2, ..Default::default() }),
+        // Anger+: STS2 deals 8 damage and copies an upgraded Anger+ to discard.
+        CardId::Anger => Some(UpgradeDelta {
+            effects_override: Some(vec![
+                EffectOp::DealDamage(8),
+                EffectOp::AddUpgradedCardToDiscard(CardId::Anger),
+            ]),
+            ..Default::default()
+        }),
         // DrumOfBattle+: draw 2 → draw 3.
         CardId::DrumOfBattle => Some(UpgradeDelta { draw_delta: 1, ..Default::default() }),
         // Stomp+: 12 AoE damage → 17 AoE damage.

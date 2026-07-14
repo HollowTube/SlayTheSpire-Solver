@@ -674,6 +674,9 @@ pub(crate) enum EffectOp {
     ExhaustTopOfDrawPile,
     // Add a copy of the named card to the player's discard pile (e.g. Anger).
     AddCardToDiscard(CardId),
+    // Add an upgraded copy of the named card to the player's discard pile
+    // (e.g. Anger+: the copy is also upgraded).
+    AddUpgradedCardToDiscard(CardId),
     // Spawns a new monster with the given name and HP onto the field
     // (e.g. Fogmog's Illusion spawns Eye With Teeth). The new monster
     // is added at the end of the monsters list.
@@ -1034,6 +1037,9 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
             }
             EffectOp::AddCardToDiscard(card_id) => {
                 state.discard_pile.push(CardInstance::new(*card_id));
+            }
+            EffectOp::AddUpgradedCardToDiscard(card_id) => {
+                state.discard_pile.push(CardInstance { id: *card_id, upgrade_level: 1 });
             }
             EffectOp::SpawnMonster(name, hp) => {
                 // Spawned monster starts with no intent — the monster
