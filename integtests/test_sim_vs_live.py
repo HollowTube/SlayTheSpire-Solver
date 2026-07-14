@@ -20,15 +20,22 @@ from .conftest import CombatFixture
 
 pytestmark = pytest.mark.live
 
-# Cards to test — Ironclad base deck + simple commons
+# Cards to test — Ironclad base deck + commons.
+# INFLAME excluded: sim exhausts it (STS1 behaviour), but STS2 treats it as a
+# Power-type card that never leaves the hand into any pile.
 BASE_DECK = [
     CardName.STRIKE,
     CardName.DEFEND,
-    CardName.BASH,
+    CardName.BASH,  # damage + 2 Vulnerable
     CardName.IRON_WAVE,  # block + damage
     CardName.TWIN_STRIKE,  # multi-hit
     CardName.SHRUG_IT_OFF,  # block only (no target)
-    CardName.THUNDERCLAP,  # AoE damage + Vulnerable (tests status tracking)
+    CardName.THUNDERCLAP,  # AoE damage + 1 Vulnerable
+    CardName.UPPERCUT,  # damage + 1 Weak + 1 Vulnerable
+    CardName.ANGER,  # damage + add copy to discard
+    CardName.IMPERVIOUS,  # 30 block, exhausts
+    CardName.BLUDGEON,  # heavy damage (32)
+    CardName.BREAK,  # apply 2 Frail to enemy
 ]
 
 BYRDONIS_HP = 84
@@ -67,16 +74,37 @@ def _play_in_game(card: CardName) -> bool:
     return True
 
 
+def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> dict:
+    """Poll until two consecutive get_combat_state() calls agree on hand contents.
+
+    Console commands are async; the state can be mid-transition immediately after
+    set_hand(). Waiting for two identical snapshots in a row ensures we read a
+    settled state before snapshotting for the sim.
+    """
+    prev_hand: tuple | None = None
+    for _ in range(retries):
+        raw = bc._payload(bc.get_combat_state())
+        hand = tuple(
+            sorted(
+                c.get("name", "") for c in raw.get("players", [{}])[0].get("hand", [])
+            )
+        )
+        if hand == prev_hand:
+            return raw
+        prev_hand = hand
+        time.sleep(delay)
+    return bc._payload(bc.get_combat_state())
+
+
 @pytest.mark.parametrize("card", BASE_DECK, ids=lambda c: c.name)
 def test_sim_matches_live(card):
     """Sim prediction for playing ``card`` must match the live game result."""
     fix = ByrdonisFix()
     fix.setup_fight()
     fix.set_hand(card)
-    time.sleep(0.4)  # let last console command settle before snapshotting
 
-    # Capture live state after set_hand — this is what the sim starts from
-    raw_before = bc._payload(bc.get_combat_state())
+    # Wait for the game state to settle after set_hand (console cmds are async)
+    raw_before = _stable_combat_state()
     piles_before = bc._payload(bc.get_card_piles())
     state_before = from_combat(raw_before, card_piles=piles_before)
 
