@@ -1,16 +1,17 @@
-"""Canonical card and monster name enums + bridge normalization.
+"""Canonical card, monster, and status name enums + bridge normalization.
 
 Provides:
   - ``CardName``    — enum of every card in ``cards.rs`` / ``data/cards.toml``
   - ``MonsterName`` — enum of every monster in ``monsters.rs`` / ``data/monsters.toml``
+  - ``StatusName``  — enum of every status in ``data/statuses.toml``
   - ``card()``      — normalise a bridge C# card class name → sim string
   - ``monster()``   — normalise a bridge C# monster class name → sim string
 
 Bridge returns C# class names (e.g. ``StrikeIronclad``, ``FuzzyWurmCrawler``).
 Sim uses display strings (e.g. ``"Strike"``, ``"Fuzzy Wurm Crawler"``).
 
-**Do not edit the generated regions by hand.** Edit ``data/cards.toml`` or
-``data/monsters.toml`` and run ``python scripts/gen_ids.py``.
+**Do not edit the generated regions by hand.** Edit the relevant TOML in ``data/``
+and run ``python scripts/gen_ids.py``.
 """
 
 from __future__ import annotations
@@ -157,6 +158,40 @@ class MonsterName(str, Enum):
 
 
 # END GENERATED MonsterName
+
+
+# ── Status catalogue ─────────────────────────────────────────────────────────
+
+
+class StatusName(str, Enum):
+    """Canonical status/power names — one per status in ``data/statuses.toml``.
+
+    A ``str`` subclass so ``StatusName.VULNERABLE == "Vulnerable"`` is true.
+    """
+
+    # BEGIN GENERATED StatusName
+    VULNERABLE = "Vulnerable"
+    WEAK = "Weak"
+    FRAIL = "Frail"
+    STRENGTH = "Strength"
+    DEXTERITY = "Dexterity"
+    POISON = "Poison"
+    THORNS = "Thorns"
+    METALLICIZE = "Metallicize"
+    RITUAL = "Ritual"
+    BARRICADE = "Barricade"
+    PLATING = "Plating"
+    REGEN = "Regen"
+    BRUTALITY = "Brutality"
+    DEMON_FORM = "DemonForm"
+    JUGGERNAUT = "Juggernaut"
+    INFLAME = "Inflame"
+    FEEL_NO_PAIN = "FeelNoPain"
+    NO_DRAW = "NoDraw"
+    SHRINK = "Shrink"
+
+
+# END GENERATED StatusName
 
 
 # ── Bridge → sim card normalization ──────────────────────────────────────────
