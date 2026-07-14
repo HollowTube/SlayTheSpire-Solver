@@ -8,6 +8,7 @@ Run with:
 """
 
 import time
+from typing import NamedTuple
 
 import pytest
 
@@ -20,11 +21,31 @@ from .conftest import CombatFixture
 
 pytestmark = pytest.mark.live
 
+
+class CardSpec(NamedTuple):
+    """A card with an optional upgrade level for parametrized tests."""
+
+    card: CardName
+    upgraded: bool = False
+
+    @property
+    def sim_name(self) -> str:
+        return self.card.value + ("+" if self.upgraded else "")
+
+    def __str__(self) -> str:
+        return self.card.name + ("_PLUS" if self.upgraded else "")
+
+
+def _spec(card: CardName | CardSpec) -> CardSpec:
+    return card if isinstance(card, CardSpec) else CardSpec(card)
+
+
 # Cards to test — Ironclad base deck + commons.
 # INFLAME excluded: sim exhausts it (STS1 behaviour), but STS2 treats it as a
 # Power-type card that never leaves the hand into any pile.
-BASE_DECK = [
+BASE_DECK: list[CardName | CardSpec] = [
     CardName.STRIKE,
+    CardSpec(CardName.STRIKE, upgraded=True),  # Strike+: 9 damage instead of 6
     CardName.DEFEND,
     CardName.BASH,  # damage + 2 Vulnerable
     CardName.IRON_WAVE,  # block + damage
@@ -45,20 +66,22 @@ class ByrdonisFix(CombatFixture):
     FIGHT_ID = "BYRDONIS_ELITE"
 
 
-def _apply_card_in_sim(state, card: CardName):
+def _apply_card_in_sim(state, card: CardName | CardSpec):
     """Play a card in the sim, auto-selecting the first target if required."""
-    mid = apply(state, PlayCardAction(card.value))
+    spec = _spec(card)
+    mid = apply(state, PlayCardAction(spec.sim_name))
     if any("SelectTarget" in a for a in legal_actions(mid)):
         return apply(mid, SelectTargetAction(0))
     return mid
 
 
-def _play_in_game(card: CardName) -> bool:
+def _play_in_game(card: CardName | CardSpec) -> bool:
     """Play a card in the live game. Returns False if not available."""
+    spec = _spec(card)
     avail = bc._payload(bc.get_available_actions())
     actions = avail.get("actions", [])
-    # Strip spaces so "Iron Wave" matches "IronWave" etc.
-    needle = card.value.replace(" ", "").lower()
+    # Strip spaces so "Iron Wave" matches "IronWave", "Strike+" matches "StrikeIronclad"
+    needle = spec.card.value.replace(" ", "").lower()
     act = next(
         (
             a
@@ -78,15 +101,16 @@ def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> dict:
     """Poll until two consecutive get_combat_state() calls agree on hand contents.
 
     Console commands are async; the state can be mid-transition immediately after
-    set_hand(). Waiting for two identical snapshots in a row ensures we read a
-    settled state before snapshotting for the sim.
+    set_hand() or upgrade_card(). The key includes the upgraded flag so an
+    in-flight upgrade doesn't produce a false-stable read.
     """
     prev_hand: tuple | None = None
     for _ in range(retries):
         raw = bc._payload(bc.get_combat_state())
         hand = tuple(
             sorted(
-                c.get("name", "") for c in raw.get("players", [{}])[0].get("hand", [])
+                (c.get("name", ""), c.get("upgraded", False))
+                for c in raw.get("players", [{}])[0].get("hand", [])
             )
         )
         if hand == prev_hand:
@@ -96,12 +120,15 @@ def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> dict:
     return bc._payload(bc.get_combat_state())
 
 
-@pytest.mark.parametrize("card", BASE_DECK, ids=lambda c: c.name)
+@pytest.mark.parametrize("card", BASE_DECK, ids=str)
 def test_sim_matches_live(card):
     """Sim prediction for playing ``card`` must match the live game result."""
+    spec = _spec(card)
     fix = ByrdonisFix()
     fix.setup_fight()
-    fix.set_hand(card)
+    fix.set_hand(spec.card)
+    if spec.upgraded:
+        fix.upgrade_card(0)
 
     # Wait for the game state to settle after set_hand (console cmds are async)
     raw_before = _stable_combat_state()
@@ -131,7 +158,7 @@ def test_sim_matches_live(card):
     }
 
     # Print full report regardless of outcome
-    print(f"\n--- {card} ---")
+    print(f"\n--- {spec} ---")
     for field, cmp in result.items():
         if cmp.get("skipped"):
             print(f"  {field}: skipped ({cmp['reason']})")
@@ -140,6 +167,6 @@ def test_sim_matches_live(card):
         else:
             print(f"  {field}: ✗  sim={cmp['sim']}  game={cmp['game']}")
 
-    assert not mismatches, f"{card} — sim diverged on: " + ", ".join(
+    assert not mismatches, f"{spec} — sim diverged on: " + ", ".join(
         f"{f}(sim={c['sim']} game={c['game']})" for f, c in mismatches.items()
     )
