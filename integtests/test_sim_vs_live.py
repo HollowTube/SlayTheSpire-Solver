@@ -15,6 +15,12 @@ import pytest
 from sts_sim import PlayCardAction, SelectTargetAction, apply, legal_actions
 from sts_sim import bridge_client as bc
 from sts_sim.bridge import diff, from_combat
+from sts_sim.bridge_types import (
+    CombatSnapshot,
+    parse_available_actions,
+    parse_card_piles,
+    parse_combat_snapshot,
+)
 from sts_sim.names import CardName
 
 from .conftest import CombatFixture
@@ -82,48 +88,42 @@ def _apply_card_in_sim(state, card: CardName | CardSpec):
 def _play_in_game(card: CardName | CardSpec) -> bool:
     """Play a card in the live game. Returns False if not available."""
     spec = _spec(card)
-    avail = bc._payload(bc.get_available_actions())
-    actions = avail.get("actions", [])
+    avail = parse_available_actions(bc._payload(bc.get_available_actions()))
     needle = spec.card.value.replace(" ", "").lower()
 
     # Use hand state to find the exact card index (upgraded vs non-upgraded),
     # then match the action by card_index rather than name alone.  This avoids
     # playing the wrong copy when both an upgraded and non-upgraded version of
     # the same card are present in hand.
-    hand = bc._payload(bc.get_combat_state())["players"][0]["hand"]
+    combat = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
     target_hand_idx = next(
         (
-            c["index"]
-            for c in hand
-            if needle in c["name"].replace(" ", "").lower()
-            and c.get("upgraded", False) == spec.upgraded
+            c.index
+            for c in combat.player.hand
+            if needle in c.name.replace(" ", "").lower() and c.upgraded == spec.upgraded
         ),
         None,
     )
     if target_hand_idx is not None:
-        act = next((a for a in actions if a.get("card_index") == target_hand_idx), None)
+        act = next((a for a in avail.actions if a.card_index == target_hand_idx), None)
         if act:
-            bc.play_card(act["card_index"], act.get("target_index", -1))
+            bc.play_card(act.card_index, act.target_index)
             time.sleep(0.5)
             return True
 
     # Fallback: match by name substring (e.g. when hand index lookup fails)
     act = next(
-        (
-            a
-            for a in actions
-            if needle in a.get("card_name", "").replace(" ", "").lower()
-        ),
+        (a for a in avail.actions if needle in a.card_name.replace(" ", "").lower()),
         None,
     )
     if act is None:
         return False
-    bc.play_card(act["card_index"], act.get("target_index", -1))
+    bc.play_card(act.card_index, act.target_index)
     time.sleep(0.5)
     return True
 
 
-def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> dict:
+def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> CombatSnapshot:
     """Poll until two consecutive get_combat_state() calls agree on hand contents.
 
     Console commands are async; the state can be mid-transition immediately after
@@ -131,19 +131,15 @@ def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> dict:
     in-flight upgrade doesn't produce a false-stable read.
     """
     prev_hand: tuple | None = None
+    snapshot = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
     for _ in range(retries):
-        raw = bc._payload(bc.get_combat_state())
-        hand = tuple(
-            sorted(
-                (c.get("name", ""), c.get("upgraded", False))
-                for c in raw.get("players", [{}])[0].get("hand", [])
-            )
-        )
+        hand = tuple(sorted((c.name, c.upgraded) for c in snapshot.player.hand))
         if hand == prev_hand:
-            return raw
+            return snapshot
         prev_hand = hand
         time.sleep(delay)
-    return bc._payload(bc.get_combat_state())
+        snapshot = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
+    return snapshot
 
 
 @pytest.mark.parametrize("card", BASE_DECK, ids=str)
@@ -156,30 +152,30 @@ def test_sim_matches_live(card):
     if spec.upgraded:
         # The card command appends to the rightmost slot; find its index
         # so we upgrade the correct card rather than whatever is at index 0.
-        hand = bc._payload(bc.get_combat_state())["players"][0]["hand"]
+        combat = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
+        hand = combat.player.hand
         needle = spec.card.value.replace(" ", "").lower()
         idx = next(
             (
-                c["index"]
+                c.index
                 for c in reversed(hand)
-                if needle in c["name"].replace(" ", "").lower()
-                and not c.get("upgraded")
+                if needle in c.name.replace(" ", "").lower() and not c.upgraded
             ),
-            hand[-1]["index"] if hand else 0,
+            hand[-1].index if hand else 0,
         )
         fix.upgrade_card(idx)
 
     # Wait for the game state to settle after set_hand (console cmds are async)
-    raw_before = _stable_combat_state()
-    piles_before = bc._payload(bc.get_card_piles())
-    state_before = from_combat(raw_before, card_piles=piles_before)
+    snapshot_before = _stable_combat_state()
+    piles_before = parse_card_piles(bc._payload(bc.get_card_piles()))
+    state_before = from_combat(snapshot_before, card_piles=piles_before)
 
     # Play in live game
     assert _play_in_game(card), f"{card} not found in available actions after set_hand"
 
     # Capture live state after play
-    raw_after = bc._payload(bc.get_combat_state())
-    piles_after = bc._payload(bc.get_card_piles())
+    snapshot_after = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
+    piles_after = parse_card_piles(bc._payload(bc.get_card_piles()))
 
     # Apply same card in sim
     try:
@@ -188,7 +184,7 @@ def test_sim_matches_live(card):
         pytest.skip(f"sim raised {type(exc).__name__}: {exc}")
 
     # Compare
-    result = diff(sim_result, raw_after, card_piles=piles_after)
+    result = diff(sim_result, snapshot_after, card_piles=piles_after)
 
     mismatches = {
         field: cmp

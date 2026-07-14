@@ -13,6 +13,7 @@ from sts_sim import (
     legal_actions,
 )
 from sts_sim.bridge import from_combat
+from sts_sim.bridge_types import parse_combat_snapshot
 
 
 def test_reconstructing_player_block_and_statuses():
@@ -144,5 +145,5 @@ def test_bridge_from_combat_maps_shrinkpower_to_shrink_status():
         ],
     }
 
-    state = from_combat(combat_snapshot)
+    state = from_combat(parse_combat_snapshot(combat_snapshot))
     assert "Shrink" in state.player_statuses
