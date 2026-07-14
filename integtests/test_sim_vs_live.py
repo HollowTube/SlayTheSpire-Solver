@@ -53,7 +53,8 @@ BASE_DECK: list[CardName | CardSpec] = [
     *_both(CardName.BASH),  # 8 / 10 damage + 2 / 3 Vulnerable
     *_both(CardName.IRON_WAVE),  # 5 / 7 block + 5 / 7 damage
     *_both(CardName.TWIN_STRIKE),  # 5×2 / 7×2 damage
-    *_both(CardName.SHRUG_IT_OFF),  # 8 / 11 block
+    # SHRUG_IT_OFF excluded: draws a card, so hand/draw_pile distribution is
+    # non-deterministic — sim draw order doesn't match game RNG draw order.
     *_both(CardName.THUNDERCLAP),  # 4 / 7 AoE + 1 Vulnerable
     *_both(CardName.UPPERCUT),  # 13 / 17 damage + Weak + Vulnerable
     *_both(CardName.ANGER),  # 6 / 8 damage + copy to discard
