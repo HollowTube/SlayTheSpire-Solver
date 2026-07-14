@@ -53,7 +53,11 @@ def _card_list(cards: list[dict]) -> list[str]:
     return result
 
 
-def from_combat(combat: dict, player_state: dict | None = None) -> CombatState:
+def from_combat(
+    combat: dict,
+    player_state: dict | None = None,
+    card_piles: dict | None = None,
+) -> CombatState:
     """Build a CombatState from bridge get_combat_state() output.
 
     Args:
@@ -62,24 +66,32 @@ def from_combat(combat: dict, player_state: dict | None = None) -> CombatState:
         player_state: Optional result of get_player_state() — used to populate
                       the draw pile from the full deck when combat doesn't
                       include it.
+        card_piles: Optional result of bridge_client.get_card_piles() — gives
+                    the actual draw/discard/exhaust card lists (more accurate).
 
     Returns:
-        A CombatState with all deterministic fields populated. Draw pile
-        order is arbitrary; RNG state is fresh (seed=0).
+        A CombatState with all deterministic fields populated. Without
+        card_piles the draw pile order is arbitrary; with it the order matches
+        the live game.
     """
     players = combat.get("players", [])
     p = players[0] if players else {}
 
-    hand_raw = p.get("hand", [])
-    hand = _card_list(hand_raw)
+    def _pile_cards(key: str) -> list[dict]:
+        if card_piles:
+            return card_piles.get(key, {}).get("cards", [])
+        return []
 
-    discard_raw = combat.get("discard_pile", p.get("discard", []))
-    discard = _card_list(discard_raw)
+    # Hand comes from combat state (same snapshot as HP/energy/enemies)
+    hand = _card_list(p.get("hand", []))
 
-    # Draw pile: use combat draw_pile if available, else reconstruct from deck
-    draw_raw = combat.get("draw_pile", p.get("draw", []))
-    if draw_raw:
-        draw = _card_list(draw_raw)
+    discard = _card_list(_pile_cards("discard_pile"))
+    exhaust = _card_list(_pile_cards("exhaust_pile"))
+
+    # Draw pile: use card_piles if available, else reconstruct from deck
+    draw_raw_list = _pile_cards("draw_pile")
+    if draw_raw_list:
+        draw = _card_list(draw_raw_list)
     elif player_state:
         ps_players = player_state.get("players", [])
         ps_p = ps_players[0] if ps_players else {}
@@ -132,6 +144,7 @@ def from_combat(combat: dict, player_state: dict | None = None) -> CombatState:
         hand=hand,
         draw_pile=draw,
         discard_pile=discard,
+        exhaust_pile=exhaust,
         seed=0,
     )
 
@@ -160,11 +173,18 @@ def _fmt_intent(intent: Any) -> str | None:
     return " + ".join(parts) if parts else move_id or None
 
 
-def diff(predicted: CombatState, actual: dict) -> dict[str, Any]:
+def diff(
+    predicted: CombatState,
+    actual: dict,
+    card_piles: dict | None = None,
+) -> dict[str, Any]:
     """Compare a sim-predicted CombatState against a bridge combat snapshot.
 
-    Returns a dict of field comparisons. Fields that are non-deterministic
-    (draw results, enemy intent selection) are marked ``skipped``.
+    Args:
+        predicted: Sim CombatState after applying the action.
+        actual: Raw get_combat_state() payload (already unwrapped).
+        card_piles: Optional get_card_piles() payload for pile comparisons.
+                    Without it, pile fields are marked skipped.
 
     Each entry is one of:
         {"match": True, "sim": v, "game": v}
@@ -189,15 +209,90 @@ def diff(predicted: CombatState, actual: dict) -> dict[str, Any]:
         result[f"{prefix}.block"] = _cmp(sim_m.block, act_e.get("block", 0))
         result[f"{prefix}.intent"] = {"skipped": True, "reason": "non-deterministic"}
 
-    # Hand size (not contents — draw order unknown)
-    sim_hand_size = len(predicted.hand)
-    act_hand_size = len(ap.get("hand", []))
-    result["hand_size"] = _cmp(sim_hand_size, act_hand_size)
-    result["hand_contents"] = {"skipped": True, "reason": "draw order unknown"}
+    def _pile_cards(key: str) -> list[dict] | None:
+        if card_piles is None:
+            return None
+        return card_piles.get(key, {}).get("cards", [])
+
+    # Hand
+    # Hand comes from combat state (same snapshot as HP/energy) for consistency
+    result["hand_cards"] = _cmp_pile(predicted.hand, _card_list(ap.get("hand", [])))
+
+    # Discard pile
+    act_discard = _pile_cards("discard_pile")
+    if act_discard is not None:
+        result["discard_pile"] = _cmp_pile(
+            predicted.discard_pile, _card_list(act_discard)
+        )
+    else:
+        result["discard_pile"] = {"skipped": True, "reason": "card_piles not provided"}
+
+    # Draw pile (order unknown — compare as multiset)
+    act_draw = _pile_cards("draw_pile")
+    if act_draw is not None:
+        result["draw_pile"] = _cmp_pile(predicted.draw_pile, _card_list(act_draw))
+    else:
+        result["draw_pile"] = {"skipped": True, "reason": "card_piles not provided"}
+
+    # Exhaust pile
+    act_exhaust = _pile_cards("exhaust_pile")
+    if act_exhaust is not None:
+        result["exhaust_pile"] = _cmp_pile(
+            predicted.exhaust_pile, _card_list(act_exhaust)
+        )
+    else:
+        result["exhaust_pile"] = {"skipped": True, "reason": "card_piles not provided"}
+
+    # Player statuses
+    sim_p_statuses = _count_statuses(predicted.player_statuses)
+    act_p_statuses = _statuses_from_powers(ap.get("powers", []))
+    for status in sim_p_statuses.keys() | act_p_statuses.keys():
+        result[f"player.{status}"] = _cmp(
+            sim_p_statuses.get(status, 0), act_p_statuses.get(status, 0)
+        )
+
+    # Enemy statuses
+    for i, (sim_m, act_e) in enumerate(zip(predicted.monsters, actual_enemies)):
+        sim_m_statuses = _count_statuses(sim_m.statuses)
+        act_m_statuses = _statuses_from_powers(act_e.get("powers", []))
+        for status in sim_m_statuses.keys() | act_m_statuses.keys():
+            result[f"enemy[{i}].{status}"] = _cmp(
+                sim_m_statuses.get(status, 0), act_m_statuses.get(status, 0)
+            )
 
     return result
+
+
+def _count_statuses(statuses: list[str]) -> dict[str, int]:
+    """Convert sim's flat status name list to {name: stacks}.
+
+    Binary statuses (Vulnerable, Weak, Frail) are stored as repeated entries;
+    counting them gives stacks. Strength appears once per (Strength, n) variant
+    and is best queried via player_strength / Monster.strength instead.
+    """
+    result: dict[str, int] = {}
+    for s in statuses:
+        result[s] = result.get(s, 0) + 1
+    return result
+
+
+def _statuses_from_powers(powers: list[dict]) -> dict[str, int]:
+    """Convert bridge powers list to {sim_status_name: stacks} dict."""
+    out: dict[str, int] = {}
+    for p in powers:
+        name = p.get("name") or p.get("id") or p.get("power_id", "")
+        mapped = STATUS_MAP.get(name)
+        if mapped:
+            out[mapped] = out.get(mapped, 0) + int(p.get("stacks", p.get("amount", 1)))
+    return out
 
 
 def _cmp(sim_val: Any, game_val: Any) -> dict[str, Any]:
     match = sim_val == game_val
     return {"match": match, "sim": sim_val, "game": game_val}
+
+
+def _cmp_pile(sim_pile: list[str], act_pile: list[str]) -> dict[str, Any]:
+    """Compare two card piles as sorted multisets (order-independent)."""
+    s, g = sorted(sim_pile), sorted(act_pile)
+    return {"match": s == g, "sim": s, "game": g}
