@@ -1,16 +1,17 @@
-"""Canonical card and monster name enums + bridge normalization.
+"""Canonical card, monster, and status name enums + bridge normalization.
 
 Provides:
   - ``CardName``    — enum of every card in ``cards.rs`` / ``data/cards.toml``
   - ``MonsterName`` — enum of every monster in ``monsters.rs`` / ``data/monsters.toml``
+  - ``StatusName``  — enum of every status in ``data/statuses.toml``
   - ``card()``      — normalise a bridge C# card class name → sim string
   - ``monster()``   — normalise a bridge C# monster class name → sim string
 
 Bridge returns C# class names (e.g. ``StrikeIronclad``, ``FuzzyWurmCrawler``).
 Sim uses display strings (e.g. ``"Strike"``, ``"Fuzzy Wurm Crawler"``).
 
-**Do not edit the generated regions by hand.** Edit ``data/cards.toml`` or
-``data/monsters.toml`` and run ``python scripts/gen_ids.py``.
+**Do not edit the generated regions by hand.** Edit the relevant TOML in ``data/``
+and run ``python scripts/gen_ids.py``.
 """
 
 from __future__ import annotations
@@ -157,6 +158,53 @@ class MonsterName(str, Enum):
 
 
 # END GENERATED MonsterName
+
+
+# ── Status catalogue ─────────────────────────────────────────────────────────
+
+
+class StatusName(str, Enum):
+    """Canonical status/power names — one per status in ``data/statuses.toml``.
+
+    Each member carries the bridge class aliases that map to it, so
+    ``STATUS_MAP`` in ``bridge.py`` can be derived without a separate
+    generated artifact.
+
+    ``StatusName.VULNERABLE == "Vulnerable"`` is true (str subclass).
+    ``StatusName.VULNERABLE.bridge_classes`` gives ``("Vulnerable", "VulnerablePower")``.
+    """
+
+    bridge_classes: tuple[str, ...]
+
+    def __new__(cls, value: str, bridge_classes: tuple[str, ...] = ()):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj.bridge_classes = bridge_classes
+        return obj
+
+    # BEGIN GENERATED StatusName
+    VULNERABLE = ("Vulnerable", ("Vulnerable", "VulnerablePower"))
+    WEAK = ("Weak", ("Weak", "WeakPower"))
+    FRAIL = ("Frail", ("Frail", "FrailPower"))
+    STRENGTH = ("Strength", ("Strength",))
+    DEXTERITY = ("Dexterity", ("Dexterity",))
+    POISON = ("Poison", ("Poison",))
+    THORNS = ("Thorns", ("Thorns",))
+    METALLICIZE = ("Metallicize", ("Metallicize",))
+    RITUAL = ("Ritual", ("Ritual",))
+    BARRICADE = ("Barricade", ("Barricade",))
+    PLATING = ("Plating", ("Plating",))
+    REGEN = ("Regen", ("Regen",))
+    BRUTALITY = ("Brutality", ("Brutality",))
+    DEMON_FORM = ("DemonForm", ("DemonForm",))
+    JUGGERNAUT = ("Juggernaut", ("Juggernaut",))
+    INFLAME = ("Inflame", ("Inflame", "InflamePower"))
+    FEEL_NO_PAIN = ("FeelNoPain", ("FeelNoPain", "FeelNoPainPower"))
+    NO_DRAW = ("NoDraw", ("NoDraw", "NoDrawPower"))
+    SHRINK = ("Shrink", ("Shrink", "ShrinkPower"))
+
+
+# END GENERATED StatusName
 
 
 # ── Bridge → sim card normalization ──────────────────────────────────────────

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate ids.rs, names.py, and cards.rs regions from data/cards.toml + data/monsters.toml.
+"""Generate ids.rs, names.py, cards.rs, and bridge.py regions from data/*.toml.
 
 Usage:
     python scripts/gen_ids.py          # regenerate in place
@@ -138,6 +138,27 @@ def _gen_card_sts2_id_map(cards: list[dict]) -> str:
 _CHAR_SUFFIXES = ("Ironclad", "Silent", "Defect", "Watcher", "Huntress")
 
 
+def _gen_status_name_enum(statuses: list[dict]) -> str:
+    """StatusName enum body — one member per entry in statuses.toml.
+
+    Each member is a (sim_name, bridge_classes_tuple) pair so that STATUS_MAP
+    in bridge.py can be derived without a separate generated artifact.
+    """
+    lines = []
+    for s in statuses:
+        sim = s["sim_name"]
+        member = _display_to_py_member(sim)
+        bcs = s["bridge_classes"]
+        # Single-item tuple requires trailing comma; multi-item must NOT have one
+        # (ruff's magic-trailing-comma rule would expand it to multi-line otherwise).
+        if len(bcs) == 1:
+            bcs_str = f'("{bcs[0]}",)'
+        else:
+            bcs_str = "(" + ", ".join(f'"{bc}"' for bc in bcs) + ")"
+        lines.append(f'    {member} = ("{sim}", {bcs_str})')
+    return "\n".join(lines) + "\n\n\n"
+
+
 def _gen_bridge_card_map(cards: list[dict]) -> str:
     """_BRIDGE_CARD_MAP entries — bridge class name → sim display name.
 
@@ -182,11 +203,14 @@ def main() -> None:
 
     cards_toml = REPO_ROOT / "data" / "cards.toml"
     monsters_toml = REPO_ROOT / "data" / "monsters.toml"
+    statuses_toml = REPO_ROOT / "data" / "statuses.toml"
 
     with cards_toml.open("rb") as f:
         cards = tomllib.load(f)["cards"]
     with monsters_toml.open("rb") as f:
         monsters = tomllib.load(f)["monsters"]
+    with statuses_toml.open("rb") as f:
+        statuses = tomllib.load(f)["statuses"]
 
     # (path, new_content, comment_char, region_tag)
     # names.py has five distinct regions, disambiguated by tag.
@@ -223,6 +247,12 @@ def main() -> None:
             "_BRIDGE_CARD_MAP",
         ),
         (REPO_ROOT / "src" / "cards.rs", _gen_all_card_names(cards), "//", ""),
+        (
+            REPO_ROOT / "python" / "sts_sim" / "names.py",
+            _gen_status_name_enum(statuses),
+            "#",
+            "StatusName",
+        ),
     ]
 
     # For files with multiple regions we apply them sequentially so each

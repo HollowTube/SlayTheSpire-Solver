@@ -14,62 +14,16 @@ Gaps (accepted, documented):
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from . import CombatState, Monster
 from . import names as _names
+from .names import StatusName
 
-
-def _to_screaming_snake(s: str) -> str:
-    s = re.sub(r"(?<=[a-z])(?=[A-Z])", "_", s)
-    return re.sub(r"[^A-Za-z0-9]+", "_", s).upper()
-
-
-# Bridge power name → sim Status string.
-# Keys are whatever the bridge puts in the "name"/"id"/"power_id" field —
-# sometimes the short Godot class suffix ("Vulnerable"), sometimes the full
-# class name ("VulnerablePower").  Values are the canonical sim Status names
-# used by engine.rs and CombatState.  Add an alias whenever the bridge is
-# observed to use a different spelling.
+# Derived from StatusName.bridge_classes — edit data/statuses.toml, not this line.
 STATUS_MAP: dict[str, str] = {
-    "Strength": "Strength",
-    "Dexterity": "Dexterity",
-    "Vulnerable": "Vulnerable",
-    "VulnerablePower": "Vulnerable",
-    "Weak": "Weak",
-    "WeakPower": "Weak",
-    "Frail": "Frail",
-    "FrailPower": "Frail",
-    "Poison": "Poison",
-    "Thorns": "Thorns",
-    "Metallicize": "Metallicize",
-    "Ritual": "Ritual",
-    "Barricade": "Barricade",
-    "Plating": "Plating",
-    "Regen": "Regen",
-    "Brutality": "Brutality",
-    "DemonForm": "DemonForm",
-    "Juggernaut": "Juggernaut",
-    "NoDraw": "NoDraw",
-    "NoDrawPower": "NoDraw",
-    "Inflame": "Inflame",
-    "InflamePower": "Inflame",
-    "FeelNoPain": "FeelNoPain",
-    "FeelNoPainPower": "FeelNoPain",
-    # Shrinker Beetle debuff
-    "ShrinkPower": "Shrink",
-    "Shrink": "Shrink",
+    bc: s.value for s in StatusName for bc in s.bridge_classes
 }
-
-
-# Constants derived from STATUS_MAP values — no separate source of truth.
-# e.g. StatusName.VULNERABLE == "Vulnerable", StatusName.FEEL_NO_PAIN == "FeelNoPain"
-StatusName = type(
-    "StatusName",
-    (),
-    {_to_screaming_snake(v): v for v in set(STATUS_MAP.values())},
-)
 
 
 def _map_statuses(powers: list[dict]) -> list[tuple[str, int]]:
