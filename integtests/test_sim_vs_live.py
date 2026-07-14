@@ -40,23 +40,26 @@ def _spec(card: CardName | CardSpec) -> CardSpec:
     return card if isinstance(card, CardSpec) else CardSpec(card)
 
 
-# Cards to test — Ironclad base deck + commons.
+# Cards to test — Ironclad base deck + commons, each at base and upgraded level.
 # INFLAME excluded: sim exhausts it (STS1 behaviour), but STS2 treats it as a
 # Power-type card that never leaves the hand into any pile.
+def _both(card: CardName) -> list[CardSpec]:
+    return [CardSpec(card), CardSpec(card, upgraded=True)]
+
+
 BASE_DECK: list[CardName | CardSpec] = [
-    CardName.STRIKE,
-    CardSpec(CardName.STRIKE, upgraded=True),  # Strike+: 9 damage instead of 6
-    CardName.DEFEND,
-    CardName.BASH,  # damage + 2 Vulnerable
-    CardName.IRON_WAVE,  # block + damage
-    CardName.TWIN_STRIKE,  # multi-hit
-    CardName.SHRUG_IT_OFF,  # block only (no target)
-    CardName.THUNDERCLAP,  # AoE damage + 1 Vulnerable
-    CardName.UPPERCUT,  # damage + 1 Weak + 1 Vulnerable
-    CardName.ANGER,  # damage + add copy to discard
-    CardName.IMPERVIOUS,  # 30 block, exhausts
-    CardName.BLUDGEON,  # heavy damage (32)
-    CardName.BREAK,  # apply 2 Frail to enemy
+    *_both(CardName.STRIKE),  # 6 / 9 damage
+    *_both(CardName.DEFEND),  # 5 / 8 block
+    *_both(CardName.BASH),  # 8 / 10 damage + 2 / 3 Vulnerable
+    *_both(CardName.IRON_WAVE),  # 5 / 7 block + 5 / 7 damage
+    *_both(CardName.TWIN_STRIKE),  # 5×2 / 7×2 damage
+    *_both(CardName.SHRUG_IT_OFF),  # 8 / 11 block
+    *_both(CardName.THUNDERCLAP),  # 4 / 7 AoE + 1 Vulnerable
+    *_both(CardName.UPPERCUT),  # 13 / 17 damage + Weak + Vulnerable
+    *_both(CardName.ANGER),  # 6 / 8 damage + copy to discard
+    *_both(CardName.IMPERVIOUS),  # 30 / 40 block, exhausts
+    *_both(CardName.BLUDGEON),  # 32 / 42 damage
+    *_both(CardName.BREAK),  # 2 Frail / +10 damage (Break+)
 ]
 
 BYRDONIS_HP = 84
@@ -128,7 +131,20 @@ def test_sim_matches_live(card):
     fix.setup_fight()
     fix.set_hand(spec.card)
     if spec.upgraded:
-        fix.upgrade_card(0)
+        # The card command appends to the rightmost slot; find its index
+        # so we upgrade the correct card rather than whatever is at index 0.
+        hand = bc._payload(bc.get_combat_state())["players"][0]["hand"]
+        needle = spec.card.value.replace(" ", "").lower()
+        idx = next(
+            (
+                c["index"]
+                for c in reversed(hand)
+                if needle in c["name"].replace(" ", "").lower()
+                and not c.get("upgraded")
+            ),
+            hand[-1]["index"] if hand else 0,
+        )
+        fix.upgrade_card(idx)
 
     # Wait for the game state to settle after set_hand (console cmds are async)
     raw_before = _stable_combat_state()
