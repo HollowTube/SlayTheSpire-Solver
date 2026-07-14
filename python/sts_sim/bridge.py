@@ -195,7 +195,35 @@ def diff(predicted: CombatState, actual: dict) -> dict[str, Any]:
     result["hand_size"] = _cmp(sim_hand_size, act_hand_size)
     result["hand_contents"] = {"skipped": True, "reason": "draw order unknown"}
 
+    # Player statuses
+    sim_p_statuses = dict(predicted.player_statuses)
+    act_p_statuses = _statuses_from_powers(ap.get("powers", []))
+    for status in sim_p_statuses.keys() | act_p_statuses.keys():
+        result[f"player.{status}"] = _cmp(
+            sim_p_statuses.get(status, 0), act_p_statuses.get(status, 0)
+        )
+
+    # Enemy statuses
+    for i, (sim_m, act_e) in enumerate(zip(predicted.monsters, actual_enemies)):
+        sim_m_statuses = dict(sim_m.statuses)
+        act_m_statuses = _statuses_from_powers(act_e.get("powers", []))
+        for status in sim_m_statuses.keys() | act_m_statuses.keys():
+            result[f"enemy[{i}].{status}"] = _cmp(
+                sim_m_statuses.get(status, 0), act_m_statuses.get(status, 0)
+            )
+
     return result
+
+
+def _statuses_from_powers(powers: list[dict]) -> dict[str, int]:
+    """Convert bridge powers list to {sim_status_name: stacks} dict."""
+    out: dict[str, int] = {}
+    for p in powers:
+        name = p.get("name") or p.get("id") or p.get("power_id", "")
+        mapped = STATUS_MAP.get(name)
+        if mapped:
+            out[mapped] = out.get(mapped, 0) + int(p.get("stacks", p.get("amount", 1)))
+    return out
 
 
 def _cmp(sim_val: Any, game_val: Any) -> dict[str, Any]:
