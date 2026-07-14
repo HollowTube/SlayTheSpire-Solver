@@ -174,10 +174,12 @@ class StatusName(str, Enum):
     ``StatusName.VULNERABLE.bridge_classes`` gives ``("Vulnerable", "VulnerablePower")``.
     """
 
+    bridge_classes: tuple[str, ...]
+
     def __new__(cls, value: str, bridge_classes: tuple[str, ...] = ()):
         obj = str.__new__(cls, value)
         obj._value_ = value
-        obj.bridge_classes = bridge_classes  # type: ignore[attr-defined]
+        obj.bridge_classes = bridge_classes
         return obj
 
     # BEGIN GENERATED StatusName
