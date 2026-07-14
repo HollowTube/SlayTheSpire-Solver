@@ -83,8 +83,30 @@ def _play_in_game(card: CardName | CardSpec) -> bool:
     spec = _spec(card)
     avail = bc._payload(bc.get_available_actions())
     actions = avail.get("actions", [])
-    # Strip spaces so "Iron Wave" matches "IronWave", "Strike+" matches "StrikeIronclad"
     needle = spec.card.value.replace(" ", "").lower()
+
+    # Use hand state to find the exact card index (upgraded vs non-upgraded),
+    # then match the action by card_index rather than name alone.  This avoids
+    # playing the wrong copy when both an upgraded and non-upgraded version of
+    # the same card are present in hand.
+    hand = bc._payload(bc.get_combat_state())["players"][0]["hand"]
+    target_hand_idx = next(
+        (
+            c["index"]
+            for c in hand
+            if needle in c["name"].replace(" ", "").lower()
+            and c.get("upgraded", False) == spec.upgraded
+        ),
+        None,
+    )
+    if target_hand_idx is not None:
+        act = next((a for a in actions if a.get("card_index") == target_hand_idx), None)
+        if act:
+            bc.play_card(act["card_index"], act.get("target_index", -1))
+            time.sleep(0.5)
+            return True
+
+    # Fallback: match by name substring (e.g. when hand index lookup fails)
     act = next(
         (
             a
