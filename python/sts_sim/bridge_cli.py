@@ -104,9 +104,10 @@ def _first_player(data: Any) -> dict[str, Any]:
 
 def _call(fn, *args, **kwargs) -> dict:
     result = fn(*args, **kwargs)
-    # send_request returns raw {"result": {...}} — unwrap it
     if isinstance(result, dict):
-        result = result.get("result", result)
+        result = result.get(
+            "result", result
+        )  # idempotent; handles any double-wrapped legacy responses
     if not isinstance(result, dict):
         click.echo(
             _error(

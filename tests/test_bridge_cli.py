@@ -346,7 +346,7 @@ def test_send_request_handles_double_encoded_json(monkeypatch):
     monkeypatch.setattr(socket, "create_connection", lambda *a, **kw: fake_sock)
 
     result = bc.send_request("ping")
-    assert result == {"result": inner}
+    assert result == inner
 
 
 # ─── formatting helpers ───────────────────────────────────────────────────────

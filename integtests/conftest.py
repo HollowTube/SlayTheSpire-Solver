@@ -51,11 +51,11 @@ def _console(cmd: str) -> dict:
 
 
 def _combat() -> CombatSnapshot:
-    return parse_combat_snapshot(bc._payload(bc.get_combat_state()))
+    return parse_combat_snapshot(bc.get_combat_state())
 
 
 def _screen() -> str:
-    return bc._payload(bc.get_screen()).get("screen", "UNKNOWN")
+    return bc.get_screen().get("screen", "UNKNOWN")
 
 
 # ---------------------------------------------------------------------------
@@ -157,9 +157,7 @@ class CombatFixture:
         return 0
 
     def play(self, keyword: str) -> bool:
-        avail: AvailableActions = parse_available_actions(
-            bc._payload(bc.get_available_actions())
-        )
+        avail: AvailableActions = parse_available_actions(bc.get_available_actions())
         act = next(
             (a for a in avail.actions if keyword.lower() in a.card_name.lower()),
             None,

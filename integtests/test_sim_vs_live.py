@@ -88,14 +88,14 @@ def _apply_card_in_sim(state, card: CardName | CardSpec):
 def _play_in_game(card: CardName | CardSpec) -> bool:
     """Play a card in the live game. Returns False if not available."""
     spec = _spec(card)
-    avail = parse_available_actions(bc._payload(bc.get_available_actions()))
+    avail = parse_available_actions(bc.get_available_actions())
     needle = spec.card.value.replace(" ", "").lower()
 
     # Use hand state to find the exact card index (upgraded vs non-upgraded),
     # then match the action by card_index rather than name alone.  This avoids
     # playing the wrong copy when both an upgraded and non-upgraded version of
     # the same card are present in hand.
-    combat = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
+    combat = parse_combat_snapshot(bc.get_combat_state())
     target_hand_idx = next(
         (
             c.index
@@ -131,14 +131,14 @@ def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> CombatSnapsho
     in-flight upgrade doesn't produce a false-stable read.
     """
     prev_hand: tuple | None = None
-    snapshot = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
+    snapshot = parse_combat_snapshot(bc.get_combat_state())
     for _ in range(retries):
         hand = tuple(sorted((c.name, c.upgraded) for c in snapshot.player.hand))
         if hand == prev_hand:
             return snapshot
         prev_hand = hand
         time.sleep(delay)
-        snapshot = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
+        snapshot = parse_combat_snapshot(bc.get_combat_state())
     return snapshot
 
 
@@ -152,7 +152,7 @@ def test_sim_matches_live(card):
     if spec.upgraded:
         # The card command appends to the rightmost slot; find its index
         # so we upgrade the correct card rather than whatever is at index 0.
-        combat = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
+        combat = parse_combat_snapshot(bc.get_combat_state())
         hand = combat.player.hand
         needle = spec.card.value.replace(" ", "").lower()
         idx = next(
@@ -167,15 +167,15 @@ def test_sim_matches_live(card):
 
     # Wait for the game state to settle after set_hand (console cmds are async)
     snapshot_before = _stable_combat_state()
-    piles_before = parse_card_piles(bc._payload(bc.get_card_piles()))
+    piles_before = parse_card_piles(bc.get_card_piles())
     state_before = from_combat(snapshot_before, card_piles=piles_before)
 
     # Play in live game
     assert _play_in_game(card), f"{card} not found in available actions after set_hand"
 
     # Capture live state after play
-    snapshot_after = parse_combat_snapshot(bc._payload(bc.get_combat_state()))
-    piles_after = parse_card_piles(bc._payload(bc.get_card_piles()))
+    snapshot_after = parse_combat_snapshot(bc.get_combat_state())
+    piles_after = parse_card_piles(bc.get_card_piles())
 
     # Apply same card in sim
     try:
