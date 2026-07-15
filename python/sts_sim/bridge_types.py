@@ -229,7 +229,7 @@ def parse_combat_snapshot(raw: dict) -> CombatSnapshot:
     enemies = [
         EnemyState(
             hp=e.get("hp", 0),
-            max_hp=e.get("max_hp", e.get("hp", 0)),
+            max_hp=int(e.get("max_hp") or e.get("hp") or 0),
             block=e.get("block", 0),
             name=e.get("name", ""),
             is_alive=bool(e.get("is_alive", True)),
