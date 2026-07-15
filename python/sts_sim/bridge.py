@@ -16,9 +16,16 @@ from __future__ import annotations
 
 from typing import Any, Protocol, Sequence
 
-from . import CombatState, Monster
+from . import CombatState, EndTurnAction, Monster, PlayCardAction, SelectTargetAction
 from . import names as _names
-from .bridge_types import CardEntry, CardPiles, CombatSnapshot, Intent, Power
+from .bridge_types import (
+    AvailableActions,
+    CardEntry,
+    CardPiles,
+    CombatSnapshot,
+    Intent,
+    Power,
+)
 from .names import StatusName
 
 # Derived from StatusName.bridge_classes — edit data/statuses.toml, not this line.
@@ -158,6 +165,44 @@ def _fmt_intent(intent: Intent | None) -> str | None:
         else:
             parts.append(i.type)
     return " + ".join(parts) if parts else intent.move_id or None
+
+
+def sim_action_to_bridge(
+    action: PlayCardAction | EndTurnAction | SelectTargetAction,
+    snapshot: CombatSnapshot,
+    avail: AvailableActions,
+) -> tuple[str, dict]:
+    """Translate a typed sim action to a (method, kwargs) pair for bridge_client.
+
+    Returns one of:
+        ("end_turn", {})
+        ("play_card", {"card_index": int, "target_index": int})
+        ("unknown", {})  — if the card is not found in the live hand
+    """
+    if isinstance(action, EndTurnAction):
+        return "end_turn", {}
+
+    if isinstance(action, PlayCardAction):
+        target_card = next(
+            (
+                c
+                for c in snapshot.player.hand
+                if _names.card(c.name) == action.card_name
+                and c.upgraded == action.upgraded
+            ),
+            None,
+        )
+        if target_card is None:
+            return "unknown", {}
+        bridge_act = next(
+            (a for a in avail.actions if a.card_index == target_card.index), None
+        )
+        return "play_card", {
+            "card_index": target_card.index,
+            "target_index": bridge_act.target_index if bridge_act else -1,
+        }
+
+    return "unknown", {}
 
 
 def diff(

@@ -1231,6 +1231,52 @@ def potion(ctx: click.Context, potion_id: str) -> None:
     _dev_out(cmd, result)
 
 
+# ── autoplay ─────────────────────────────────────────────────────────────────
+
+
+@main.command()
+@click.option(
+    "--iterations",
+    default=300,
+    show_default=True,
+    type=int,
+    help="MCTS rollouts per decision.",
+)
+@click.option(
+    "--fight", default=None, help="Jump to this encounter first (e.g. NIBBITS_WEAK)."
+)
+@click.pass_context
+def autoplay(ctx: click.Context, iterations: int, fight: str | None) -> None:
+    """Play the current combat using MCTS. Pass --fight to start a specific encounter."""
+    import time
+
+    from .autoplay import play_combat
+
+    if fight:
+        if bc.get_screen().get("screen", "") not in ("MAP",):
+            _call(bc.execute_console_command, "heal 999")
+            time.sleep(0.25)
+            _call(bc.execute_console_command, "room MAP")
+            time.sleep(1.5)
+        _call(bc.execute_console_command, "heal 999")
+        time.sleep(0.25)
+        _call(bc.execute_console_command, f"fight {fight}")
+        time.sleep(1.0)
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            s = bc.get_screen().get("screen", "")
+            if "COMBAT" in s and "LOADING" not in s:
+                break
+            time.sleep(0.4)
+
+    final_screen = play_combat(iterations=iterations, verbose=not ctx.obj["as_json"])
+    if ctx.obj["as_json"]:
+        click.echo(json.dumps({"result": "done", "screen": final_screen}))
+        return
+    click.echo(_block("autoplay", {"result": "done", "screen": final_screen}))
+    click.echo(_hint(["Run `sts2` to see current state"]))
+
+
 # ── hook setup ────────────────────────────────────────────────────────────────
 
 _OPENCODE_PLUGIN_TEMPLATE = """
