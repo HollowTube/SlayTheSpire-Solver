@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import time
 
-from . import legal_actions, mcts_search
-from . import bridge_client as bc
-from .bridge import from_combat, sim_action_to_bridge
-from .bridge_types import (
+from .. import legal_actions, mcts_search
+from . import client as bc
+from .translate import from_combat, sim_action_to_bridge
+from .types import (
     parse_available_actions,
     parse_card_piles,
     parse_combat_snapshot,

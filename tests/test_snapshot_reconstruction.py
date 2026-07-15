@@ -13,7 +13,7 @@ from sts_sim import (
     legal_actions,
 )
 from sts_sim.bridge import from_combat
-from sts_sim.bridge_types import parse_combat_snapshot
+from sts_sim.bridge.types import parse_combat_snapshot
 
 
 def test_reconstructing_player_block_and_statuses():

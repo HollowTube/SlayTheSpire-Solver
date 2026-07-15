@@ -13,9 +13,9 @@ from typing import NamedTuple
 import pytest
 
 from sts_sim import PlayCardAction, SelectTargetAction, apply, legal_actions
-from sts_sim import bridge_client as bc
+from sts_sim.bridge import client as bc
 from sts_sim.bridge import diff, from_combat
-from sts_sim.bridge_types import (
+from sts_sim.bridge.types import (
     CombatSnapshot,
     parse_available_actions,
     parse_card_piles,

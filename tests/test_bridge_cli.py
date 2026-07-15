@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from sts_sim.bridge_cli import (
+from sts_sim.bridge.cli import (
     _call,
     _card_name,
     _card_upgraded,
@@ -12,7 +12,7 @@ from sts_sim.bridge_cli import (
     _fmt_intent,
     main,
 )
-from sts_sim import bridge_client as bc
+from sts_sim.bridge import client as bc
 
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ def test_call_returns_raw_dict_when_no_result_key():
 
 
 def test_call_exits_on_error(monkeypatch):
-    monkeypatch.setattr("sts_sim.bridge_cli.click.echo", lambda x: None)
+    monkeypatch.setattr("sts_sim.bridge.cli.click.echo", lambda x: None)
 
     def fn():
         return {"result": {"error": "something broke"}}
@@ -79,7 +79,7 @@ def test_call_exits_on_error(monkeypatch):
 
 
 def test_call_exits_on_non_dict_return(monkeypatch):
-    monkeypatch.setattr("sts_sim.bridge_cli.click.echo", lambda x: None)
+    monkeypatch.setattr("sts_sim.bridge.cli.click.echo", lambda x: None)
 
     def fn():
         return "double-encoded string"
@@ -392,7 +392,7 @@ def test_error_block():
 
 
 def test_action_status_event_proceed_blocked_when_blessings_available():
-    from sts_sim.bridge_cli import _action_status
+    from sts_sim.bridge.cli import _action_status
 
     actions = [
         {"action": "event_option"},
@@ -402,7 +402,7 @@ def test_action_status_event_proceed_blocked_when_blessings_available():
 
 
 def test_action_status_event_proceed_ready_when_no_blessings():
-    from sts_sim.bridge_cli import _action_status
+    from sts_sim.bridge.cli import _action_status
 
     actions = [
         {"action": "event_proceed"},
@@ -412,7 +412,7 @@ def test_action_status_event_proceed_ready_when_no_blessings():
 
 
 def test_action_status_card_confirm_blocked_until_selection():
-    from sts_sim.bridge_cli import _action_status
+    from sts_sim.bridge.cli import _action_status
 
     actions = [
         {"action": "card_select"},
@@ -422,7 +422,7 @@ def test_action_status_card_confirm_blocked_until_selection():
 
 
 def test_action_status_card_confirm_ready_when_no_selections():
-    from sts_sim.bridge_cli import _action_status
+    from sts_sim.bridge.cli import _action_status
 
     actions = [
         {"action": "card_confirm"},
@@ -431,7 +431,7 @@ def test_action_status_card_confirm_ready_when_no_selections():
 
 
 def test_action_status_default_ready():
-    from sts_sim.bridge_cli import _action_status
+    from sts_sim.bridge.cli import _action_status
 
     actions = [{"action": "play_card"}, {"action": "end_turn"}]
     assert _action_status({"action": "play_card"}, actions) == "ready"
@@ -441,7 +441,7 @@ def test_action_status_default_ready():
 
 
 def test_home_hints_neow_pick_phase():
-    from sts_sim.bridge_cli import _home_hints
+    from sts_sim.bridge.cli import _home_hints
 
     actions = [
         {"action": "event_option", "label": "Pomander"},
@@ -453,7 +453,7 @@ def test_home_hints_neow_pick_phase():
 
 
 def test_home_hints_neow_proceed_phase():
-    from sts_sim.bridge_cli import _home_hints
+    from sts_sim.bridge.cli import _home_hints
 
     actions = [
         {"action": "event_proceed"},
@@ -464,7 +464,7 @@ def test_home_hints_neow_proceed_phase():
 
 
 def test_home_hints_card_selection_upgrade():
-    from sts_sim.bridge_cli import _home_hints
+    from sts_sim.bridge.cli import _home_hints
 
     actions = [
         {"action": "card_select", "label": "Strike"},
@@ -478,7 +478,7 @@ def test_home_hints_card_selection_upgrade():
 
 
 def test_home_hints_combat_turn():
-    from sts_sim.bridge_cli import _home_hints
+    from sts_sim.bridge.cli import _home_hints
 
     actions = [
         {"action": "play_card", "label": "Strike"},

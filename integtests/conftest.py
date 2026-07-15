@@ -12,9 +12,9 @@ import time
 
 import pytest
 
-from sts_sim import bridge_client as bc
+from sts_sim.bridge import client as bc
 from sts_sim.bridge import STATUS_MAP
-from sts_sim.bridge_types import (
+from sts_sim.bridge.types import (
     AvailableActions,
     CombatSnapshot,
     parse_available_actions,

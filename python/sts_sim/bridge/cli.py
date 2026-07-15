@@ -16,7 +16,7 @@ from typing import Any
 
 import click
 
-from . import bridge_client as bc
+from . import client as bc
 
 
 # ── rendering ────────────────────────────────────────────────────────────────
