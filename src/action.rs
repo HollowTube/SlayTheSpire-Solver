@@ -91,6 +91,18 @@ impl PlayCardAction {
     fn __contains__(&self, item: &str) -> bool {
         self.__str__().contains(item)
     }
+
+    /// Base card name without the upgrade suffix (e.g. ``"Strike"`` from ``"Strike+"``).
+    #[getter]
+    pub fn card_name(&self) -> &str {
+        self.card.strip_suffix('+').unwrap_or(&self.card)
+    }
+
+    /// Whether the card is upgraded (``card`` ends with ``"+"``).
+    #[getter]
+    pub fn upgraded(&self) -> bool {
+        self.card.ends_with('+')
+    }
 }
 
 #[pyclass]
