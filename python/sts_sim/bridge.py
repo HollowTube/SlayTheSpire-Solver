@@ -18,7 +18,7 @@ from typing import Any, Protocol, Sequence
 
 from . import CombatState, Monster
 from . import names as _names
-from .bridge_types import CardEntry, CardPiles, CombatSnapshot, Power
+from .bridge_types import CardEntry, CardPiles, CombatSnapshot, Intent, Power
 from .names import StatusName
 
 # Derived from StatusName.bridge_classes — edit data/statuses.toml, not this line.
@@ -143,28 +143,21 @@ def from_combat(
     )
 
 
-def _fmt_intent(intent: Any) -> str | None:
-    """Convert bridge intent dict to a sim-compatible intent string."""
+def _fmt_intent(intent: Intent | None) -> str | None:
+    """Convert a typed Intent into a sim-compatible intent string."""
     if intent is None:
         return None
-    if isinstance(intent, str):
-        return intent
-    if not isinstance(intent, dict):
-        return str(intent)
-    move_id = intent.get("move_id", "")
-    intents = intent.get("intents", [])
-    if not intents:
-        return move_id or None
+    if not intent.intents:
+        return intent.move_id or None
     parts = []
-    for i in intents:
-        t = i.get("type", "")
-        if t == "Attack":
-            dmg = i.get("damage", 0)
-            hits = i.get("hits", 1)
-            parts.append(f"Attack({dmg}×{hits})" if hits > 1 else f"Attack({dmg})")
+    for i in intent.intents:
+        if i.type == "Attack":
+            parts.append(
+                f"Attack({i.damage}×{i.hits})" if i.hits > 1 else f"Attack({i.damage})"
+            )
         else:
-            parts.append(t)
-    return " + ".join(parts) if parts else move_id or None
+            parts.append(i.type)
+    return " + ".join(parts) if parts else intent.move_id or None
 
 
 def diff(
