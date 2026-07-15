@@ -14,7 +14,7 @@ With Shrink:
 """
 
 from sts_sim import CombatState, Monster
-from sts_sim import mcts
+from sts_sim.sim import mcts
 
 
 def _state(attacks_played=0):

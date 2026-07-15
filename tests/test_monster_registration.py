@@ -12,8 +12,8 @@ import tomllib
 
 from sts_sim._sts_sim import all_monster_names
 from sts_sim.bench import Encounter
-from sts_sim.names import MonsterName, _MONSTER_MAP
-from sts_sim.scenarios import MONSTER_STARTING_HP
+from sts_sim.sim.names import MonsterName, _MONSTER_MAP
+from sts_sim.sim.scenarios import MONSTER_STARTING_HP
 
 
 def _toml_monsters():

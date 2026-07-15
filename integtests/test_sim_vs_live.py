@@ -21,7 +21,7 @@ from sts_sim.bridge.types import (
     parse_card_piles,
     parse_combat_snapshot,
 )
-from sts_sim.names import CardName
+from sts_sim.sim.names import CardName
 
 from .conftest import CombatFixture
 

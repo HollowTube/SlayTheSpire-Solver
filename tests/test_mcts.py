@@ -1,8 +1,8 @@
 import random
 
 from sts_sim import PlayCardAction, apply, is_terminal, legal_actions, redeterminized
-from sts_sim.scenarios import ironclad_starter_deck_vs_jaw_worm
-from sts_sim import mcts
+from sts_sim.sim.scenarios import ironclad_starter_deck_vs_jaw_worm
+from sts_sim.sim import mcts
 
 
 def test_search_returns_a_legal_action_for_the_opening_decision():

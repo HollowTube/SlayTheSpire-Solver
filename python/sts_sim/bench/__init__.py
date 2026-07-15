@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
     from .. import RunState
 
-from ..scenarios import (
+from ..sim.scenarios import (
     PLAYER_STARTING_HP,
     CardName,
     ironclad_starter_deck_vs_assassin_ruby_raider,
@@ -460,7 +460,7 @@ def build_overgrowth_monster_only_run(seed: int, slots: int, deck: list | None =
     the Overgrowth weak/normal pools and look up each one's canonical
     starting HP."""
     from .. import RunState, draw_overgrowth_monster_sequence
-    from ..scenarios import (
+    from ..sim.scenarios import (
         IRONCLAD_STARTING_DECK,
         PLAYER_STARTING_HP,
     )
@@ -518,7 +518,7 @@ def build_overgrowth_run(seed: int, deck: list | None = None, hp: int | None = N
     None of HOL-61/62/63/64 needed to hand-edit anything for this; it's
     pure composition on top of their already-isolated mechanisms."""
     from .. import RunState, draw_overgrowth_elite, draw_overgrowth_monster_sequence
-    from ..scenarios import (
+    from ..sim.scenarios import (
         IRONCLAD_STARTING_DECK,
         PLAYER_STARTING_HP,
     )
@@ -595,7 +595,7 @@ def _run_one_reward_ab(args: tuple) -> tuple[int, int, int]:
     import random
 
     from .. import run_apply, run_is_terminal, run_legal_actions
-    from ..policies import simulate_run_with_reward_lookahead
+    from ..sim.policies import simulate_run_with_reward_lookahead
 
     builder, kwargs, seed, num_sims, rollout_iterations = args
     build = _REWARD_RUN_BUILDERS[builder]

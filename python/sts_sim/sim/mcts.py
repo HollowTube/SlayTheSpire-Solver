@@ -1,7 +1,7 @@
 import math
 import random
 
-from . import apply, is_terminal, legal_actions, random_rollout, redeterminized, reward
+from .. import apply, is_terminal, legal_actions, random_rollout, redeterminized, reward
 
 # Standard UCB1 exploration constant (sqrt(2)) — balances exploiting the
 # best-known action against trying under-visited ones.

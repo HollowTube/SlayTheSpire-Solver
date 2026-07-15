@@ -4,7 +4,7 @@ Two-phase AI with Plow HP threshold and Ringing player debuff.
 """
 
 from sts_sim import CombatState, EndTurnAction, Monster, apply
-from sts_sim.scenarios import IRONCLAD_STARTING_DECK, PLAYER_STARTING_HP
+from sts_sim.sim.scenarios import IRONCLAD_STARTING_DECK, PLAYER_STARTING_HP
 
 # ---------------------------------------------------------------------------
 # Helpers

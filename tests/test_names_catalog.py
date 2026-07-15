@@ -5,7 +5,7 @@ corresponding entry is added to CardName in python/sts_sim/names.py.
 """
 
 from sts_sim._sts_sim import all_card_names, all_monster_names
-from sts_sim.names import CardName, MonsterName, card, _MONSTER_MAP
+from sts_sim.sim.names import CardName, MonsterName, card, _MONSTER_MAP
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────

@@ -12,7 +12,7 @@ from sts_sim import (
     legal_actions,
     reward,
 )
-from sts_sim.scenarios import (
+from sts_sim.sim.scenarios import (
     INKLET_STARTING_HP,
     IRONCLAD_STARTING_DECK,
     JAW_WORM_STARTING_HP,

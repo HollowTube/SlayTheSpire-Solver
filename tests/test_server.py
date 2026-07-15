@@ -7,7 +7,7 @@ import socket
 import threading
 
 from sts_sim import legal_actions
-from sts_sim.scenarios import ironclad_starter_deck_vs_jaw_worm
+from sts_sim.sim.scenarios import ironclad_starter_deck_vs_jaw_worm
 from sts_sim.server import handle_request, make_server
 
 

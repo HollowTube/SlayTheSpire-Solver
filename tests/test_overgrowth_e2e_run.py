@@ -5,7 +5,7 @@ skeleton-assembly issue (HOL-65) required."""
 
 from sts_sim import simulate_run_outcome
 from sts_sim.bench import build_overgrowth_monster_only_run, run_overgrowth_win_rate
-from sts_sim.scenarios import PLAYER_STARTING_HP
+from sts_sim.sim.scenarios import PLAYER_STARTING_HP
 
 
 def test_a_drawn_overgrowth_path_runs_end_to_end():

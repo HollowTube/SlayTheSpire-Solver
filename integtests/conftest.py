@@ -20,7 +20,7 @@ from sts_sim.bridge.types import (
     parse_available_actions,
     parse_combat_snapshot,
 )
-from sts_sim.names import CARD_STS2_ID, CardName
+from sts_sim.sim.names import CARD_STS2_ID, CardName
 
 
 def pytest_configure(config):

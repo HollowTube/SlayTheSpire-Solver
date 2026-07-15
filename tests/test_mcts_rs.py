@@ -6,7 +6,7 @@ from sts_sim import (
     simulate_hp_lost,
 )
 from sts_sim.bench import PRESETS
-from sts_sim.scenarios import ironclad_starter_deck_vs_jaw_worm
+from sts_sim.sim.scenarios import ironclad_starter_deck_vs_jaw_worm
 
 
 def test_mcts_action_values_returns_a_value_for_every_legal_action():
