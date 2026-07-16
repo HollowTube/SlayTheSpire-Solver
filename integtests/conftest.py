@@ -12,15 +12,15 @@ import time
 
 import pytest
 
-from sts_sim import bridge_client as bc
+from sts_sim.bridge import client as bc
 from sts_sim.bridge import STATUS_MAP
-from sts_sim.bridge_types import (
+from sts_sim.bridge.types import (
     AvailableActions,
     CombatSnapshot,
     parse_available_actions,
     parse_combat_snapshot,
 )
-from sts_sim.names import CARD_STS2_ID, CardName
+from sts_sim.sim.names import CARD_STS2_ID, CardName
 
 
 def pytest_configure(config):

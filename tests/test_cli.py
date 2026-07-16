@@ -13,7 +13,7 @@ from sts_sim.cli import (
     render_state,
     run_interactive,
 )
-from sts_sim.scenarios import ironclad_starter_deck_vs_jaw_worm
+from sts_sim.sim.scenarios import ironclad_starter_deck_vs_jaw_worm
 
 
 def test_format_action_translates_engine_strings_into_human_readable_labels():

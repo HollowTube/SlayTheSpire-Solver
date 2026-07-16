@@ -78,7 +78,7 @@ from . import (
     mcts_action_values as _rust_mcts,
     simulate_hp_lost,
 )
-from . import mcts as _mcts
+from .sim import mcts as _mcts
 
 DEFAULT_MCTS_ITERATIONS = 2000
 
@@ -230,7 +230,7 @@ def handle_request(payload):
         }
     if cmd == "deck_baseline":
         from .bench import run_deck
-        from .scenarios import (
+        from .sim.scenarios import (
             IRONCLAD_STARTING_DECK,
             MONSTER_STARTING_HP,
             PLAYER_STARTING_HP,

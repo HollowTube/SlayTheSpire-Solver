@@ -1,6 +1,6 @@
 from typing import cast
 
-from . import CombatState, Monster
+from .. import CombatState, Monster
 from .names import CardName, MonsterName
 
 # CardName and MonsterName are defined in sts_sim.names (single source of truth).

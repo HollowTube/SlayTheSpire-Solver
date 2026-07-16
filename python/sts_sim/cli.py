@@ -23,7 +23,7 @@ from . import (
     optimal_value,
     reward,
 )
-from .scenarios import (
+from .sim.scenarios import (
     ironclad_starter_deck_vs_fuzzy_wurm_crawler,
     ironclad_starter_deck_vs_gremlin_nob,
     ironclad_starter_deck_vs_jaw_worm,
@@ -233,7 +233,7 @@ def run_interactive(state, input_fn=input, output_fn=print, analysis=False):
     When `analysis=True`, runs MCTS before each decision to annotate the
     menu with per-action value estimates and the overall state value.
     """
-    from . import mcts as _mcts
+    from .sim import mcts as _mcts
 
     while not is_terminal(state):
         output_fn("")

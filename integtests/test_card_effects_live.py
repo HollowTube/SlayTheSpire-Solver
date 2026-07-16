@@ -9,7 +9,7 @@ Run with:
 
 import pytest
 
-from sts_sim.names import CardName, StatusName
+from sts_sim.sim.names import CardName, StatusName
 
 
 pytestmark = pytest.mark.live

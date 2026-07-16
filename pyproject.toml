@@ -16,7 +16,7 @@ notebook = ["jupyterlab", "ipykernel", "matplotlib"]
 [project.scripts]
 sts-sim = "sts_sim.cli:main"
 sts-sim-server = "sts_sim.server:main"
-sts2 = "sts_sim.bridge_cli:main"
+sts2 = "sts_sim.bridge.cli:main"
 
 [tool.maturin]
 python-source = "python"

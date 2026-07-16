@@ -6,7 +6,7 @@ RunState API (run_legal_actions/run_apply/run_is_terminal) — no Rust
 changes."""
 
 from sts_sim import RunState, run_apply
-from sts_sim.policies import (
+from sts_sim.sim.policies import (
     evaluate_reward_options,
     lookahead_reward_policy,
     simulate_run_with_reward_lookahead,

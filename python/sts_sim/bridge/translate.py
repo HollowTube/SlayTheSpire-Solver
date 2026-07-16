@@ -16,9 +16,9 @@ from __future__ import annotations
 
 from typing import Any, Protocol, Sequence
 
-from . import CombatState, EndTurnAction, Monster, PlayCardAction, SelectTargetAction
-from . import names as _names
-from .bridge_types import (
+from .. import CombatState, EndTurnAction, Monster, PlayCardAction, SelectTargetAction
+from ..sim import names as _names
+from .types import (
     AvailableActions,
     CardEntry,
     CardPiles,
@@ -26,7 +26,7 @@ from .bridge_types import (
     Intent,
     Power,
 )
-from .names import StatusName
+from ..sim.names import StatusName
 
 # Derived from StatusName.bridge_classes — edit data/statuses.toml, not this line.
 STATUS_MAP: dict[str, str] = {

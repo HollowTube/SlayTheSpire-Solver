@@ -8,7 +8,7 @@ while still falling back to random-legal everywhere else.
 import random
 import statistics
 
-from . import RunState, run_apply, run_is_terminal, run_legal_actions
+from .. import RunState, run_apply, run_is_terminal, run_legal_actions
 
 
 def _is_reward_decision(actions: list[str]) -> bool:
