@@ -74,6 +74,10 @@ class CombatFixture:
     # Monster used as a test dummy — high enough HP that 8 damage (Bash) never kills it.
     FIGHT_ID = "NIBBITS_WEAK"
 
+    def __init__(self, fight_id: str | None = None) -> None:
+        if fight_id is not None:
+            self.FIGHT_ID = fight_id
+
     def setup_fight(self, timeout: int = 15) -> None:
         """Start a fresh combat via the dev console.
 
