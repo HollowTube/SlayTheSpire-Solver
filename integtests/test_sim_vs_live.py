@@ -29,10 +29,20 @@ pytestmark = pytest.mark.live
 
 
 class CardSpec(NamedTuple):
-    """A card with an optional upgrade level for parametrized tests."""
+    """A card with an optional upgrade level for parametrized tests.
+
+    draw_fill: if non-empty, the draw pile is replaced with these cards before
+    snapshotting — needed for cards that draw so draw-RNG divergence is
+    eliminated by making every card in the draw pile identical.
+
+    fight_id: STS2 console fight ID to use. Defaults to Byrdonis (single enemy,
+    high HP). Use "THE_KIN_BOSS" for AoE cards that need multiple enemies.
+    """
 
     card: CardName
     upgraded: bool = False
+    draw_fill: tuple[CardName, ...] = ()
+    fight_id: str = "BYRDONIS_ELITE"
 
     @property
     def sim_name(self) -> str:
@@ -53,20 +63,44 @@ def _both(card: CardName) -> list[CardSpec]:
     return [CardSpec(card), CardSpec(card, upgraded=True)]
 
 
+# Cards that draw need an all-identical draw pile so order never matters.
+_STRIKES_5 = (CardName.STRIKE,) * 5
+
+
+def _draw(card: CardName) -> list[CardSpec]:
+    """Like _both but fills draw pile with Strikes so draw-RNG can't diverge."""
+    return [
+        CardSpec(card, upgraded=False, draw_fill=_STRIKES_5),
+        CardSpec(card, upgraded=True, draw_fill=_STRIKES_5),
+    ]
+
+
+def _aoe(card: CardName) -> list[CardSpec]:
+    """Like _both but runs against THE_KIN_BOSS (3 enemies) to exercise AoE."""
+    return [
+        CardSpec(card, upgraded=False, fight_id="THE_KIN_BOSS"),
+        CardSpec(card, upgraded=True, fight_id="THE_KIN_BOSS"),
+    ]
+
+
 BASE_DECK: list[CardName | CardSpec] = [
     *_both(CardName.STRIKE),  # 6 / 9 damage
     *_both(CardName.DEFEND),  # 5 / 8 block
     *_both(CardName.BASH),  # 8 / 10 damage + 2 / 3 Vulnerable
     *_both(CardName.IRON_WAVE),  # 5 / 7 block + 5 / 7 damage
     *_both(CardName.TWIN_STRIKE),  # 5×2 / 7×2 damage
-    # SHRUG_IT_OFF excluded: draws a card, so hand/draw_pile distribution is
-    # non-deterministic — sim draw order doesn't match game RNG draw order.
-    *_both(CardName.THUNDERCLAP),  # 4 / 7 AoE + 1 Vulnerable
+    *_draw(CardName.SHRUG_IT_OFF),  # 8 / 11 block + draw 1 / 2 cards
+    *_draw(CardName.POMMEL_STRIKE),  # 9 / 10 damage + draw 1 card
+    *_aoe(CardName.THUNDERCLAP),  # 4 / 7 AoE + 1 Vulnerable (3-enemy Kin fight)
     *_both(CardName.UPPERCUT),  # 13 / 17 damage + Weak + Vulnerable
     *_both(CardName.ANGER),  # 6 / 8 damage + copy to discard
     *_both(CardName.IMPERVIOUS),  # 30 / 40 block, exhausts
     *_both(CardName.BLUDGEON),  # 32 / 42 damage
     *_both(CardName.BREAK),  # 2 Frail / +10 damage (Break+)
+    *_both(CardName.HEMOKINESIS),  # lose 2 HP + 15 / 20 damage
+    *_both(CardName.BLOOD_WALL),  # lose 2 HP + 16 / 20 block
+    *_both(CardName.BLOODLETTING),  # lose 3 HP + gain 2 / 3 energy
+    *_aoe(CardName.BREAKTHROUGH),  # lose 1 HP + 9 / 13 AoE (3-enemy Kin fight)
 ]
 
 BYRDONIS_HP = 84
@@ -146,7 +180,7 @@ def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> CombatSnapsho
 def test_sim_matches_live(card):
     """Sim prediction for playing ``card`` must match the live game result."""
     spec = _spec(card)
-    fix = ByrdonisFix()
+    fix = CombatFixture(fight_id=spec.fight_id)
     fix.setup_fight()
     fix.set_hand(spec.card)
     if spec.upgraded:
@@ -164,6 +198,9 @@ def test_sim_matches_live(card):
             hand[-1].index if hand else 0,
         )
         fix.upgrade_card(idx)
+
+    if spec.draw_fill:
+        fix.set_draw_pile(*spec.draw_fill)
 
     # Wait for the game state to settle after set_hand (console cmds are async)
     snapshot_before = _stable_combat_state()

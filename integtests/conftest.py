@@ -18,6 +18,7 @@ from sts_sim.bridge.types import (
     AvailableActions,
     CombatSnapshot,
     parse_available_actions,
+    parse_card_piles,
     parse_combat_snapshot,
 )
 from sts_sim.sim.names import CARD_STS2_ID, CardName
@@ -73,6 +74,10 @@ class CombatFixture:
     # Monster used as a test dummy — high enough HP that 8 damage (Bash) never kills it.
     FIGHT_ID = "NIBBITS_WEAK"
 
+    def __init__(self, fight_id: str | None = None) -> None:
+        if fight_id is not None:
+            self.FIGHT_ID = fight_id
+
     def setup_fight(self, timeout: int = 15) -> None:
         """Start a fresh combat via the dev console.
 
@@ -127,6 +132,25 @@ class CombatFixture:
         for card in cards:
             console_id = CARD_STS2_ID.get(card, card)
             _console(f"card {console_id} hand")
+
+    def set_draw_pile(self, *cards: CardName | str) -> None:
+        """Replace the draw pile with the given cards.
+
+        `remove_card X draw` is not supported by the console (only hand/deck),
+        so we drain the draw pile into hand via `draw 99`, remove those cards
+        from hand one-by-one, then add the desired cards to the now-empty pile.
+        """
+        piles = parse_card_piles(bc.get_card_piles())
+        draw_before = list(piles.draw_pile.cards)
+        _console("draw 99")
+        time.sleep(0.5)
+        for c in draw_before:
+            cid = _to_console_id(c.name)
+            _console(f"remove_card {cid} hand")
+        time.sleep(0.2)
+        for card in cards:
+            console_id = CARD_STS2_ID.get(card, card)
+            _console(f"card {console_id} draw")
 
     def upgrade_card(self, index: int = 0) -> None:
         """Upgrade the card at the given hand index via the dev console."""

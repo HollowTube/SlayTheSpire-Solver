@@ -253,8 +253,8 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
         CardId::Mangle => Some(UpgradeDelta { damage_delta: 5, ..Default::default() }),
         // OneTwoPunch+: cost 1 → 0.
         CardId::OneTwoPunch => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
-        // Pommel Strike+: 9 damage → 10 damage.
-        CardId::PommelStrike => Some(UpgradeDelta { damage_delta: 1, ..Default::default() }),
+        // Pommel Strike+: 9 damage → 10 damage, draw 1 → draw 2.
+        CardId::PommelStrike => Some(UpgradeDelta { damage_delta: 1, draw_delta: 1, ..Default::default() }),
         // Hemokinesis+: 15 damage → 20 damage.
         CardId::Hemokinesis => Some(UpgradeDelta { damage_delta: 5, ..Default::default() }),
         // Offering+: draw 3 → draw 5.
