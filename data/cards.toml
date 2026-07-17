@@ -404,3 +404,384 @@ sts2_id = "WHIRLWIND"
 variant = "Cascade"
 display = "Cascade"
 sts2_id = "CASCADE"
+
+# Ironclad cards missing from initial implementation
+
+[[cards]]
+variant = "Armaments"
+display = "Armaments"
+sts2_id = "ARMAMENTS"
+
+[[cards]]
+variant = "Brand"
+display = "Brand"
+sts2_id = "BRAND"
+
+[[cards]]
+variant = "ExpectAFight"
+display = "Expect A Fight"
+sts2_id = "EXPECT_A_FIGHT"
+
+[[cards]]
+variant = "Feed"
+display = "Feed"
+sts2_id = "FEED"
+
+[[cards]]
+variant = "Hellraiser"
+display = "Hellraiser"
+sts2_id = "HELLRAISER"
+
+[[cards]]
+variant = "Pillage"
+display = "Pillage"
+sts2_id = "PILLAGE"
+
+[[cards]]
+variant = "PrimalForce"
+display = "Primal Force"
+sts2_id = "PRIMAL_FORCE"
+
+[[cards]]
+variant = "Rampage"
+display = "Rampage"
+sts2_id = "RAMPAGE"
+
+[[cards]]
+variant = "Rupture"
+display = "Rupture"
+sts2_id = "RUPTURE"
+
+[[cards]]
+variant = "Stampede"
+display = "Stampede"
+sts2_id = "STAMPEDE"
+
+[[cards]]
+variant = "Stoke"
+display = "Stoke"
+sts2_id = "STOKE"
+
+# Colorless cards (multiplayer shared pool)
+
+[[cards]]
+variant = "Coordinate"
+display = "Coordinate"
+sts2_id = "COORDINATE"
+
+[[cards]]
+variant = "Discovery"
+display = "Discovery"
+sts2_id = "DISCOVERY"
+
+[[cards]]
+variant = "Entropy"
+display = "Entropy"
+sts2_id = "ENTROPY"
+
+[[cards]]
+variant = "EternalArmor"
+display = "Eternal Armor"
+sts2_id = "ETERNAL_ARMOR"
+
+[[cards]]
+variant = "Finesse"
+display = "Finesse"
+sts2_id = "FINESSE"
+
+[[cards]]
+variant = "Fisticuffs"
+display = "Fisticuffs"
+sts2_id = "FISTICUFFS"
+
+[[cards]]
+variant = "FlashOfSteel"
+display = "Flash Of Steel"
+sts2_id = "FLASH_OF_STEEL"
+
+[[cards]]
+variant = "GangUp"
+display = "Gang Up"
+sts2_id = "GANG_UP"
+
+[[cards]]
+variant = "GoldAxe"
+display = "Gold Axe"
+sts2_id = "GOLD_AXE"
+
+[[cards]]
+variant = "HandOfGreed"
+display = "Hand Of Greed"
+sts2_id = "HAND_OF_GREED"
+
+[[cards]]
+variant = "HiddenGem"
+display = "Hidden Gem"
+sts2_id = "HIDDEN_GEM"
+
+[[cards]]
+variant = "HuddleUp"
+display = "Huddle Up"
+sts2_id = "HUDDLE_UP"
+
+[[cards]]
+variant = "Intercept"
+display = "Intercept"
+sts2_id = "INTERCEPT"
+
+[[cards]]
+variant = "Jackpot"
+display = "Jackpot"
+sts2_id = "JACKPOT"
+
+[[cards]]
+variant = "Lift"
+display = "Lift"
+sts2_id = "LIFT"
+
+[[cards]]
+variant = "MasterOfStrategy"
+display = "Master Of Strategy"
+sts2_id = "MASTER_OF_STRATEGY"
+
+[[cards]]
+variant = "Mayhem"
+display = "Mayhem"
+sts2_id = "MAYHEM"
+
+[[cards]]
+variant = "Mimic"
+display = "Mimic"
+sts2_id = "MIMIC"
+
+[[cards]]
+variant = "MindBlast"
+display = "Mind Blast"
+sts2_id = "MIND_BLAST"
+
+[[cards]]
+variant = "Nostalgia"
+display = "Nostalgia"
+sts2_id = "NOSTALGIA"
+
+[[cards]]
+variant = "Omnislice"
+display = "Omnislice"
+sts2_id = "OMNISLICE"
+
+[[cards]]
+variant = "Panache"
+display = "Panache"
+sts2_id = "PANACHE"
+
+[[cards]]
+variant = "PanicButton"
+display = "Panic Button"
+sts2_id = "PANIC_BUTTON"
+
+[[cards]]
+variant = "PrepTime"
+display = "Prep Time"
+sts2_id = "PREP_TIME"
+
+[[cards]]
+variant = "Production"
+display = "Production"
+sts2_id = "PRODUCTION"
+
+[[cards]]
+variant = "Prowess"
+display = "Prowess"
+sts2_id = "PROWESS"
+
+[[cards]]
+variant = "Rally"
+display = "Rally"
+sts2_id = "RALLY"
+
+[[cards]]
+variant = "Rend"
+display = "Rend"
+sts2_id = "REND"
+
+[[cards]]
+variant = "Restlessness"
+display = "Restlessness"
+sts2_id = "RESTLESSNESS"
+
+[[cards]]
+variant = "RollingBoulder"
+display = "Rolling Boulder"
+sts2_id = "ROLLING_BOULDER"
+
+[[cards]]
+variant = "Salvo"
+display = "Salvo"
+sts2_id = "SALVO"
+
+[[cards]]
+variant = "Scrawl"
+display = "Scrawl"
+sts2_id = "SCRAWL"
+
+[[cards]]
+variant = "SecretTechnique"
+display = "Secret Technique"
+sts2_id = "SECRET_TECHNIQUE"
+
+[[cards]]
+variant = "SeekerStrike"
+display = "Seeker Strike"
+sts2_id = "SEEKER_STRIKE"
+
+[[cards]]
+variant = "Splash"
+display = "Splash"
+sts2_id = "SPLASH"
+
+[[cards]]
+variant = "TagTeam"
+display = "Tag Team"
+sts2_id = "TAG_TEAM"
+
+[[cards]]
+variant = "UltimateDefend"
+display = "Ultimate Defend"
+sts2_id = "ULTIMATE_DEFEND"
+
+[[cards]]
+variant = "Volley"
+display = "Volley"
+sts2_id = "VOLLEY"
+
+[[cards]]
+variant = "Alchemize"
+display = "Alchemize"
+sts2_id = "ALCHEMIZE"
+
+[[cards]]
+variant = "Anointed"
+display = "Anointed"
+sts2_id = "ANOINTED"
+
+[[cards]]
+variant = "Automation"
+display = "Automation"
+sts2_id = "AUTOMATION"
+
+[[cards]]
+variant = "BeaconOfHope"
+display = "Beacon Of Hope"
+sts2_id = "BEACON_OF_HOPE"
+
+[[cards]]
+variant = "BeatDown"
+display = "Beat Down"
+sts2_id = "BEAT_DOWN"
+
+[[cards]]
+variant = "BelieveInYou"
+display = "Believe In You"
+sts2_id = "BELIEVE_IN_YOU"
+
+[[cards]]
+variant = "Bolas"
+display = "Bolas"
+sts2_id = "BOLAS"
+
+[[cards]]
+variant = "Calamity"
+display = "Calamity"
+sts2_id = "CALAMITY"
+
+[[cards]]
+variant = "Catastrophe"
+display = "Catastrophe"
+sts2_id = "CATASTROPHE"
+
+[[cards]]
+variant = "DarkShackles"
+display = "Dark Shackles"
+sts2_id = "DARK_SHACKLES"
+
+[[cards]]
+variant = "DramaticEntrance"
+display = "Dramatic Entrance"
+sts2_id = "DRAMATIC_ENTRANCE"
+
+[[cards]]
+variant = "Equilibrium"
+display = "Equilibrium"
+sts2_id = "EQUILIBRIUM"
+
+[[cards]]
+variant = "Fasten"
+display = "Fasten"
+sts2_id = "FASTEN"
+
+[[cards]]
+variant = "Impatience"
+display = "Impatience"
+sts2_id = "IMPATIENCE"
+
+[[cards]]
+variant = "JackOfAllTrades"
+display = "Jack Of All Trades"
+sts2_id = "JACK_OF_ALL_TRADES"
+
+[[cards]]
+variant = "Knockdown"
+display = "Knockdown"
+sts2_id = "KNOCKDOWN"
+
+[[cards]]
+variant = "Prolong"
+display = "Prolong"
+sts2_id = "PROLONG"
+
+[[cards]]
+variant = "Purity"
+display = "Purity"
+sts2_id = "PURITY"
+
+[[cards]]
+variant = "SecretWeapon"
+display = "Secret Weapon"
+sts2_id = "SECRET_WEAPON"
+
+[[cards]]
+variant = "Shockwave"
+display = "Shockwave"
+sts2_id = "SHOCKWAVE"
+
+[[cards]]
+variant = "Stratagem"
+display = "Stratagem"
+sts2_id = "STRATAGEM"
+
+[[cards]]
+variant = "TheBomb"
+display = "The Bomb"
+sts2_id = "THE_BOMB"
+
+[[cards]]
+variant = "TheGambit"
+display = "The Gambit"
+sts2_id = "THE_GAMBIT"
+
+[[cards]]
+variant = "ThinkingAhead"
+display = "Thinking Ahead"
+sts2_id = "THINKING_AHEAD"
+
+[[cards]]
+variant = "ThrummingHatchet"
+display = "Thrumming Hatchet"
+sts2_id = "THRUMMING_HATCHET"
+
+[[cards]]
+variant = "UltimateStrike"
+display = "Ultimate Strike"
+sts2_id = "ULTIMATE_STRIKE"
+
+
