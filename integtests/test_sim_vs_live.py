@@ -78,6 +78,7 @@ BASE_DECK: list[CardName | CardSpec] = [
     *_both(CardName.IRON_WAVE),  # 5 / 7 block + 5 / 7 damage
     *_both(CardName.TWIN_STRIKE),  # 5×2 / 7×2 damage
     *_draw(CardName.SHRUG_IT_OFF),  # 8 / 11 block + draw 1 / 2 cards
+    *_draw(CardName.POMMEL_STRIKE),  # 9 / 10 damage + draw 1 card
     *_both(CardName.THUNDERCLAP),  # 4 / 7 AoE + 1 Vulnerable
     *_both(CardName.UPPERCUT),  # 13 / 17 damage + Weak + Vulnerable
     *_both(CardName.ANGER),  # 6 / 8 damage + copy to discard
