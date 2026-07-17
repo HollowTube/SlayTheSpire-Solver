@@ -130,11 +130,19 @@ class CombatFixture:
             _console(f"card {console_id} hand")
 
     def set_draw_pile(self, *cards: CardName | str) -> None:
-        """Replace the draw pile with the given cards."""
+        """Replace the draw pile with the given cards.
+
+        `remove_card X draw` is not supported by the console (only hand/deck),
+        so we drain the draw pile into hand via `draw 99`, remove those cards
+        from hand one-by-one, then add the desired cards to the now-empty pile.
+        """
         piles = parse_card_piles(bc.get_card_piles())
-        for c in piles.draw_pile.cards:
+        draw_before = list(piles.draw_pile.cards)
+        _console("draw 99")
+        time.sleep(0.5)
+        for c in draw_before:
             cid = _to_console_id(c.name)
-            _console(f"remove_card {cid} draw")
+            _console(f"remove_card {cid} hand")
         time.sleep(0.2)
         for card in cards:
             console_id = CARD_STS2_ID.get(card, card)
