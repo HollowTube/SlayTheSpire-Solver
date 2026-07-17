@@ -18,6 +18,7 @@ from sts_sim.bridge.types import (
     AvailableActions,
     CombatSnapshot,
     parse_available_actions,
+    parse_card_piles,
     parse_combat_snapshot,
 )
 from sts_sim.sim.names import CARD_STS2_ID, CardName
@@ -127,6 +128,17 @@ class CombatFixture:
         for card in cards:
             console_id = CARD_STS2_ID.get(card, card)
             _console(f"card {console_id} hand")
+
+    def set_draw_pile(self, *cards: CardName | str) -> None:
+        """Replace the draw pile with the given cards."""
+        piles = parse_card_piles(bc.get_card_piles())
+        for c in piles.draw_pile.cards:
+            cid = _to_console_id(c.name)
+            _console(f"remove_card {cid} draw")
+        time.sleep(0.2)
+        for card in cards:
+            console_id = CARD_STS2_ID.get(card, card)
+            _console(f"card {console_id} draw")
 
     def upgrade_card(self, index: int = 0) -> None:
         """Upgrade the card at the given hand index via the dev console."""

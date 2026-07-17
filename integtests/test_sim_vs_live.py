@@ -29,10 +29,16 @@ pytestmark = pytest.mark.live
 
 
 class CardSpec(NamedTuple):
-    """A card with an optional upgrade level for parametrized tests."""
+    """A card with an optional upgrade level for parametrized tests.
+
+    draw_fill: if non-empty, the draw pile is replaced with these cards before
+    snapshotting — needed for cards that draw so draw-RNG divergence is
+    eliminated by making every card in the draw pile identical.
+    """
 
     card: CardName
     upgraded: bool = False
+    draw_fill: tuple[CardName, ...] = ()
 
     @property
     def sim_name(self) -> str:
@@ -53,14 +59,25 @@ def _both(card: CardName) -> list[CardSpec]:
     return [CardSpec(card), CardSpec(card, upgraded=True)]
 
 
+# Cards that draw need an all-identical draw pile so order never matters.
+_STRIKES_5 = (CardName.STRIKE,) * 5
+
+
+def _draw(card: CardName) -> list[CardSpec]:
+    """Like _both but fills draw pile with Strikes so draw-RNG can't diverge."""
+    return [
+        CardSpec(card, upgraded=False, draw_fill=_STRIKES_5),
+        CardSpec(card, upgraded=True, draw_fill=_STRIKES_5),
+    ]
+
+
 BASE_DECK: list[CardName | CardSpec] = [
     *_both(CardName.STRIKE),  # 6 / 9 damage
     *_both(CardName.DEFEND),  # 5 / 8 block
     *_both(CardName.BASH),  # 8 / 10 damage + 2 / 3 Vulnerable
     *_both(CardName.IRON_WAVE),  # 5 / 7 block + 5 / 7 damage
     *_both(CardName.TWIN_STRIKE),  # 5×2 / 7×2 damage
-    # SHRUG_IT_OFF excluded: draws a card, so hand/draw_pile distribution is
-    # non-deterministic — sim draw order doesn't match game RNG draw order.
+    *_draw(CardName.SHRUG_IT_OFF),  # 8 / 11 block + draw 1 / 2 cards
     *_both(CardName.THUNDERCLAP),  # 4 / 7 AoE + 1 Vulnerable
     *_both(CardName.UPPERCUT),  # 13 / 17 damage + Weak + Vulnerable
     *_both(CardName.ANGER),  # 6 / 8 damage + copy to discard
@@ -164,6 +181,9 @@ def test_sim_matches_live(card):
             hand[-1].index if hand else 0,
         )
         fix.upgrade_card(idx)
+
+    if spec.draw_fill:
+        fix.set_draw_pile(*spec.draw_fill)
 
     # Wait for the game state to settle after set_hand (console cmds are async)
     snapshot_before = _stable_combat_state()
