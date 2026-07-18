@@ -143,7 +143,14 @@ fn draw_reward_cards(seed: u64) -> Vec<String> {
     let pool: Vec<&str> = ALL_CARD_NAMES
         .iter()
         .copied()
-        .filter(|name| CardId::from_str(name).map_or(false, |id| card_data(id, 0).card_type != CardType::Status))
+        .filter(|name| {
+            CardId::from_str(name).map_or(false, |id| {
+                let data = card_data(id, 0);
+                // Exclude Status cards (monster-inflicted junk) and stub cards
+                // (description-only entries with no implemented effects).
+                data.card_type != CardType::Status && !data.effects.is_empty()
+            })
+        })
         .collect();
     let mut rng = Pcg32::seed_from_u64(seed);
     pool.choose_multiple(&mut rng, REWARD_CHOICE_COUNT.min(pool.len()))
