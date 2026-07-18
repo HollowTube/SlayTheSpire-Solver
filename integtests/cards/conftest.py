@@ -117,7 +117,6 @@ def _play_in_game(card: CardName | CardSpec) -> bool:
         act = next((a for a in avail.actions if a.card_index == target_hand_idx), None)
         if act:
             bc.play_card(act.card_index, act.target_index)
-            time.sleep(0.5)
             return True
 
     # Fallback: match by name substring
@@ -128,7 +127,6 @@ def _play_in_game(card: CardName | CardSpec) -> bool:
     if act is None:
         return False
     bc.play_card(act.card_index, act.target_index)
-    time.sleep(0.5)
     return True
 
 
@@ -149,6 +147,34 @@ def _stable_combat_state(retries: int = 6, delay: float = 0.25) -> CombatSnapsho
         time.sleep(delay)
         snapshot = parse_combat_snapshot(bc.get_combat_state())
     return snapshot
+
+
+def _wait_for_played_card(card_name: str, retries: int = 30, delay: float = 0.1):
+    """Poll until card_name appears in the discard or exhaust pile.
+
+    In STS all card effects (damage, statuses) resolve before the card moves to
+    a pile, so once the card appears there the entire combat snapshot is stable.
+    This is more reliable than a fixed sleep for AoE cards that animate across
+    multiple targets before settling.
+
+    Returns (snapshot, piles) captured at the moment the card is found.
+    """
+    needle = card_name.lower().replace(" ", "").replace("+", "")
+    upgraded = card_name.endswith("+")
+    for _ in range(retries):
+        piles = parse_card_piles(bc.get_card_piles())
+        settled = list(piles.discard_pile.cards) + list(piles.exhaust_pile.cards)
+        if any(
+            needle in c.name.lower().replace(" ", "")
+            and getattr(c, "upgraded", False) == upgraded
+            for c in settled
+        ):
+            snapshot = parse_combat_snapshot(bc.get_combat_state())
+            return snapshot, piles
+        time.sleep(delay)
+    # Fallback: return whatever is there after timeout
+    piles = parse_card_piles(bc.get_card_piles())
+    return parse_combat_snapshot(bc.get_combat_state()), piles
 
 
 # ---------------------------------------------------------------------------
@@ -189,8 +215,7 @@ def _run_card_parity(card: CardName | CardSpec) -> None:
 
     assert _play_in_game(card), f"{card} not found in available actions after set_hand"
 
-    snapshot_after = parse_combat_snapshot(bc.get_combat_state())
-    piles_after = parse_card_piles(bc.get_card_piles())
+    snapshot_after, piles_after = _wait_for_played_card(spec.sim_name)
 
     try:
         sim_result = _apply_card_in_sim(state_before, card)
