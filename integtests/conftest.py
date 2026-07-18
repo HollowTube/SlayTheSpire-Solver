@@ -152,6 +152,23 @@ class CombatFixture:
             console_id = CARD_STS2_ID.get(card, card)
             _console(f"card {console_id} draw")
 
+    def set_discard_pile(self, *cards: CardName | str) -> None:
+        """Replace the discard pile with the given cards.
+
+        Drains the existing discard into hand (via `draw_discard 99` if
+        available, otherwise one-by-one removal), then adds the desired cards
+        via `card X discard`.
+        """
+        piles = parse_card_piles(bc.get_card_piles())
+        discard_before = list(piles.discard_pile.cards)
+        for c in discard_before:
+            cid = _to_console_id(c.name)
+            _console(f"remove_card {cid} discard")
+        time.sleep(0.2)
+        for card in cards:
+            console_id = CARD_STS2_ID.get(card, card)
+            _console(f"card {console_id} discard")
+
     def upgrade_card(self, index: int = 0) -> None:
         """Upgrade the card at the given hand index via the dev console."""
         _console(f"upgrade {index}")
