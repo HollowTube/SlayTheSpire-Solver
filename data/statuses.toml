@@ -47,11 +47,11 @@ bridge_classes = ["Ritual"]
 
 [[statuses]]
 sim_name = "Barricade"
-bridge_classes = ["Barricade"]
+bridge_classes = ["Barricade", "BarricadePower"]
 
 [[statuses]]
 sim_name = "Plating"
-bridge_classes = ["Plating"]
+bridge_classes = ["Plating", "PlatingPower"]
 
 [[statuses]]
 sim_name = "Regen"
