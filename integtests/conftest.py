@@ -81,10 +81,9 @@ class CombatFixture:
     def setup_fight(self, timeout: int = 15) -> None:
         """Start a fresh combat via the dev console.
 
-        Recipe: win any active fight → act 1 (refresh map) → room MAP → fight <encounter>.
+        Recipe: win any active fight → room MAP → fight <encounter>.
         Works from any game state. Uses in_combat field (not screen name) for detection
-        because STS2's combat screens include COMBAT_PLAYER_TURN (real combat) and
-        MENU_NCombatRoom (room navigation, not yet in combat).
+        because STS2's MENU_NCombatRoom screen (room entry overlay) is not actual combat.
         """
         # Start a run if there is none yet
         screen = _screen()
@@ -103,18 +102,11 @@ class CombatFixture:
             time.sleep(0.5)
 
         # Win any active combat. Check in_combat rather than screen name —
-        # MENU_NCombatRoom also contains "COMBAT" but is not actual combat.
+        # MENU_NCombatRoom contains the word "Combat" but is not actual combat.
         if bc.get_combat_state().get("in_combat"):
             _console("win")
             time.sleep(1.5)
 
-        # Reset to act 1 so fresh map nodes are always available.
-        # Each fight X call consumes a node; without this the map exhausts
-        # after ~17 fights and fight X lands in MENU_NCombatRoom instead of combat.
-        _console("act 1")
-        time.sleep(1.0)
-
-        # Navigate to MAP (act 1 may land on EVENT or similar)
         if _screen() != "MAP":
             _console("room MAP")
             time.sleep(1.5)
