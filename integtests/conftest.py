@@ -81,8 +81,10 @@ class CombatFixture:
     def setup_fight(self, timeout: int = 15) -> None:
         """Start a fresh combat via the dev console.
 
-        Recipe: win any active fight → room MAP → fight <encounter>.
-        Works from COMBAT, REWARD, MAP, EVENT, or CARD_SELECTION.
+        Recipe: win any active fight → act 1 (refresh map) → room MAP → fight <encounter>.
+        Works from any game state. Uses in_combat field (not screen name) for detection
+        because STS2's combat screens include COMBAT_PLAYER_TURN (real combat) and
+        MENU_NCombatRoom (room navigation, not yet in combat).
         """
         # Start a run if there is none yet
         screen = _screen()
@@ -100,12 +102,19 @@ class CombatFixture:
             _console("heal 999")
             time.sleep(0.5)
 
-        # Win any active combat to reach REWARD
-        if "COMBAT" in _screen() and "LOADING" not in _screen():
+        # Win any active combat. Check in_combat rather than screen name —
+        # MENU_NCombatRoom also contains "COMBAT" but is not actual combat.
+        if bc.get_combat_state().get("in_combat"):
             _console("win")
             time.sleep(1.5)
 
-        # Navigate to MAP (works from REWARD, OVERLAY, EVENT, CARD_SELECTION, etc.)
+        # Reset to act 1 so fresh map nodes are always available.
+        # Each fight X call consumes a node; without this the map exhausts
+        # after ~17 fights and fight X lands in MENU_NCombatRoom instead of combat.
+        _console("act 1")
+        time.sleep(1.0)
+
+        # Navigate to MAP (act 1 may land on EVENT or similar)
         if _screen() != "MAP":
             _console("room MAP")
             time.sleep(1.5)
@@ -115,12 +124,12 @@ class CombatFixture:
 
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
-            s = _screen()
-            if "COMBAT" in s and "LOADING" not in s:
+            if bc.get_combat_state().get("in_combat"):
                 return
             time.sleep(0.4)
         raise RuntimeError(
-            f"fight {self.FIGHT_ID} did not reach combat in {timeout}s (screen: {_screen()})"
+            f"fight {self.FIGHT_ID} did not reach combat in {timeout}s "
+            f"(screen: {_screen()}, in_combat: {bc.get_combat_state().get('in_combat')})"
         )
 
     def set_hand(self, *cards: CardName | str) -> None:
