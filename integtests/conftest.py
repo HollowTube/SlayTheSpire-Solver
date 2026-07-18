@@ -82,7 +82,8 @@ class CombatFixture:
         """Start a fresh combat via the dev console.
 
         Recipe: win any active fight → room MAP → fight <encounter>.
-        Works from COMBAT, REWARD, MAP, EVENT, or CARD_SELECTION.
+        Works from any game state. Uses in_combat field (not screen name) for detection
+        because STS2's MENU_NCombatRoom screen (room entry overlay) is not actual combat.
         """
         # Start a run if there is none yet
         screen = _screen()
@@ -100,12 +101,12 @@ class CombatFixture:
             _console("heal 999")
             time.sleep(0.5)
 
-        # Win any active combat to reach REWARD
-        if "COMBAT" in _screen() and "LOADING" not in _screen():
+        # Win any active combat. Check in_combat rather than screen name —
+        # MENU_NCombatRoom contains the word "Combat" but is not actual combat.
+        if bc.get_combat_state().get("in_combat"):
             _console("win")
             time.sleep(1.5)
 
-        # Navigate to MAP (works from REWARD, OVERLAY, EVENT, CARD_SELECTION, etc.)
         if _screen() != "MAP":
             _console("room MAP")
             time.sleep(1.5)
@@ -115,12 +116,12 @@ class CombatFixture:
 
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
-            s = _screen()
-            if "COMBAT" in s and "LOADING" not in s:
+            if bc.get_combat_state().get("in_combat"):
                 return
             time.sleep(0.4)
         raise RuntimeError(
-            f"fight {self.FIGHT_ID} did not reach combat in {timeout}s (screen: {_screen()})"
+            f"fight {self.FIGHT_ID} did not reach combat in {timeout}s "
+            f"(screen: {_screen()}, in_combat: {bc.get_combat_state().get('in_combat')})"
         )
 
     def set_hand(self, *cards: CardName | str) -> None:
