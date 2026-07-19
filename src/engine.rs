@@ -697,6 +697,30 @@ pub(crate) enum EffectOp {
         count_source: ScaleSource,
         exhaust: bool,
     },
+    // If the most recent DealDamage (or DealDamageWithCombatBonus) op reduced
+    // a target's HP from >0 to ≤0 (a kill), raise the player's max HP by `n`.
+    // The current HP is NOT changed — raising max HP above current HP is valid
+    // (mirrors STS: Feed's permanent HP gain). No-op if no kill happened.
+    GainMaxHpIfLastAttackKilled(i32),
+    // Deal `base` + the current value of `state.combat_counters[bonus_key]`
+    // damage to each target, then increment `combat_counters[bonus_key]` by
+    // `increment` (Rampage: key "Rampage", base 9, increment 5 or 9+).
+    DealDamageWithCombatBonus {
+        base: i32,
+        bonus_key: &'static str,
+        increment: i32,
+    },
+    // Set `state.pending = PendingDecision::UpgradeFromHand` so the player
+    // must choose a hand card to upgrade in-combat (Armaments base). No-op if
+    // every card in hand is already at upgrade_level >= 1.
+    PromptUpgradeCardFromHand,
+    // Set `state.pending = PendingDecision::ExhaustFromHand { strength }` so
+    // the player must choose a hand card to exhaust; on resolution the player
+    // gains `strength` Strength (Brand). No-op if hand is empty.
+    PromptExhaustCardFromHand { strength: i32 },
+    // Increment `upgrade_level` by 1 for every card in `actor`'s hand that
+    // currently has `upgrade_level == 0` (Armaments+: upgrade ALL hand cards).
+    UpgradeAllCardsInHand,
 }
 
 /// What a `DealDamageScaled` op reads its multiplier from. New scaling
@@ -942,11 +966,19 @@ pub(crate) fn tick_debuffs(statuses: &mut Vec<Status>) {
 /// card (used by `Status::Slow`). Pass `false` for monster moves, status
 /// reactions, and any non-Attack card effects.
 pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor, targets: &[Actor], is_attack_card: bool) {
+    // Tracks whether the immediately preceding damage op killed a target — used
+    // by GainMaxHpIfLastAttackKilled (Feed) to detect a fatal blow.
+    let mut last_damage_killed = false;
     for op in ops {
         match op {
             EffectOp::DealDamage(amount) => {
+                last_damage_killed = false;
                 for &target in targets {
+                    let hp_before = state.fighter(target).hp;
                     deal_damage(state, actor, target, *amount, is_attack_card, state.cards_played_this_turn);
+                    if hp_before > 0 && state.fighter(target).hp <= 0 {
+                        last_damage_killed = true;
+                    }
                 }
             }
             EffectOp::GainBlock(amount) => {
@@ -1127,6 +1159,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 per_unit,
                 source,
             } => {
+                last_damage_killed = false;
                 for &target in targets {
                     let amount = base + per_unit * source.read(state, actor, target);
                     deal_damage(state, actor, target, amount, is_attack_card, state.cards_played_this_turn);
@@ -1138,6 +1171,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 hits_per_unit,
                 hits_source,
             } => {
+                last_damage_killed = false;
                 for &target in targets {
                     let hits = hits_base + hits_per_unit * hits_source.read(state, actor, target);
                     for _ in 0..hits {
@@ -1176,11 +1210,13 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 }
             }
             EffectOp::DealDamageToAllEnemies(amount) => {
+                last_damage_killed = false;
                 for i in state.living_monster_indices() {
                     deal_damage(state, actor, Actor::Monster(i), *amount, is_attack_card, state.cards_played_this_turn);
                 }
             }
             EffectOp::DealDamageToRandomEnemy(amount) => {
+                last_damage_killed = false;
                 let living = state.living_monster_indices();
                 if !living.is_empty() {
                     let pick = living[state.rng.gen_range(0..living.len())];
@@ -1188,6 +1224,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 }
             }
             EffectOp::DealDamageToLastAttacker(amount) => {
+                last_damage_killed = false;
                 if let Some(i) = state.last_attacker {
                     deal_damage(state, actor, Actor::Monster(i), *amount, is_attack_card, state.cards_played_this_turn);
                 }
@@ -1228,6 +1265,42 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 let effective_count =
                     *count_base + (count_per_unit * count_source.read(state, actor, actor)) as usize;
                 run_play_top_of_deck(state, effective_count, *exhaust);
+            }
+            EffectOp::GainMaxHpIfLastAttackKilled(n) => {
+                if last_damage_killed {
+                    state.player.max_hp += n;
+                }
+            }
+            EffectOp::DealDamageWithCombatBonus { base, bonus_key, increment } => {
+                let bonus = state.combat_counters.get(*bonus_key).copied().unwrap_or(0);
+                let amount = base + bonus;
+                last_damage_killed = false;
+                for &target in targets {
+                    let hp_before = state.fighter(target).hp;
+                    deal_damage(state, actor, target, amount, is_attack_card, state.cards_played_this_turn);
+                    if hp_before > 0 && state.fighter(target).hp <= 0 {
+                        last_damage_killed = true;
+                    }
+                }
+                *state.combat_counters.entry(bonus_key.to_string()).or_insert(0) += increment;
+            }
+            EffectOp::PromptUpgradeCardFromHand => {
+                let has_upgradable = state.hand.iter().any(|c| c.upgrade_level == 0);
+                if has_upgradable {
+                    state.pending = Some(crate::state::PendingDecision::UpgradeFromHand);
+                }
+            }
+            EffectOp::PromptExhaustCardFromHand { strength } => {
+                if !state.hand.is_empty() {
+                    state.pending = Some(crate::state::PendingDecision::ExhaustFromHand { strength: *strength });
+                }
+            }
+            EffectOp::UpgradeAllCardsInHand => {
+                for card in &mut state.hand {
+                    if card.upgrade_level == 0 {
+                        card.upgrade_level = 1;
+                    }
+                }
             }
         }
     }
