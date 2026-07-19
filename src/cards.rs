@@ -517,12 +517,41 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
         CardId::ExpectAFight => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
         CardId::Hellraiser => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
         CardId::Stampede => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
-        CardId::Armaments => Some(UpgradeDelta { description: Some("Gain 5 Block.\nUpgrade ALL cards in your Hand."), ..Default::default() }),
-        CardId::Brand => Some(UpgradeDelta { description: Some("Lose 1 HP.\nExhaust 1 card.\nGain 2 Strength."), ..Default::default() }),
-        CardId::Feed => Some(UpgradeDelta { description: Some("Deal 12 damage.\nIf Fatal, raise your Max HP by 4.\nExhaust."), ..Default::default() }),
+        CardId::Armaments => Some(UpgradeDelta {
+            effects_override: Some(vec![
+                EffectOp::GainBlock(5),
+                EffectOp::UpgradeAllCardsInHand,
+            ]),
+            description: Some("Gain 5 Block.\nUpgrade ALL cards in your Hand."),
+            ..Default::default()
+        }),
+        CardId::Brand => Some(UpgradeDelta {
+            effects_override: Some(vec![
+                EffectOp::LoseHp(1),
+                EffectOp::PromptExhaustCardFromHand { strength: 2 },
+            ]),
+            description: Some("Lose 1 HP.\nExhaust 1 card.\nGain 2 Strength."),
+            ..Default::default()
+        }),
+        CardId::Feed => Some(UpgradeDelta {
+            effects_override: Some(vec![
+                EffectOp::DealDamage(12),
+                EffectOp::GainMaxHpIfLastAttackKilled(4),
+            ]),
+            description: Some("Deal 12 damage.\nIf Fatal, raise your Max HP by 4.\nExhaust."),
+            ..Default::default()
+        }),
         CardId::Pillage => Some(UpgradeDelta { description: Some("Deal 9 damage.\nDraw cards until you draw a non-Attack card."), ..Default::default() }),
         CardId::PrimalForce => Some(UpgradeDelta { description: Some("Transform all Attacks in your Hand into Giant Rock+."), ..Default::default() }),
-        CardId::Rampage => Some(UpgradeDelta { description: Some("Deal 9 damage.\nIncrease this card's damage by 9 this combat."), ..Default::default() }),
+        CardId::Rampage => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::DealDamageWithCombatBonus {
+                base: 9,
+                bonus_key: "Rampage",
+                increment: 9,
+            }]),
+            description: Some("Deal 9 damage.\nIncrease this card's damage by 9 this combat."),
+            ..Default::default()
+        }),
         CardId::Rupture => Some(UpgradeDelta { description: Some("Whenever you lose HP on your turn, gain 2 Strength."), ..Default::default() }),
         CardId::Stoke => Some(UpgradeDelta { description: Some("Exhaust your Hand.\nAdd 1 random Upgraded card into your Hand for each card Exhausted."), ..Default::default() }),
         CardId::Coordinate => Some(UpgradeDelta { description: Some("Give another player 8 Strength this turn."), ..Default::default() }),
@@ -597,6 +626,12 @@ pub(crate) fn card_data(id: CardId, upgrade_level: u8) -> CardData {
         }
     }
     data
+}
+
+/// Whether an in-combat upgrade can pick this card. Status cards never can
+/// (the game's Status and Curse cards have no upgrade level).
+pub(crate) fn can_upgrade(id: CardId, upgrade_level: u8) -> bool {
+    upgrade_level == 0 && card_data_base(id).card_type != CardType::Status
 }
 
 fn card_data_base(id: CardId) -> CardData {
@@ -1642,7 +1677,10 @@ fn card_data_base(id: CardId) -> CardData {
             cost: 1,
             targeted: false,
             card_type: CardType::Skill,
-            effects: vec![],
+            effects: vec![
+                EffectOp::GainBlock(5),
+                EffectOp::PromptUpgradeCardFromHand,
+            ],
             keywords: HashSet::new(),
             rarity: CardRarity::Common,
             description: "Gain 5 Block.\nUpgrade a card in your Hand.",
@@ -1651,7 +1689,10 @@ fn card_data_base(id: CardId) -> CardData {
             cost: 0,
             targeted: false,
             card_type: CardType::Skill,
-            effects: vec![],
+            effects: vec![
+                EffectOp::LoseHp(1),
+                EffectOp::PromptExhaustCardFromHand { strength: 1 },
+            ],
             keywords: HashSet::new(),
             rarity: CardRarity::Rare,
             description: "Lose 1 HP.\nExhaust 1 card.\nGain 1 Strength.",
@@ -1669,7 +1710,10 @@ fn card_data_base(id: CardId) -> CardData {
             cost: 1,
             targeted: true,
             card_type: CardType::Attack,
-            effects: vec![],
+            effects: vec![
+                EffectOp::DealDamage(10),
+                EffectOp::GainMaxHpIfLastAttackKilled(3),
+            ],
             keywords: HashSet::from([CardKeyword::Exhaust]),
             rarity: CardRarity::Rare,
             description: "Deal 10 damage.\nIf Fatal, raise your Max HP by 3.\nExhaust.",
@@ -1705,7 +1749,11 @@ fn card_data_base(id: CardId) -> CardData {
             cost: 1,
             targeted: true,
             card_type: CardType::Attack,
-            effects: vec![],
+            effects: vec![EffectOp::DealDamageWithCombatBonus {
+                base: 9,
+                bonus_key: "Rampage",
+                increment: 5,
+            }],
             keywords: HashSet::new(),
             rarity: CardRarity::Uncommon,
             description: "Deal 9 damage.\nIncrease this card's damage by 5 this combat.",

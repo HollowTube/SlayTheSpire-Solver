@@ -3,6 +3,9 @@
 ``fixtures/registry_snapshot.json`` was recorded from the generated modules
 before the registry moved into ``crates/sts-ids``. The only intended
 differences are listed in ``_ADDED_*`` / ``_REMOVED_*`` below.
+
+``reward_offers`` draws from every card with effects, so it is re-recorded
+whenever a stub card gains its first effect.
 """
 
 import json

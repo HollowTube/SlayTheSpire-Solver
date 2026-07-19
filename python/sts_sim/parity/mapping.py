@@ -157,6 +157,7 @@ def _in_engine(why: str) -> Probe:
 # Per-card overrides, keyed by game class then var name. Informed by each
 # card's template, e.g. Uppercut "Apply {Power} Weak. Apply {Power} Vulnerable".
 CARD_PROBES: dict[str, dict[str, Probe]] = {
+    "Brand": {"StrengthPower": field("PromptExhaustCardFromHand", "strength")},
     "Colossus": {"Colossus": status_amount("Colossus")},
     "CrimsonMantle": {
         "CrimsonMantlePower": _in_engine(
@@ -171,6 +172,7 @@ CARD_PROBES: dict[str, dict[str, Probe]] = {
             "GainStrengthEqualToTargetVulnerable is 1 per stack"
         )
     },
+    "Feed": {"MaxHp": field("GainMaxHpIfLastAttackKilled", "amount")},
     "FiendFire": {"Damage": field("DealDamageScaled", "per_unit")},
     "FightMe": {
         "StrengthPower": Probe(
@@ -198,6 +200,10 @@ CARD_PROBES: dict[str, dict[str, Probe]] = {
     "OneTwoPunch": {"Attacks": count_status("OneTwoPunch", "ApplyStatusToSelf")},
     "PactsEnd": {"Cards": _in_engine("the Exhaust Pile threshold is a play condition")},
     "Pyre": {"Energy": _in_engine("binary status; energy is in the reaction")},
+    "Rampage": {
+        "Damage": field("DealDamageWithCombatBonus", "base"),
+        "Increase": field("DealDamageWithCombatBonus", "increment"),
+    },
     "SecondWind": {"Block": field("ExhaustAllFromHand", "gain_block_per_card")},
     "SetupStrike": {"StrengthPower": status_amount("StrengthThisTurn")},
     "TearAsunder": {

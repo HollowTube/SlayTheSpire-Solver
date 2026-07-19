@@ -196,7 +196,8 @@ fn resolve_combat(state: &RunState, iterations: u32) -> PyResult<RunState> {
     let (hp_lost, _turns) = simulate_fight_outcome(&combat, iterations, combat_seed, true, 8, 1000);
 
     let mut next = state.clone();
-    next.hp = (state.hp - hp_lost).max(0);
+    // In-combat healing can make hp_lost negative; max HP gains aren't carried back.
+    next.hp = (state.hp - hp_lost).clamp(0, state.max_hp);
     next.position += 1;
     if next.hp > 0 {
         // Distinct from `combat_seed` (which drives the embedded MCTS) so

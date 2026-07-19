@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use rand_pcg::Pcg32;
+use std::collections::BTreeMap;
 
 /// Per the Slay the Spire wiki, the Ironclad opens combat with — and redraws
 /// up to — a 5-card hand each turn. Hard-coded for now since the Ironclad is
@@ -78,12 +79,19 @@ pub(crate) fn draw_cards(state: &mut CombatState, count: usize) {
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub(crate) enum PendingDecision {
     SelectTarget { card: CardInstance },
+    /// Waiting for player to choose a hand card to upgrade in-combat (Armaments).
+    UpgradeFromHand,
+    /// Waiting for player to choose a hand card to exhaust (Brand); strength
+    /// is granted to the player after the choice resolves.
+    ExhaustFromHand { strength: i32 },
 }
 
 impl PendingDecision {
     fn as_str(&self) -> &'static str {
         match self {
             PendingDecision::SelectTarget { .. } => "SelectTarget",
+            PendingDecision::UpgradeFromHand => "UpgradeFromHand",
+            PendingDecision::ExhaustFromHand { .. } => "ExhaustFromHand",
         }
     }
 }
@@ -304,6 +312,9 @@ pub struct CombatState {
     // run_effect_ops, cleared after). Used by PlayTopOfDeck to avoid
     // auto-playing the card that generated the effect.
     pub(crate) resolving_card: Option<CardInstance>,
+    // Per-combat counters for cards that scale each time they're played
+    // (Rampage). Ordered so it can be hashed into the transposition key.
+    pub(crate) combat_counters: BTreeMap<&'static str, i32>,
 }
 
 #[pymethods]
@@ -372,6 +383,7 @@ impl CombatState {
             pending: None,
             rng,
             resolving_card: None,
+            combat_counters: BTreeMap::new(),
         };
         if deal_opening_hand {
             draw_cards(&mut state, HAND_SIZE);
