@@ -170,14 +170,14 @@ tests/          ← pytest (require the .so to be built)
 | File | Role |
 |---|---|
 | `__init__.py` | Re-exports everything from `_sts_sim` (the compiled extension). |
-| `names.py` | `CardName` and `MonsterName` str-enums + `_MONSTER_MAP` dict for normalising bridge class names. **Three regions are generated** by `gen_ids.py`; marked with `# BEGIN/END GENERATED`. |
-| `scenarios.py` | Per-monster factory functions (`ironclad_starter_deck_vs_*(seed, deck=None) → CombatState`) and `MONSTER_STARTING_HP` dict. Factory functions are hand-written. |
+| `sim/names.py` | `CardName` and `MonsterName` str-enums + `_MONSTER_MAP` dict for normalising bridge class names. **Three regions are generated** by `gen_ids.py`; marked with `# BEGIN/END GENERATED`. |
+| `sim/scenarios.py` | Per-monster factory functions (`ironclad_starter_deck_vs_*(seed, deck=None) → CombatState`) and `MONSTER_STARTING_HP` dict. Factory functions are hand-written. |
 | `bench/__init__.py` | `Encounter` str-enum, `_SCENARIOS` dict, `run_deck`, `compare`, and run-level benchmarks. |
-| `mcts.py` | Pure-Python MCTS tree (UCB1 select/expand/backprop). |
-| `policies.py` | `simulate_run_with_reward_lookahead`. |
+| `sim/mcts.py` | Pure-Python MCTS tree (UCB1 select/expand/backprop). |
+| `sim/policies.py` | `simulate_run_with_reward_lookahead`. |
 | `server.py` | FastAPI analysis server (receives live bridge state, returns MCTS action values). |
-| `bridge.py` / `bridge_client.py` | HTTP client for the bridge server. |
-| `bridge_cli.py` | `sts2` CLI — AXI-compliant wrapper around the bridge MCPTest protocol. |
+| `bridge/translate.py` / `bridge/client.py` | Translate live bridge JSON into `CombatState` / TCP client for the MCPTest bridge mod. |
+| `bridge/cli.py` | `sts2` CLI — AXI-compliant wrapper around the bridge MCPTest protocol. |
 | `cli.py` | `sts-sim` CLI — interactive and step-mode play. |
 
 ### Code generation
@@ -185,7 +185,7 @@ tests/          ← pytest (require the .so to be built)
 `data/cards.toml` and `data/monsters.toml` drive three generated targets:
 
 - `src/ids.rs` — `CardId` and `MonsterId` enum bodies
-- `python/sts_sim/names.py` — `CardName` enum, `MonsterName` enum, `_MONSTER_MAP` dict (tagged regions)
+- `python/sts_sim/sim/names.py` — `CardName` enum, `MonsterName` enum, `_MONSTER_MAP` dict (tagged regions)
 - `src/cards.rs` — `ALL_CARD_NAMES` array
 
 Run `python scripts/gen_ids.py` after editing either TOML. CI runs `--check` to catch stale regions.
@@ -195,12 +195,12 @@ Run `python scripts/gen_ids.py` after editing either TOML. CI runs `--check` to 
 `etc/monsters.toml` is the *management* source of truth checked by `tests/test_monster_registration.py`, which guards all five catalogues:
 
 1. `ids.rs` (`MonsterId` enum) — generated from `data/monsters.toml`
-2. `names.py` `MonsterName` enum — generated
-3. `names.py` `_MONSTER_MAP` — generated
-4. `scenarios.py` `MONSTER_STARTING_HP` dict — hand-maintained; uses `hp` field in `etc/monsters.toml`
+2. `sim/names.py` `MonsterName` enum — generated
+3. `sim/names.py` `_MONSTER_MAP` — generated
+4. `sim/scenarios.py` `MONSTER_STARTING_HP` dict — hand-maintained; uses `hp` field in `etc/monsters.toml`
 5. `bench/__init__.py` `Encounter` — hand-maintained; uses `encounter` field in `etc/monsters.toml`
 
-When adding a new monster: add to `etc/monsters.toml` (with `hp` and `encounter` if appropriate), then add to `data/monsters.toml`, run `scripts/gen_ids.py`, implement AI in `monsters.rs`, add HP constant + factory in `scenarios.py`, and add `Encounter` entry in `bench/__init__.py`. The sync test tells you exactly what's missing.
+When adding a new monster: add to `etc/monsters.toml` (with `hp` and `encounter` if appropriate), then add to `data/monsters.toml`, run `scripts/gen_ids.py`, implement AI in `monsters.rs`, add HP constant + factory in `sim/scenarios.py`, and add `Encounter` entry in `bench/__init__.py`. The sync test tells you exactly what's missing.
 
 Monsters tagged with no `encounter` field in `etc/monsters.toml` (e.g. KinPriest, KinFollower, EyeWithTeeth) are covered via composite scenarios or are spawned mid-combat. Multi-monster scenarios are listed in `_MULTI_MONSTER_ENCOUNTERS` in `test_monster_registration.py`.
 

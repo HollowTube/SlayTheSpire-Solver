@@ -1,4 +1,4 @@
-"""Behavioural tests for the reward-lookahead policy (sts_sim.policies): at
+"""Behavioural tests for the reward-lookahead policy (sts_sim.sim.policies): at
 a card-reward decision, simulate a few random rollouts of the rest of the
 run for each candidate (every offered card, plus Skip) and pick whichever
 leaves the highest average final HP. Built entirely on the existing public

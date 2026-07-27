@@ -7,7 +7,7 @@
 #                    and the Godot class name ("XxxPower").
 #
 # Adding a new status: add one [[statuses]] entry here, then run
-# scripts/gen_ids.py to regenerate STATUS_MAP in python/sts_sim/bridge.py.
+# scripts/gen_ids.py to regenerate STATUS_MAP in python/sts_sim/bridge/translate.py.
 
 [[statuses]]
 sim_name = "Vulnerable"

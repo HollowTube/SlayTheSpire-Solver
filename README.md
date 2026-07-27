@@ -41,7 +41,7 @@ card and monster IDs. Three files are generated from them:
 | File | What's generated |
 |---|---|
 | `src/ids.rs` | `define_ids!(CardId { … })` and `define_ids!(MonsterId { … })` blocks |
-| `python/sts_sim/names.py` | `CardName` enum, `MonsterName` enum, `_MONSTER_MAP` dict |
+| `python/sts_sim/sim/names.py` | `CardName` enum, `MonsterName` enum, `_MONSTER_MAP` dict |
 | `src/cards.rs` | `ALL_CARD_NAMES` array |
 
 **Don't edit those regions by hand.** Edit the TOML file instead, then run:
@@ -69,8 +69,8 @@ python scripts/gen_ids.py --check
 cargo check
 
 # Python lint and formatting
-ruff check python/ tests/
-ruff format --check python/ tests/    # use `ruff format` (no --check) to auto-fix
+ruff check python/ tests/ integtests/
+ruff format --check python/ tests/ integtests/    # use `ruff format` (no --check) to auto-fix
 
 # Python type-checking
 mypy python/ tests/ --ignore-missing-imports
@@ -398,7 +398,7 @@ The engine is also usable directly from Python:
 
 ```python
 from sts_sim import apply, is_terminal, legal_actions, reward
-from sts_sim.scenarios import ironclad_starter_deck_vs_jaw_worm
+from sts_sim.sim.scenarios import ironclad_starter_deck_vs_jaw_worm
 
 state = ironclad_starter_deck_vs_jaw_worm(seed=42)
 
@@ -409,4 +409,4 @@ while not is_terminal(state):
 print(f"reward: {reward(state):.2f}")
 ```
 
-See `python/sts_sim/mcts.py` for the MCTS solver built on the same interface.
+See `python/sts_sim/sim/mcts.py` for the MCTS solver built on the same interface.

@@ -3,8 +3,8 @@ from typing import cast
 from .. import CombatState, Monster
 from .names import CardName, MonsterName
 
-# CardName and MonsterName are defined in sts_sim.names (single source of truth).
-# Re-exported here so existing `from sts_sim.scenarios import CardName` keeps working.
+# CardName and MonsterName are defined in sts_sim.sim.names (single source of truth).
+# Re-exported here so existing `from sts_sim.sim.scenarios import CardName` keeps working.
 __all__ = ["CardName", "MonsterName"]
 
 # Per the Slay the Spire wiki, the Ironclad's starting deck is 5 Strike,
