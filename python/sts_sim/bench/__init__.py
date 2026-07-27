@@ -62,7 +62,7 @@ from ..sim.scenarios import (
 
 class Encounter(str, Enum):
     """Canonical keys for `run_deck`/`compare`'s `monster=` argument — one
-    per scenario in `sts_sim.scenarios`. A `str` subclass, so existing code
+    per scenario in `sts_sim.sim.scenarios`. A `str` subclass, so existing code
     passing plain strings (e.g. `monster="jaw-worm"`) keeps working —
     `Encounter.JAW_WORM == "jaw-worm"` is true and hashes the same, so dict
     lookups and equality checks behave identically either way. Exists so

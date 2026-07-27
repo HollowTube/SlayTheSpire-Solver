@@ -242,7 +242,7 @@ class StatusName(str, Enum):
     """Canonical status/power names — one per status in ``data/statuses.toml``.
 
     Each member carries the bridge class aliases that map to it, so
-    ``STATUS_MAP`` in ``bridge.py`` can be derived without a separate
+    ``STATUS_MAP`` in ``bridge/translate.py`` can be derived without a separate
     generated artifact.
 
     ``StatusName.VULNERABLE == "Vulnerable"`` is true (str subclass).
