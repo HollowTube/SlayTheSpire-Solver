@@ -13,7 +13,8 @@ description: >
 ## Setup
 
 ```bash
-# WSL: set the Windows host IP so sts2 can reach the bridge
+# WSL: sts2 auto-detects the Windows host IP. Only export this if detection
+# picks the wrong address:
 export STS2_BRIDGE_HOST=172.26.176.1   # check /etc/resolv.conf if different
 
 # Verify connection

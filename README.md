@@ -309,7 +309,9 @@ sts2 console "fight JAW_WORM"
 sts2 console "bridge_hot_reload <path/to/stssimbridgemod.dll>"
 ```
 
-By default `sts2` connects to `127.0.0.1:21337`. When running from WSL, set the Windows host IP:
+By default `sts2` auto-detects the WSL gateway (Windows host IP) and falls back to
+`127.0.0.1:21337` if detection fails. Override with `STS2_BRIDGE_HOST` or `--host` if the
+auto-detected IP is wrong:
 
 ```bash
 export STS2_BRIDGE_HOST=172.26.176.1   # Windows IP as seen from WSL — check /etc/resolv.conf
