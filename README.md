@@ -316,6 +316,25 @@ export STS2_BRIDGE_HOST=172.26.176.1   # Windows IP as seen from WSL — check /
 sts2 state
 ```
 
+### Live integration tests
+
+`integtests/` (`pytest integtests/ -m live -v`) drives a real running game via the same
+MCPTest bridge as `sts2`. `CombatFixture.setup_fight()` (`integtests/conftest.py`) handles
+resetting combat and starting the next fight; it settle-polls screen transitions rather than
+using fixed sleeps, because a console command issued mid-transition can throw a
+`NullReferenceException` in `NCombatUi.Enable()` and permanently wedge the game's
+`CombatManager` (stuck on `MENU_NCombatRoom`, no in-session recovery — a full relaunch is
+required). `setup_fight()` raises `CombatWedgedError` with that guidance if it happens.
+
+**If you see `NCombatUi.Enable()` `NullReferenceException`s in the game log, don't chase
+window focus.** The log's `MuteInBackground: FocusOut` lines right before the crash look
+causally related but aren't — forcing OS focus on the game window does not stop the crash.
+The actual cause is timing: a `fight`/`win`/`room` console command landing before the
+previous screen transition (most commonly `start_run()`'s async intro Event Room) has
+actually finished settling. `setup_fight()`'s settle-polling is the fix; if you're writing
+new fixture code that issues console commands after a screen transition, poll for settle the
+same way instead of adding a fixed sleep.
+
 ### `sts2 dev` — dev console shortcuts
 
 `sts2 dev` is an AXI-compliant wrapper around the 40 in-game dev console commands. Each subcommand validates its arguments, calls the game console, and returns TOON-formatted output including the updated combat state so you don't need a follow-up call.
