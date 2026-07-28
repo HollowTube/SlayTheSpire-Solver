@@ -283,6 +283,38 @@ def test_actions_table_includes_status_column(monkeypatch):
     assert "ready" in result.output
 
 
+# ─── --host default preserves client.py's auto-detection ─────────────────────
+
+
+def test_host_option_unset_preserves_autodetected_bridge_host(monkeypatch):
+    """Regression test for HOL-95: --host used to default to '127.0.0.1' and
+    unconditionally overwrite bc.BRIDGE_HOST, silently defeating client.py's
+    WSL-gateway auto-detection (e.g. resolving to 172.26.176.1) any time the
+    CLI ran without an explicit --host or STS2_BRIDGE_HOST. Not passing --host
+    must leave bc.BRIDGE_HOST exactly as client.py set it at import time."""
+    from click.testing import CliRunner
+
+    monkeypatch.setattr(bc, "BRIDGE_HOST", "172.26.176.1")
+    monkeypatch.setattr(bc, "get_full_state", lambda: {"result": {"screen": "MAP"}})
+
+    runner = CliRunner()
+    result = runner.invoke(main, [])
+    assert result.exit_code == 0
+    assert bc.BRIDGE_HOST == "172.26.176.1"
+
+
+def test_host_option_explicit_overrides_bridge_host(monkeypatch):
+    from click.testing import CliRunner
+
+    monkeypatch.setattr(bc, "BRIDGE_HOST", "172.26.176.1")
+    monkeypatch.setattr(bc, "get_full_state", lambda: {"result": {"screen": "MAP"}})
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["--host", "10.0.0.5"])
+    assert result.exit_code == 0
+    assert bc.BRIDGE_HOST == "10.0.0.5"
+
+
 # ─── send_request double-encoding ─────────────────────────────────────────────
 
 

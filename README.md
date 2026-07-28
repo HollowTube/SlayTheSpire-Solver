@@ -309,12 +309,33 @@ sts2 console "fight JAW_WORM"
 sts2 console "bridge_hot_reload <path/to/stssimbridgemod.dll>"
 ```
 
-By default `sts2` connects to `127.0.0.1:21337`. When running from WSL, set the Windows host IP:
+By default `sts2` auto-detects the WSL gateway (Windows host IP) and falls back to
+`127.0.0.1:21337` if detection fails. Override with `STS2_BRIDGE_HOST` or `--host` if the
+auto-detected IP is wrong:
 
 ```bash
 export STS2_BRIDGE_HOST=172.26.176.1   # Windows IP as seen from WSL — check /etc/resolv.conf
 sts2 state
 ```
+
+### Live integration tests
+
+`integtests/` (`pytest integtests/ -m live -v`) drives a real running game via the same
+MCPTest bridge as `sts2`. `CombatFixture.setup_fight()` (`integtests/conftest.py`) handles
+resetting combat and starting the next fight; it settle-polls screen transitions rather than
+using fixed sleeps, because a console command issued mid-transition can throw a
+`NullReferenceException` in `NCombatUi.Enable()` and permanently wedge the game's
+`CombatManager` (stuck on `MENU_NCombatRoom`, no in-session recovery — a full relaunch is
+required). `setup_fight()` raises `CombatWedgedError` with that guidance if it happens.
+
+**If you see `NCombatUi.Enable()` `NullReferenceException`s in the game log, don't chase
+window focus.** The log's `MuteInBackground: FocusOut` lines right before the crash look
+causally related but aren't — forcing OS focus on the game window does not stop the crash.
+The actual cause is timing: a `fight`/`win`/`room` console command landing before the
+previous screen transition (most commonly `start_run()`'s async intro Event Room) has
+actually finished settling. `setup_fight()`'s settle-polling is the fix; if you're writing
+new fixture code that issues console commands after a screen transition, poll for settle the
+same way instead of adding a fixed sleep.
 
 ### `sts2 dev` — dev console shortcuts
 

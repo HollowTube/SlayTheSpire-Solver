@@ -227,18 +227,19 @@ def _home_hints(
 @click.option(
     "--host",
     envvar="STS2_BRIDGE_HOST",
-    default="127.0.0.1",
-    show_default=True,
-    help="Bridge host (set STS2_BRIDGE_HOST for WSL).",
+    default=None,
+    help="Bridge host. Defaults to client.py's WSL-gateway auto-detection; "
+    "set STS2_BRIDGE_HOST or pass this explicitly to override it.",
 )
 @click.option("--json", "as_json", is_flag=True, help="Output raw JSON.")
 @click.option("--timeout", default=12.0, show_default=True, type=float)
 @click.pass_context
-def main(ctx: click.Context, host: str, as_json: bool, timeout: float) -> None:
+def main(ctx: click.Context, host: str | None, as_json: bool, timeout: float) -> None:
     """Inspect and control STS2 via the MCPTest bridge (port 21337)."""
     ctx.ensure_object(dict)
     ctx.obj["as_json"] = as_json
-    bc.BRIDGE_HOST = host
+    if host is not None:
+        bc.BRIDGE_HOST = host
     bc.TIMEOUT = timeout
 
     if ctx.invoked_subcommand is not None:
