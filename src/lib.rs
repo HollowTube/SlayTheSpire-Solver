@@ -10,7 +10,7 @@ mod run;
 mod state;
 
 use act::{draw_overgrowth_elite, draw_overgrowth_monster_sequence};
-use action::{EndTurnAction, PlayCardAction, SelectTargetAction};
+use action::{EndTurnAction, ExhaustCardFromHandAction, PlayCardAction, SelectTargetAction, UpgradeCardFromHandAction};
 use cards::{card_data, CardData, CardKeyword, CardType};
 use crate::ids::{CardId, MonsterId};
 use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
@@ -35,6 +35,8 @@ pub(crate) enum ActionKind {
     EndTurn,
     PlayCard(String),
     SelectTarget(usize),
+    UpgradeCardFromHand(String),
+    ExhaustCardFromHand(String),
 }
 
 impl std::fmt::Display for ActionKind {
@@ -43,6 +45,8 @@ impl std::fmt::Display for ActionKind {
             ActionKind::EndTurn => write!(f, "EndTurn"),
             ActionKind::PlayCard(name) => write!(f, "PlayCard:{name}"),
             ActionKind::SelectTarget(i) => write!(f, "SelectTarget:Monster:{i}"),
+            ActionKind::UpgradeCardFromHand(name) => write!(f, "UpgradeCardFromHand:{name}"),
+            ActionKind::ExhaustCardFromHand(name) => write!(f, "ExhaustCardFromHand:{name}"),
         }
     }
 }
@@ -97,6 +101,17 @@ pub(crate) fn legal_actions_typed(state: &CombatState) -> Vec<ActionKind> {
             .into_iter()
             .map(ActionKind::SelectTarget)
             .collect(),
+        Some(PendingDecision::UpgradeFromHand) => state
+            .hand
+            .iter()
+            .filter(|c| c.upgrade_level == 0)
+            .map(|c| ActionKind::UpgradeCardFromHand(c.as_str()))
+            .collect(),
+        Some(PendingDecision::ExhaustFromHand { .. }) => state
+            .hand
+            .iter()
+            .map(|c| ActionKind::ExhaustCardFromHand(c.as_str()))
+            .collect(),
         None => {
             let mut actions: Vec<ActionKind> = state
                 .hand
@@ -150,6 +165,12 @@ fn str_to_action(py: Python<'_>, s: &str) -> PyObject {
         if let Ok(idx) = idx_str.parse::<usize>() {
             return SelectTargetAction::new(idx).into_pyobject(py).unwrap().into_any().unbind();
         }
+    }
+    if let Some(card) = s.strip_prefix("UpgradeCardFromHand:") {
+        return UpgradeCardFromHandAction::new(card.to_string()).into_pyobject(py).unwrap().into_any().unbind();
+    }
+    if let Some(card) = s.strip_prefix("ExhaustCardFromHand:") {
+        return ExhaustCardFromHandAction::new(card.to_string()).into_pyobject(py).unwrap().into_any().unbind();
     }
     unreachable!("legal_actions only produces well-formed action strings")
 }
@@ -419,6 +440,42 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             fire_event(&mut next, GameEvent::TurnStart);
             Ok(next)
         }
+        ActionKind::UpgradeCardFromHand(card_name) => match &state.pending {
+            Some(PendingDecision::UpgradeFromHand) => {
+                let mut next = state.clone();
+                let pos = next
+                    .hand
+                    .iter()
+                    .position(|c| c.as_str() == *card_name)
+                    .ok_or_else(|| PyValueError::new_err(format!("{card_name} is not in hand")))?;
+                next.hand[pos].upgrade_level += 1;
+                next.pending = None;
+                Ok(next)
+            }
+            _ => Err(PyValueError::new_err(format!(
+                "unknown action: UpgradeCardFromHand:{card_name}"
+            ))),
+        },
+        ActionKind::ExhaustCardFromHand(card_name) => match &state.pending {
+            Some(PendingDecision::ExhaustFromHand { strength }) => {
+                let strength = *strength;
+                let mut next = state.clone();
+                let pos = next
+                    .hand
+                    .iter()
+                    .position(|c| c.as_str() == *card_name)
+                    .ok_or_else(|| PyValueError::new_err(format!("{card_name} is not in hand")))?;
+                let card = next.hand.remove(pos);
+                next.exhaust_pile.push(card);
+                fire_event(&mut next, GameEvent::CardExhausted);
+                next.player.statuses.push(Status::Strength(strength));
+                next.pending = None;
+                Ok(next)
+            }
+            _ => Err(PyValueError::new_err(format!(
+                "unknown action: ExhaustCardFromHand:{card_name}"
+            ))),
+        },
         ActionKind::SelectTarget(idx) => match &state.pending {
             Some(PendingDecision::SelectTarget { card }) => {
                 let idx = *idx;
@@ -454,7 +511,7 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                 next.pending = None;
                 Ok(next)
             }
-            None => Err(PyValueError::new_err(format!(
+            _ => Err(PyValueError::new_err(format!(
                 "unknown action: SelectTarget:Monster:{idx}"
             ))),
         },
@@ -590,6 +647,10 @@ pub(crate) fn apply_str(state: &CombatState, action: &str) -> PyResult<CombatSta
             .parse::<usize>()
             .map_err(|_| PyValueError::new_err(format!("unknown action: {action}")))?;
         ActionKind::SelectTarget(idx)
+    } else if let Some(card) = action.strip_prefix("UpgradeCardFromHand:") {
+        ActionKind::UpgradeCardFromHand(card.to_string())
+    } else if let Some(card) = action.strip_prefix("ExhaustCardFromHand:") {
+        ActionKind::ExhaustCardFromHand(card.to_string())
     } else {
         return Err(PyValueError::new_err(format!("unknown action: {action}")));
     };
@@ -606,9 +667,13 @@ fn apply(state: &CombatState, action: &Bound<'_, PyAny>) -> PyResult<CombatState
         ActionKind::PlayCard(a.card.clone())
     } else if let Ok(a) = action.extract::<PyRef<SelectTargetAction>>() {
         ActionKind::SelectTarget(a.monster_index)
+    } else if let Ok(a) = action.extract::<PyRef<UpgradeCardFromHandAction>>() {
+        ActionKind::UpgradeCardFromHand(a.card.clone())
+    } else if let Ok(a) = action.extract::<PyRef<ExhaustCardFromHandAction>>() {
+        ActionKind::ExhaustCardFromHand(a.card.clone())
     } else {
         return Err(PyTypeError::new_err(
-            "action must be a PlayCardAction, SelectTargetAction, or EndTurnAction",
+            "action must be a PlayCardAction, SelectTargetAction, EndTurnAction, UpgradeCardFromHandAction, or ExhaustCardFromHandAction",
         ));
     };
     apply_action(state, &kind)
@@ -716,11 +781,19 @@ struct StateKey {
     attacks_played_this_turn: i32,
     blocks_gained_this_turn: i32,
     pending: Option<PendingDecision>,
+    // HashMap doesn't impl Hash; fingerprint as a sorted vec of (key, value) pairs.
+    combat_counters: Vec<(String, i32)>,
     rng_fingerprint: [u32; 4],
 }
 
 fn state_key(state: &CombatState) -> StateKey {
     let mut rng_clone = state.rng.clone();
+    let mut combat_counters: Vec<(String, i32)> = state
+        .combat_counters
+        .iter()
+        .map(|(k, v)| (k.clone(), *v))
+        .collect();
+    combat_counters.sort();
     StateKey {
         player: state.player.clone(),
         player_energy: state.player_energy,
@@ -734,6 +807,7 @@ fn state_key(state: &CombatState) -> StateKey {
         attacks_played_this_turn: state.attacks_played_this_turn,
         blocks_gained_this_turn: state.blocks_gained_this_turn,
         pending: state.pending.clone(),
+        combat_counters,
         rng_fingerprint: [
             rng_clone.next_u32(),
             rng_clone.next_u32(),
@@ -828,6 +902,8 @@ fn _sts_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<EndTurnAction>()?;
     m.add_class::<PlayCardAction>()?;
     m.add_class::<SelectTargetAction>()?;
+    m.add_class::<UpgradeCardFromHandAction>()?;
+    m.add_class::<ExhaustCardFromHandAction>()?;
     m.add_class::<CombatState>()?;
     m.add_class::<Monster>()?;
     m.add_class::<RunState>()?;

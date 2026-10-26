@@ -1,7 +1,9 @@
 from ._sts_sim import (
     EndTurnAction,
+    ExhaustCardFromHandAction,
     PlayCardAction,
     SelectTargetAction,
+    UpgradeCardFromHandAction,
     CombatState,
     Monster,
     RunState,
@@ -29,8 +31,10 @@ from ._sts_sim import (
 
 __all__ = [
     "EndTurnAction",
+    "ExhaustCardFromHandAction",
     "PlayCardAction",
     "SelectTargetAction",
+    "UpgradeCardFromHandAction",
     "CombatState",
     "Monster",
     "RunState",

@@ -149,3 +149,91 @@ impl SelectTargetAction {
         self.__str__().contains(item)
     }
 }
+
+#[pyclass]
+#[derive(Clone)]
+pub struct UpgradeCardFromHandAction {
+    #[pyo3(get)]
+    pub card: String,
+}
+
+#[pymethods]
+impl UpgradeCardFromHandAction {
+    #[new]
+    pub fn new(card: String) -> Self {
+        UpgradeCardFromHandAction { card }
+    }
+
+    fn __str__(&self) -> String {
+        format!("UpgradeCardFromHand:{}", self.card)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("UpgradeCardFromHandAction({:?})", self.card)
+    }
+
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        if let Ok(other) = other.extract::<PyRef<UpgradeCardFromHandAction>>() {
+            return self.card == other.card;
+        }
+        other.extract::<String>().map(|s| s == self.__str__()).unwrap_or(false)
+    }
+
+    fn __hash__(&self, py: Python<'_>) -> PyResult<isize> {
+        py_str_hash(py, &self.__str__())
+    }
+
+    fn __lt__(&self, other: &Bound<'_, PyAny>) -> PyResult<bool> {
+        let self_s = self.__str__();
+        let other_s = other.str()?.to_string();
+        Ok(self_s < other_s)
+    }
+
+    fn __contains__(&self, item: &str) -> bool {
+        self.__str__().contains(item)
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct ExhaustCardFromHandAction {
+    #[pyo3(get)]
+    pub card: String,
+}
+
+#[pymethods]
+impl ExhaustCardFromHandAction {
+    #[new]
+    pub fn new(card: String) -> Self {
+        ExhaustCardFromHandAction { card }
+    }
+
+    fn __str__(&self) -> String {
+        format!("ExhaustCardFromHand:{}", self.card)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("ExhaustCardFromHandAction({:?})", self.card)
+    }
+
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        if let Ok(other) = other.extract::<PyRef<ExhaustCardFromHandAction>>() {
+            return self.card == other.card;
+        }
+        other.extract::<String>().map(|s| s == self.__str__()).unwrap_or(false)
+    }
+
+    fn __hash__(&self, py: Python<'_>) -> PyResult<isize> {
+        py_str_hash(py, &self.__str__())
+    }
+
+    fn __lt__(&self, other: &Bound<'_, PyAny>) -> PyResult<bool> {
+        let self_s = self.__str__();
+        let other_s = other.str()?.to_string();
+        Ok(self_s < other_s)
+    }
+
+    fn __contains__(&self, item: &str) -> bool {
+        self.__str__().contains(item)
+    }
+}
