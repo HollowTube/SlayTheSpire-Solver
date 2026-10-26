@@ -48,7 +48,7 @@ impl<T: Transport> McpTestBackend<T> {
     fn read_actions(&mut self) -> Result<WireActions, BridgeError> {
         const METHOD: &str = "get_available_actions";
         let value = self.call(METHOD, None)?;
-        parse(METHOD, value)
+        parse(METHOD, &value)
     }
 }
 
@@ -58,20 +58,22 @@ impl<T: Transport> Backend for McpTestBackend<T> {
 
         const RUN: &str = "get_run_state";
         let run_value = self.call(RUN, None)?;
-        let run = if parse::<WireRunFlag>(RUN, run_value.clone())?.in_progress {
-            Some(parse::<WireRun>(RUN, run_value)?.into_run_info(RUN)?)
+        let run = if parse::<WireRunFlag>(RUN, &run_value)?.in_progress {
+            Some(parse::<WireRun>(RUN, &run_value)?.into_run_info(RUN)?)
         } else {
             None
         };
 
-        let combat = if screen.is_combat() {
+        // Not gated on a COMBAT* screen: in-combat overlays (HAND_SELECT,
+        // CARD_SELECTION) still carry a combat.
+        let combat = if run.is_some() && !screen.is_loading() {
             const COMBAT: &str = "get_combat_state";
             let combat_value = self.call(COMBAT, None)?;
-            if parse::<WireCombatFlag>(COMBAT, combat_value.clone())?.in_combat {
-                let combat = parse::<WireCombat>(COMBAT, combat_value)?;
+            if parse::<WireCombatFlag>(COMBAT, &combat_value)?.in_combat {
+                let combat = parse::<WireCombat>(COMBAT, &combat_value)?;
                 const PILES: &str = "get_card_piles";
                 let piles_value = self.call(PILES, None)?;
-                let piles = parse::<WireCardPiles>(PILES, piles_value)?;
+                let piles = parse::<WireCardPiles>(PILES, &piles_value)?;
                 Some(combat.into_combat_view(COMBAT, piles)?)
             } else {
                 None
@@ -111,7 +113,7 @@ impl<T: Transport> Backend for McpTestBackend<T> {
         let started = Instant::now();
         let value = self.call(METHOD, None)?;
         let latency_ms = started.elapsed().as_secs_f64() * 1000.0;
-        let ping: WirePing = parse(METHOD, value)?;
+        let ping: WirePing = parse(METHOD, &value)?;
         Ok(Health {
             ok: ping.status == "ok",
             latency_ms,

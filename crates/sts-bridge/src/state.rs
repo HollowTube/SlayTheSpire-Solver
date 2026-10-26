@@ -10,7 +10,8 @@ pub struct GameState {
     pub screen: Screen,
     /// `None` when no run is in progress (main menu, character select).
     pub run: Option<RunInfo>,
-    /// `None` outside combat, including while a combat room is loading.
+    /// `None` outside combat, including while a combat room is loading. Set on
+    /// in-combat overlay screens (`HAND_SELECT`, `CARD_SELECTION`) too.
     pub combat: Option<CombatView>,
 }
 
@@ -27,7 +28,11 @@ impl Screen {
 
     /// A combat screen whose state can be read (not a loading transition).
     pub fn is_combat(&self) -> bool {
-        self.0.starts_with("COMBAT") && !self.0.contains("LOADING")
+        self.0.starts_with("COMBAT") && !self.is_loading()
+    }
+
+    pub fn is_loading(&self) -> bool {
+        self.0.contains("LOADING")
     }
 }
 

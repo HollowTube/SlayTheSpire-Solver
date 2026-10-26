@@ -14,7 +14,7 @@ use crate::state::{
     PlayerView, Power, RunInfo, Screen,
 };
 
-pub(crate) fn parse<T: DeserializeOwned>(method: &str, value: Value) -> Result<T, BridgeError> {
+pub(crate) fn parse<T: DeserializeOwned>(method: &str, value: &Value) -> Result<T, BridgeError> {
     serde_path_to_error::deserialize(value).map_err(|e| BridgeError::Schema {
         method: method.to_string(),
         path: e.path().to_string(),

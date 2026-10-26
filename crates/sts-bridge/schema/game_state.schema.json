@@ -5,7 +5,7 @@
   "type": "object",
   "properties": {
     "combat": {
-      "description": "`None` outside combat, including while a combat room is loading.",
+      "description": "`None` outside combat, including while a combat room is loading. Set on\nin-combat overlay screens (`HAND_SELECT`, `CARD_SELECTION`) too.",
       "anyOf": [
         {
           "$ref": "#/$defs/CombatView"

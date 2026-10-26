@@ -58,21 +58,26 @@ impl TcpTransport {
         format!("{}:{}", self.host, self.port)
     }
 
-    fn resolve(&self, method: &str) -> Result<SocketAddr, BridgeError> {
-        (self.host.as_str(), self.port)
+    /// Tries each resolved address in turn, like `socket.create_connection`.
+    fn connect(&self, method: &str) -> Result<TcpStream, BridgeError> {
+        let addrs: Vec<SocketAddr> = (self.host.as_str(), self.port)
             .to_socket_addrs()
             .map_err(|source| BridgeError::Io {
                 method: method.to_string(),
                 source,
             })?
-            .next()
-            .ok_or_else(|| BridgeError::Io {
-                method: method.to_string(),
-                source: std::io::Error::new(
-                    ErrorKind::NotFound,
-                    format!("{} did not resolve", self.addr()),
-                ),
-            })
+            .collect();
+        let mut last = std::io::Error::new(
+            ErrorKind::NotFound,
+            format!("{} did not resolve", self.addr()),
+        );
+        for addr in addrs {
+            match TcpStream::connect_timeout(&addr, self.timeout) {
+                Ok(stream) => return Ok(stream),
+                Err(e) => last = e,
+            }
+        }
+        Err(self.io_error(method, last))
     }
 
     fn io_error(&self, method: &str, source: std::io::Error) -> BridgeError {
@@ -100,9 +105,8 @@ impl Transport for TcpTransport {
         let mut line = request.to_string();
         line.push('\n');
 
-        let addr = self.resolve(method)?;
+        let mut stream = self.connect(method)?;
         let err = |e| self.io_error(method, e);
-        let mut stream = TcpStream::connect_timeout(&addr, self.timeout).map_err(err)?;
         stream.set_read_timeout(Some(self.timeout)).map_err(err)?;
         stream.set_write_timeout(Some(self.timeout)).map_err(err)?;
         stream.write_all(line.as_bytes()).map_err(err)?;
@@ -212,7 +216,7 @@ pub(crate) fn decode(method: &str, raw: &[u8]) -> Result<Value, BridgeError> {
                 if obj.contains_key("result")
                     && obj
                         .keys()
-                        .all(|k| matches!(k.as_str(), "result" | "id" | "jsonrpc")) =>
+                        .all(|k| matches!(k.as_str(), "result" | "id" | "jsonrpc" | "error")) =>
             {
                 value = obj.remove("result").unwrap_or(Value::Null);
             }

@@ -21,7 +21,7 @@ cargo test -p sts-bridge --test live_contract -- --ignored --test-threads=1
 # Regenerate the published schema after changing GameState.
 UPDATE_SCHEMA=1 cargo test -p sts-bridge --test offline
 
-# Re-record fixtures from the game's current screen (main menu or combat).
+# Record the current screen (main menu or combat) into tests/fixtures/mcptest/recorded/.
 STS2_RECORD=1 cargo test -p sts-bridge --test live_contract record_fixtures -- --ignored
 ```
 

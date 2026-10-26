@@ -138,3 +138,12 @@ fn error_reply_is_a_remote_error() {
         other => panic!("expected a Remote error, got {other:?}"),
     }
 }
+
+#[test]
+fn hostname_tries_every_resolved_address() {
+    let port =
+        replying(b"{\"result\":{\"status\":\"ok\",\"mod\":\"MCPTest\"},\"id\":1}\n".to_vec());
+    let mut backend =
+        McpTestBackend::new(TcpTransport::new("localhost", port).with_timeout(TIMEOUT));
+    assert!(backend.health().unwrap().ok);
+}

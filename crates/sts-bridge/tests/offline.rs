@@ -228,3 +228,59 @@ fn parsed_fixtures_validate_against_the_schema() {
         assert!(errors.is_empty(), "{errors:?}");
     }
 }
+
+#[test]
+fn in_combat_overlay_screen_still_reads_combat() {
+    let mut transport = replay("combat");
+    let mut envelope: Value =
+        serde_json::from_slice(transport.get("get_available_actions").unwrap()).unwrap();
+    envelope["result"]["screen"] = Value::from("HAND_SELECT");
+    transport.insert("get_available_actions", envelope.to_string());
+    let state = McpTestBackend::new(transport).state().unwrap();
+    assert_eq!(state.screen.as_str(), "HAND_SELECT");
+    assert_eq!(state.combat, combat_state().combat);
+}
+
+#[test]
+fn in_run_outside_combat_has_run_but_no_combat() {
+    let mut transport = replay("combat");
+    transport.insert(
+        "get_available_actions",
+        r#"{"result":{"screen":"MAP","actions":[]},"id":1}"#,
+    );
+    transport.insert(
+        "get_combat_state",
+        r#"{"result":{"in_combat":false,"screen":"MAP"},"id":2}"#,
+    );
+    let state = McpTestBackend::new(transport).state().unwrap();
+    assert_eq!(state.screen.as_str(), "MAP");
+    assert!(state.run.is_some());
+    assert_eq!(state.combat, None);
+}
+
+#[test]
+fn json_rpc_envelope_with_null_error_is_unwrapped() {
+    let mut transport = replay("main_menu");
+    transport.insert(
+        "ping",
+        r#"{"jsonrpc":"2.0","result":{"status":"ok","mod":"MCPTest"},"error":null,"id":3}"#,
+    );
+    assert!(McpTestBackend::new(transport).health().unwrap().ok);
+}
+
+/// Live recordings (`record_fixtures`) land in `recorded/<screen>/`; whatever
+/// is there must parse and match the screen it was recorded on.
+#[test]
+fn recorded_fixtures_parse() {
+    for (screen, in_combat) in [("main_menu", false), ("combat", true)] {
+        let dir = fixture_dir("recorded").join(screen);
+        if !dir.is_dir() {
+            continue;
+        }
+        let state = McpTestBackend::new(ReplayTransport::from_dir(&dir).unwrap())
+            .state()
+            .unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
+        assert_eq!(state.combat.is_some(), in_combat, "{}", dir.display());
+        assert_eq!(state.run.is_some(), in_combat, "{}", dir.display());
+    }
+}

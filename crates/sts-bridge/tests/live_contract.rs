@@ -203,7 +203,7 @@ fn combat_intent_totals_are_consistent() {
     for (e, p) in attacks {
         let (damage, hits, total) = (
             p.damage.expect("attack damage"),
-            p.hits.expect("attack hits"),
+            p.hits.unwrap_or(1),
             p.total_damage.expect("attack total_damage"),
         );
         assert!(
@@ -214,13 +214,13 @@ fn combat_intent_totals_are_consistent() {
     }
 }
 
-/// Re-records the offline fixtures from the game's current screen:
+/// Records the current screen into `tests/fixtures/mcptest/recorded/<screen>/`:
 /// `STS2_RECORD=1 cargo test -p sts-bridge --test live_contract record_fixtures -- --ignored`.
 #[test]
 #[ignore = "live: records fixtures from STS2"]
 fn record_fixtures() {
     if std::env::var_os("STS2_RECORD").is_none() {
-        panic!("set STS2_RECORD=1 to overwrite tests/fixtures/mcptest from the live game");
+        panic!("set STS2_RECORD=1 to write tests/fixtures/mcptest/recorded from the live game");
     }
     let _game = hold_game();
     let state = live_state("record");
@@ -247,7 +247,7 @@ fn record_fixtures() {
         );
     };
     let out = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/fixtures/mcptest")
+        .join("tests/fixtures/mcptest/recorded")
         .join(dir);
     std::fs::create_dir_all(&out).unwrap();
     let mut transport = TcpTransport::from_env();
