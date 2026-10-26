@@ -33,27 +33,30 @@ maturin develop      # faster than a full re-install
 pytest tests/
 ```
 
-## Code generation
+## The registry (cards, monsters, statuses)
 
-`data/cards.toml` and `data/monsters.toml` are the single source of truth for
-card and monster IDs. Three files are generated from them:
+Every card, monster and status is one row in `crates/sts-ids/src/registry.rs`:
+display name, STS2 model id, bridge class names, and per-kind fields
+(`in_card_pool` for cards; `hp` and `encounter` for monsters). Everything else
+is derived from those rows:
 
-| File | What's generated |
-|---|---|
-| `src/ids.rs` | `define_ids!(CardId { … })` and `define_ids!(MonsterId { … })` blocks |
-| `python/sts_sim/sim/names.py` | `CardName` enum, `MonsterName` enum, `_MONSTER_MAP` dict |
-| `src/cards.rs` | `ALL_CARD_NAMES` array |
+- Rust: `CardId`, `MonsterId`, `StatusId` (re-exported by `src/ids.rs`), the
+  card-reward pool, and the `sts-bridge` state types (`Entity<CardId>`, …).
+- Python, at import time: `CardName`, `MonsterName`, `StatusName`, `Encounter`,
+  the bridge-name maps in `sim/names.py`, and `MONSTER_STARTING_HP`.
 
-**Don't edit those regions by hand.** Edit the TOML file instead, then run:
+To add a monster, add one row, then run `cargo check` (it names each AI
+function in `src/monsters.rs` that needs an arm) and
+`pytest tests/test_monster_registration.py` (it names the missing scenario
+factory). Cards work the same way with `card_data_base` in `src/cards.rs`.
+
+The one generated file is `python/sts_sim/sim/_registry.pyi`, so editors and
+mypy see the enum members. Rebuild the extension, then regenerate it:
 
 ```bash
-python scripts/gen_ids.py
-```
-
-To check that committed files are up to date without changing anything (also runs in CI):
-
-```bash
-python scripts/gen_ids.py --check
+uv pip install -e ".[dev]"
+python scripts/gen_ids.py           # rewrite the stub
+python scripts/gen_ids.py --check   # fail if it is stale (CI runs this)
 ```
 
 ## Run the CI checks locally
@@ -62,7 +65,7 @@ CI (`.github/workflows/ci.yml`) runs the following checks against every push and
 pull request. Run them yourself before pushing to catch issues early:
 
 ```bash
-# Generated regions must match TOML source of truth
+# The registry stub must match the built extension
 python scripts/gen_ids.py --check
 
 # Rust: must build with no warnings

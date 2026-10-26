@@ -125,15 +125,15 @@ ruff format --check python/ tests/  # CI check
 # Type-check
 mypy python/ tests/ --ignore-missing-imports
 
-# Validate generated regions are up to date
+# Validate the registry stub (_registry.pyi) is up to date
 python scripts/gen_ids.py --check   # fails if stale
 python scripts/gen_ids.py           # regenerate in place
 
-# Cargo check (Rust only, no Python build) — covers sts-sim and crates/sts-bridge
+# Cargo check (Rust only, no Python build) — covers sts-sim, crates/sts-ids and crates/sts-bridge
 cargo check
 
-# Bridge crate tests (offline; live ones are opt-in — see crates/sts-bridge/README.md)
-cargo test -p sts-bridge
+# Registry and bridge crate tests (offline; live bridge ones are opt-in — see crates/sts-bridge/README.md)
+cargo test -p sts-ids -p sts-bridge
 
 # Restart analysis server (pull latest, rebuild Rust if src/ changed, kill old, start fresh)
 ./scripts/start-server.sh
@@ -160,10 +160,10 @@ tests/          ← pytest (require the .so to be built)
 
 | File | Role |
 |---|---|
-| `ids.rs` | `CardId` and `MonsterId` enums — all string/STS2-ID conversions. **Generated** from `data/cards.toml` + `data/monsters.toml` via `scripts/gen_ids.py`. Do not hand-edit the marked regions. |
+| `ids.rs` | Re-exports `CardId`, `MonsterId`, `StatusId` from the registry crate `crates/sts-ids` (see "The registry" below). |
 | `state.rs` | `CombatState`, `Monster`, `Fighter`, `CardInstance` — all game state. Cloned on every action (persistent immutable-ish tree). |
 | `engine.rs` | `Status` enum (the canonical source of truth for in-game statuses), `EffectOp` pipeline, `GameEvent` reactions, and `fire_event`. |
-| `cards.rs` | Card data table (`card_data(id, upgrade_level) → CardData`). Has a `BEGIN GENERATED` block for `ALL_CARD_NAMES`. |
+| `cards.rs` | Card data table (`card_data(id, upgrade_level) → CardData`) and `card_pool()`, the reward pool derived from the registry. |
 | `monsters.rs` | Monster AI: `opening_intent`, `monster_move` (per-move effects), `select_next_intent`. Add a new monster by adding arms to all three functions. |
 | `mcts.rs` | Rayon-parallel MCTS: `fight_outcomes_per_fight`, `mcts_search`, etc. |
 | `action.rs` | PyO3 action types (`EndTurnAction`, `PlayCardAction`, `SelectTargetAction`). |
@@ -177,9 +177,9 @@ tests/          ← pytest (require the .so to be built)
 | File | Role |
 |---|---|
 | `__init__.py` | Re-exports everything from `_sts_sim` (the compiled extension). |
-| `sim/names.py` | `CardName` and `MonsterName` str-enums + `_MONSTER_MAP` dict for normalising bridge class names. **Three regions are generated** by `gen_ids.py`; marked with `# BEGIN/END GENERATED`. |
-| `sim/scenarios.py` | Per-monster factory functions (`ironclad_starter_deck_vs_*(seed, deck=None) → CombatState`) and `MONSTER_STARTING_HP` dict. Factory functions are hand-written. |
-| `bench/__init__.py` | `Encounter` str-enum, `_SCENARIOS` dict, `run_deck`, `compare`, and run-level benchmarks. |
+| `sim/names.py` | `CardName`, `MonsterName`, `StatusName` str-enums + `card()`/`monster()` bridge-name normalisation. Built at import time from the registry rows by `sim/_registry.py` (types in the generated `_registry.pyi`). |
+| `sim/scenarios.py` | Per-monster factory functions (`ironclad_starter_deck_vs_*(seed, deck=None) → CombatState`), hand-written. `MONSTER_STARTING_HP` is derived from the registry `hp` field. |
+| `bench/__init__.py` | `_SCENARIOS` dict (`Encounter` → factory), `run_deck`, `compare`, and run-level benchmarks. `Encounter` comes from the registry. |
 | `sim/mcts.py` | Pure-Python MCTS tree (UCB1 select/expand/backprop). |
 | `sim/policies.py` | `simulate_run_with_reward_lookahead`. |
 | `server.py` | FastAPI analysis server (receives live bridge state, returns MCTS action values). |
@@ -187,29 +187,22 @@ tests/          ← pytest (require the .so to be built)
 | `bridge/cli.py` | `sts2` CLI — AXI-compliant wrapper around the bridge MCPTest protocol. |
 | `cli.py` | `sts-sim` CLI — interactive and step-mode play. |
 
-### Code generation
+### The registry and monster registration
 
-`data/cards.toml` and `data/monsters.toml` drive three generated targets:
+Cards, monsters and statuses are defined once, as rows in
+`crates/sts-ids/src/registry.rs`. Rust uses the generated enums directly;
+`_sts_sim.cards()`/`monsters()`/`statuses()` hand the rows to Python, where
+`sim/_registry.py` builds `CardName`, `MonsterName`, `StatusName` and
+`Encounter`. The only generated file is `sim/_registry.pyi`: run
+`python scripts/gen_ids.py` after changing rows (and rebuilding); CI runs `--check`.
 
-- `src/ids.rs` — `CardId` and `MonsterId` enum bodies
-- `python/sts_sim/sim/names.py` — `CardName` enum, `MonsterName` enum, `_MONSTER_MAP` dict (tagged regions)
-- `src/cards.rs` — `ALL_CARD_NAMES` array
-
-Run `python scripts/gen_ids.py` after editing either TOML. CI runs `--check` to catch stale regions.
-
-### Monster registration: the five catalogues
-
-`etc/monsters.toml` is the *management* source of truth checked by `tests/test_monster_registration.py`, which guards all five catalogues:
-
-1. `ids.rs` (`MonsterId` enum) — generated from `data/monsters.toml`
-2. `sim/names.py` `MonsterName` enum — generated
-3. `sim/names.py` `_MONSTER_MAP` — generated
-4. `sim/scenarios.py` `MONSTER_STARTING_HP` dict — hand-maintained; uses `hp` field in `etc/monsters.toml`
-5. `bench/__init__.py` `Encounter` — hand-maintained; uses `encounter` field in `etc/monsters.toml`
-
-When adding a new monster: add to `etc/monsters.toml` (with `hp` and `encounter` if appropriate), then add to `data/monsters.toml`, run `scripts/gen_ids.py`, implement AI in `monsters.rs`, add HP constant + factory in `sim/scenarios.py`, and add `Encounter` entry in `bench/__init__.py`. The sync test tells you exactly what's missing.
-
-Monsters tagged with no `encounter` field in `etc/monsters.toml` (e.g. KinPriest, KinFollower, EyeWithTeeth) are covered via composite scenarios or are spawned mid-combat. Multi-monster scenarios are listed in `_MULTI_MONSTER_ENCOUNTERS` in `test_monster_registration.py`.
+To add a monster, add its row (with `hp` and `encounter` if it has a
+standalone scenario). Then `cargo check` names each `match` in `monsters.rs`
+that needs an arm, and `tests/test_monster_registration.py` names the missing
+scenario factory / `_SCENARIOS` entry. Multi-monster encounter keys are listed
+in `MULTI_MONSTER_ENCOUNTERS` in `sim/_registry.py`; monsters with no
+`encounter` (e.g. KinPriest, EyeWithTeeth) are covered by composite scenarios
+or spawn mid-combat.
 
 ### Action model
 

@@ -28,7 +28,7 @@ from .types import (
 )
 from ..sim.names import StatusName
 
-# Derived from StatusName.bridge_classes — edit data/statuses.toml, not this line.
+# Derived from StatusName.bridge_classes — add statuses in crates/sts-ids/src/registry.rs.
 STATUS_MAP: dict[str, str] = {
     bc: s.value for s in StatusName for bc in s.bridge_classes
 }

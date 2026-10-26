@@ -12,7 +12,7 @@ mod state;
 use act::{draw_overgrowth_elite, draw_overgrowth_monster_sequence};
 use action::{EndTurnAction, PlayCardAction, SelectTargetAction};
 use cards::{card_data, CardData, CardKeyword, CardType};
-use crate::ids::{CardId, MonsterId};
+use crate::ids::{CardId, MonsterId, StatusId};
 use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
 use mcts::{
     fight_outcomes_per_fight, hp_lost_per_fight, mcts_action_values, mcts_search,
@@ -21,6 +21,7 @@ use mcts::{
 use monsters::{monster_move, opening_intent, select_next_intent, is_one_time_move};
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 use rand::{Rng, RngCore};
 use run::{
     run_apply, run_is_terminal, run_legal_actions, simulate_run_outcome, simulate_run_outcomes,
@@ -816,6 +817,56 @@ fn all_monster_names() -> Vec<&'static str> {
     MonsterId::all().iter().map(|id| id.as_str()).collect()
 }
 
+/// Registry card rows, in declaration order, for `sts_sim.sim._registry`.
+#[pyfunction(name = "cards")]
+fn card_rows(py: Python<'_>) -> PyResult<Vec<Bound<'_, PyDict>>> {
+    CardId::all()
+        .iter()
+        .map(|&id| {
+            let row = PyDict::new(py);
+            row.set_item("variant", id.variant())?;
+            row.set_item("display", id.as_str())?;
+            row.set_item("sts2_id", id.sts2_id())?;
+            row.set_item("bridge_names", id.bridge_names())?;
+            row.set_item("in_card_pool", id.in_card_pool())?;
+            Ok(row)
+        })
+        .collect()
+}
+
+/// Registry monster rows, in declaration order, for `sts_sim.sim._registry`.
+#[pyfunction(name = "monsters")]
+fn monster_rows(py: Python<'_>) -> PyResult<Vec<Bound<'_, PyDict>>> {
+    MonsterId::all()
+        .iter()
+        .map(|&id| {
+            let row = PyDict::new(py);
+            row.set_item("variant", id.variant())?;
+            row.set_item("display", id.as_str())?;
+            row.set_item("sts2_id", id.sts2_id())?;
+            row.set_item("bridge_names", id.bridge_names().to_vec())?;
+            row.set_item("hp", id.hp())?;
+            row.set_item("encounter", id.encounter())?;
+            Ok(row)
+        })
+        .collect()
+}
+
+/// Registry status rows, in declaration order, for `sts_sim.sim._registry`.
+#[pyfunction(name = "statuses")]
+fn status_rows(py: Python<'_>) -> PyResult<Vec<Bound<'_, PyDict>>> {
+    StatusId::all()
+        .iter()
+        .map(|&id| {
+            let row = PyDict::new(py);
+            row.set_item("variant", id.variant())?;
+            row.set_item("display", id.as_str())?;
+            row.set_item("bridge_names", id.bridge_names().to_vec())?;
+            Ok(row)
+        })
+        .collect()
+}
+
 #[pyfunction]
 fn optimal_value(state: &CombatState) -> f64 {
     let mut best = f64::NEG_INFINITY;
@@ -847,6 +898,9 @@ fn _sts_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(redeterminized, m)?)?;
     m.add_function(wrap_pyfunction!(all_card_names, m)?)?;
     m.add_function(wrap_pyfunction!(all_monster_names, m)?)?;
+    m.add_function(wrap_pyfunction!(card_rows, m)?)?;
+    m.add_function(wrap_pyfunction!(monster_rows, m)?)?;
+    m.add_function(wrap_pyfunction!(status_rows, m)?)?;
     m.add_function(wrap_pyfunction!(optimal_value, m)?)?;
     m.add_function(wrap_pyfunction!(mcts_action_values, m)?)?;
     m.add_function(wrap_pyfunction!(mcts_search, m)?)?;

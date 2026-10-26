@@ -4,7 +4,8 @@ use std::path::PathBuf;
 
 use serde_json::Value;
 use sts_bridge::mcptest::ReplayTransport;
-use sts_bridge::{schema, Backend, BridgeError, GameState, McpTestBackend};
+use sts_bridge::{schema, Backend, BridgeError, Entity, GameState, McpTestBackend};
+use sts_ids::{CardId, MonsterId, StatusId};
 
 fn fixture_dir(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -56,7 +57,10 @@ fn combat_state_populates_run_enemies_hand_and_piles() {
         ),
         (70, 3, 3, 3)
     );
-    assert_eq!(combat.player.powers[0].id, "StrengthPower");
+    assert_eq!(
+        combat.player.powers[0].id,
+        Entity::Known(StatusId::Strength)
+    );
 
     assert_eq!(combat.enemies.len(), 2);
     let first = &combat.enemies[0];
@@ -64,7 +68,8 @@ fn combat_state_populates_run_enemies_hand_and_piles() {
         (first.entity_id.as_str(), first.hp, first.max_hp),
         ("Nibbit_0", 38, 44)
     );
-    assert_eq!(first.powers[0].id, "VulnerablePower");
+    assert_eq!(first.name, Entity::Known(MonsterId::Nibbit));
+    assert_eq!(first.powers[0].id, Entity::Known(StatusId::Vulnerable));
     assert_eq!(first.powers[0].amount, 2);
     let intent = combat.enemies[1].intent.as_ref().expect("intent");
     assert_eq!(intent.move_id, "SLICE_AND_HISS");
@@ -82,8 +87,8 @@ fn combat_state_populates_run_enemies_hand_and_piles() {
     let hand = &combat.piles.hand;
     assert_eq!(hand.len(), 5);
     assert_eq!(
-        (hand[2].id.as_str(), hand[2].cost, hand[2].upgraded),
-        ("Bash", 2, true)
+        (&hand[2].id, hand[2].cost, hand[2].upgraded),
+        (&Entity::Known(CardId::Bash), 2, true)
     );
     assert_eq!(hand[0].valid_targets.as_deref(), Some(&[0, 1][..]));
     assert_eq!(hand[1].valid_targets, None);
@@ -92,7 +97,11 @@ fn combat_state_populates_run_enemies_hand_and_piles() {
 
     assert_eq!(combat.piles.draw.len(), 3);
     assert_eq!(combat.piles.discard.len(), 2);
-    assert_eq!(combat.piles.exhaust[0].id, "DefendIronclad");
+    assert_eq!(hand[0].id, Entity::Known(CardId::StrikeIronclad));
+    assert_eq!(
+        combat.piles.exhaust[0].id,
+        Entity::Known(CardId::DefendIronclad)
+    );
     assert!(combat.piles.exhaust[0].upgraded);
 }
 
@@ -141,6 +150,35 @@ fn with_combat_state_edit(edit: impl FnOnce(&mut Value)) -> McpTestBackend<Repla
     edit(&mut envelope["result"]);
     transport.insert("get_combat_state", envelope.to_string());
     McpTestBackend::new(transport)
+}
+
+#[test]
+fn entities_the_registry_does_not_know_are_unknown_not_errors() {
+    let mut backend = with_combat_state_edit(|r| {
+        r["enemies"][0]["name"] = Value::from("GremlinWizard");
+        r["enemies"][0]["powers"][0]["name"] = Value::from("MysteryPower");
+        r["players"][0]["hand"][1]["name"] = Value::from("Defend");
+    });
+    let combat = backend
+        .state()
+        .expect("unknown names still parse")
+        .combat
+        .unwrap();
+    let enemy = &combat.enemies[0];
+    assert_eq!(enemy.name, Entity::Unknown("GremlinWizard".into()));
+    assert_eq!(enemy.powers[0].id, Entity::Unknown("MysteryPower".into()));
+    assert_eq!(combat.piles.hand[1].id, Entity::Unknown("Defend".into()));
+    assert_eq!(enemy.name.name(), "GremlinWizard");
+    assert_eq!(combat.enemies[1].name, Entity::Known(MonsterId::Nibbit));
+}
+
+#[test]
+fn known_entities_serialize_as_their_canonical_bridge_name() {
+    let combat = combat_state().combat.unwrap();
+    let json = serde_json::to_value(&combat).unwrap();
+    assert_eq!(json["enemies"][0]["name"], "Nibbit");
+    assert_eq!(json["enemies"][0]["powers"][0]["id"], "Vulnerable");
+    assert_eq!(json["piles"]["hand"][0]["id"], "StrikeIronclad");
 }
 
 #[test]

@@ -1,8 +1,63 @@
 //! Backend-neutral game state: what the live game reports, and what the sim
 //! will produce for parity comparison.
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
+
+use schemars::{JsonSchema, Schema, SchemaGenerator};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+pub use sts_ids::{BridgeId, CardId, MonsterId, StatusId};
+
+/// A game entity named by its bridge class name: a registry id, or the raw
+/// name when the registry doesn't know it (a game patch, an unported card).
+/// On the wire and in the schema it is a plain string.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Entity<T> {
+    Known(T),
+    Unknown(String),
+}
+
+impl<T: BridgeId> Entity<T> {
+    pub fn parse(name: String) -> Self {
+        match T::from_bridge(&name) {
+            Some(id) => Entity::Known(id),
+            None => Entity::Unknown(name),
+        }
+    }
+
+    /// The canonical bridge name for `Known`, the raw name for `Unknown`.
+    pub fn name(&self) -> &str {
+        match self {
+            Entity::Known(id) => id.bridge_name(),
+            Entity::Unknown(name) => name,
+        }
+    }
+}
+
+impl<T: BridgeId> Serialize for Entity<T> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.name())
+    }
+}
+
+impl<'de, T: BridgeId> Deserialize<'de> for Entity<T> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        String::deserialize(deserializer).map(Entity::parse)
+    }
+}
+
+impl<T> JsonSchema for Entity<T> {
+    fn inline_schema() -> bool {
+        true
+    }
+
+    fn schema_name() -> Cow<'static, str> {
+        String::schema_name()
+    }
+
+    fn json_schema(generator: &mut SchemaGenerator) -> Schema {
+        String::json_schema(generator)
+    }
+}
 
 /// Everything a consumer can observe about the game at one instant.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -79,7 +134,7 @@ pub struct EnemyView {
     pub index: usize,
     /// Unique per combat, e.g. `Nibbit_0`, `Nibbit_1`.
     pub entity_id: String,
-    pub name: String,
+    pub name: Entity<MonsterId>,
     pub hp: i32,
     pub max_hp: i32,
     pub block: i32,
@@ -108,8 +163,8 @@ pub struct IntentPart {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Power {
-    /// The game's power class name, e.g. `VulnerablePower`.
-    pub id: String,
+    /// Parsed from the game's power class name, e.g. `VulnerablePower`.
+    pub id: Entity<StatusId>,
     pub amount: i32,
     /// `Buff`, `Debuff`, … when the backend reports it.
     pub kind: Option<String>,
@@ -126,8 +181,8 @@ pub struct Piles {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct HandCard {
     pub index: usize,
-    /// The game's card class name, e.g. `StrikeIronclad`.
-    pub id: String,
+    /// Parsed from the game's card class name, e.g. `StrikeIronclad`.
+    pub id: Entity<CardId>,
     pub upgraded: bool,
     pub cost: i32,
     /// `Attack`, `Skill`, `Power`, `Status`, `Curse`.
@@ -143,7 +198,7 @@ pub struct HandCard {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct CardRef {
-    pub id: String,
+    pub id: Entity<CardId>,
     pub upgraded: bool,
     pub cost: i32,
     pub kind: String,

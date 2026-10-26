@@ -828,8 +828,13 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_path_to_error",
+ "sts-ids",
  "thiserror",
 ]
+
+[[package]]
+name = "sts-ids"
+version = "0.1.0"
 
 [[package]]
 name = "sts-sim"
@@ -839,6 +844,7 @@ dependencies = [
  "rand",
  "rand_pcg",
  "rayon",
+ "sts-ids",
 ]
 
 [[package]]
