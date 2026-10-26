@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scrape in-game card descriptions for all cards in data/cards.toml.
+"""Scrape in-game card descriptions for every registry card (crates/sts-ids).
 
 Requires:
   - STS2 bridge running (set STS2_BRIDGE_HOST if not localhost)
@@ -61,7 +61,6 @@ ENERGY_PATH = "res://images/packed/sprite_fonts/ironclad_energy_icon.png"
 
 REPO_ROOT = Path(__file__).parent.parent
 OUT_FILE = REPO_ROOT / "scripts" / "card_descriptions.json"
-CARDS_TOML = REPO_ROOT / "data" / "cards.toml"
 
 
 # ── Fallback explorer client (mirrors sts2mcp.godot_explorer_client) ─────────
@@ -103,25 +102,14 @@ def explorer_get_property(path: str, prop: str) -> str:
     return _explorer_get_property_fallback(path, prop)
 
 
-# ── Card list from data/cards.toml ────────────────────────────────────────────
+# ── Card list from the registry ───────────────────────────────────────────────
 
 def load_card_ids() -> list[tuple[str, str]]:
-    """Return [(variant, sts2_id), ...] for every card in data/cards.toml."""
-    content = CARDS_TOML.read_text()
-    entries = []
-    current: dict = {}
-    for line in content.splitlines():
-        line = line.strip()
-        if line == "[[cards]]":
-            if current:
-                entries.append(current)
-            current = {}
-        elif "=" in line and not line.startswith("#"):
-            key, _, val = line.partition("=")
-            current[key.strip()] = val.strip().strip('"')
-    if current:
-        entries.append(current)
-    return [(e["variant"], e["sts2_id"]) for e in entries if "variant" in e and "sts2_id" in e]
+    """Return [(variant, sts2_id), ...] for every registry card."""
+    sys.path.insert(0, str(REPO_ROOT / "python"))
+    from sts_sim._sts_sim import cards
+
+    return [(row["variant"], row["sts2_id"]) for row in cards()]
 
 
 # ── Text cleaning ─────────────────────────────────────────────────────────────
@@ -228,7 +216,7 @@ def main():
     args = parser.parse_args()
 
     all_cards = load_card_ids()
-    print(f"Loaded {len(all_cards)} cards from {CARDS_TOML.name}")
+    print(f"Loaded {len(all_cards)} cards from the registry")
 
     # Load existing results
     results: dict = {}
@@ -240,7 +228,7 @@ def main():
     if args.card:
         target = [(v, s) for v, s in all_cards if s == args.card.upper()]
         if not target:
-            print(f"ERROR: {args.card!r} not found in {CARDS_TOML.name}")
+            print(f"ERROR: {args.card!r} not found in the registry")
             sys.exit(1)
         # Force re-scrape even if already present
         results.pop(args.card.upper(), None)

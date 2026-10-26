@@ -1,6 +1,7 @@
 from typing import cast
 
 from .. import CombatState, Monster
+from ._registry import MONSTER_ROWS
 from .names import CardName, MonsterName
 
 # CardName and MonsterName are defined in sts_sim.sim.names (single source of truth).
@@ -23,136 +24,109 @@ STARTING_RELICS = ["Burning Blood"]
 
 PLAYER_STARTING_HP = 80
 
-
-# Per the Slay the Spire wiki, Jaw Worm's HP ranges 40-44 in Act 1 — 44 pins
-# the canonical scenario to its documented maximum.
-JAW_WORM_STARTING_HP = 44
-
-
-# Per the Slay the Spire wiki, Gremlin Nob is an Act 1 elite with 82-86 HP.
-# 85 pins the canonical scenario to a challenging but beatable value.
-GREMLIN_NOB_STARTING_HP = 85
-
-# Nibbit HP: 42-46 normal, 44-48 on A9. 44 used as canonical value.
-NIBBIT_STARTING_HP = 44
-
-# Fuzzy Wurm Crawler HP: 55-57 normal. 56 used as canonical value.
-FUZZY_WURM_CRAWLER_STARTING_HP = 56
-
-# Twig Slime (S) HP: 7-11 normal. 11 used as canonical value.
-TWIG_SLIME_S_STARTING_HP = 11
-
-# Shrinker Beetle HP: 38-40 normal. 38 used as canonical value.
-SHRINKER_BEETLE_STARTING_HP = 38
-
-# Leaf Slime (S) HP: 11-15 normal. 13 used as canonical value.
-LEAF_SLIME_S_STARTING_HP = 13
-
-# Leaf Slime (M) HP: 32-35 normal. 33 used as canonical value.
-LEAF_SLIME_M_STARTING_HP = 33
-
-# Twig Slime (M) HP: 26-28 normal. 27 used as canonical value.
-TWIG_SLIME_M_STARTING_HP = 27
-
-# Byrdonis (Act 1 elite) HP: 81-84 normal. 84 pins the canonical scenario to
-# its documented maximum, matching the Gremlin Nob convention.
-BYRDONIS_STARTING_HP = 84
-
-# Inklet HP: 11-17 normal. 15 used as canonical value.
-INKLET_STARTING_HP = 15
-
-# Vantom (Overgrowth boss) HP: 173 normal, 183 at Ascension 8. 173 used as the
-# canonical value, per the existing "pick one documented number" convention.
-VANTOM_STARTING_HP = 173
-
-# Snapping Jaxfruit HP range: 31-33 normal. 31 used as canonical (minimum).
-SNAPPING_JAXFRUIT_STARTING_HP = 31
-
-# Axe Ruby Raider HP range: 20-22 normal. 20 used as canonical (minimum).
-AXE_RUBY_RAIDER_STARTING_HP = 20
-
-# Assassin Ruby Raider HP range: 18-23 normal. 18 used as canonical (minimum).
-ASSASSIN_RUBY_RAIDER_STARTING_HP = 18
-
-# Brute Ruby Raider HP range: 30-33 normal. 30 used as canonical (minimum).
-BRUTE_RUBY_RAIDER_STARTING_HP = 30
-
-# Crossbow Ruby Raider HP range: 18-21 normal. 18 used as canonical (minimum).
-CROSSBOW_RUBY_RAIDER_STARTING_HP = 18
-
-# Slithering Strangler (elite) HP range: 53-55 normal. 54 used as canonical.
-SLITHERING_STRANGLER_STARTING_HP = 54
-# Cubex Construct (elite) HP: 65 normal. 65 used as canonical.
-CUBEX_CONSTRUCT_STARTING_HP = 65
-
-# Kin Priest HP: 190 normal, 199 at Ascension 8. 190 used as canonical.
-KIN_PRIEST_STARTING_HP = 190
-
-# Kin Follower HP: 58-59 normal, 62-63 at Ascension 8. 59 used as canonical.
-KIN_FOLLOWER_STARTING_HP = 59
-
-# Phrog Parasite (elite) HP: 61-64 normal. 64 used as canonical (max).
-PHROG_PARASITE_STARTING_HP = 64
-
-# Wriggler (summoned minion) HP: 17-21 normal. 21 used as canonical (max).
-WRIGGLER_STARTING_HP = 21
-
-# Tracker Ruby Raider (normal) HP: 21-25 normal. 21 used as canonical (min).
-TRACKER_RUBY_RAIDER_STARTING_HP = 21
-
-# Mawler (elite) HP: 72 normal. 72 used as canonical.
-MAWLER_STARTING_HP = 72
-
-# Vine Shambler (elite) HP: 61-64 normal. 64 used as canonical (max).
-VINE_SHAMBLER_STARTING_HP = 64
-
-# Bygone Effigy (elite) HP: 127 normal, 132 at A8. 132 used as canonical (max).
-BYGONE_EFFIGY_STARTING_HP = 132
-
-# Per the Overgrowth wiki, Flyconid is an elite with 47-49 HP.
-FLYCONID_STARTING_HP = 49
-
-# Fogmog (Overgrowth monster) HP: 74-78 normal. 76 used as canonical value.
-# Ceremonial Beast (Overgrowth boss) HP: 252.
-CEREMONIAL_BEAST_STARTING_HP = 252
-FOGMOG_STARTING_HP = 76
-
 # Canonical starting HP keyed by MonsterName value. Used by the server's
 # deck_baseline handler to construct a "fresh start" scenario from a named
 # monster list, so the benchmark uses canonical HP regardless of what the
 # game rolled for this specific encounter.
 MONSTER_STARTING_HP: dict[str, int] = {
-    MonsterName.JAW_WORM: JAW_WORM_STARTING_HP,
-    MonsterName.GREMLIN_NOB: GREMLIN_NOB_STARTING_HP,
-    MonsterName.NIBBIT: NIBBIT_STARTING_HP,
-    MonsterName.FUZZY_WURM_CRAWLER: FUZZY_WURM_CRAWLER_STARTING_HP,
-    MonsterName.TWIG_SLIME_S: TWIG_SLIME_S_STARTING_HP,
-    MonsterName.SHRINKER_BEETLE: SHRINKER_BEETLE_STARTING_HP,
-    MonsterName.LEAF_SLIME_S: LEAF_SLIME_S_STARTING_HP,
-    MonsterName.LEAF_SLIME_M: LEAF_SLIME_M_STARTING_HP,
-    MonsterName.TWIG_SLIME_M: TWIG_SLIME_M_STARTING_HP,
-    MonsterName.BYRDONIS: BYRDONIS_STARTING_HP,
-    MonsterName.INKLET: INKLET_STARTING_HP,
-    MonsterName.VANTOM: VANTOM_STARTING_HP,
-    MonsterName.SNAPPING_JAXFRUIT: SNAPPING_JAXFRUIT_STARTING_HP,
-    MonsterName.AXE_RUBY_RAIDER: AXE_RUBY_RAIDER_STARTING_HP,
-    MonsterName.ASSASSIN_RUBY_RAIDER: ASSASSIN_RUBY_RAIDER_STARTING_HP,
-    MonsterName.BRUTE_RUBY_RAIDER: BRUTE_RUBY_RAIDER_STARTING_HP,
-    MonsterName.CROSSBOW_RUBY_RAIDER: CROSSBOW_RUBY_RAIDER_STARTING_HP,
-    MonsterName.SLITHERING_STRANGLER: SLITHERING_STRANGLER_STARTING_HP,
-    MonsterName.CUBEX_CONSTRUCT: CUBEX_CONSTRUCT_STARTING_HP,
-    MonsterName.KIN_PRIEST: KIN_PRIEST_STARTING_HP,
-    MonsterName.KIN_FOLLOWER: KIN_FOLLOWER_STARTING_HP,
-    MonsterName.PHROG_PARASITE: PHROG_PARASITE_STARTING_HP,
-    MonsterName.WRIGGLER: WRIGGLER_STARTING_HP,
-    MonsterName.TRACKER_RUBY_RAIDER: TRACKER_RUBY_RAIDER_STARTING_HP,
-    MonsterName.MAWLER: MAWLER_STARTING_HP,
-    MonsterName.VINE_SHAMBLER: VINE_SHAMBLER_STARTING_HP,
-    MonsterName.BYGONE_EFFIGY: BYGONE_EFFIGY_STARTING_HP,
-    MonsterName.CEREMONIAL_BEAST: CEREMONIAL_BEAST_STARTING_HP,
-    MonsterName.FLYCONID: FLYCONID_STARTING_HP,
-    MonsterName.FOGMOG: FOGMOG_STARTING_HP,
+    MonsterName(row["display"]): row["hp"]
+    for row in MONSTER_ROWS
+    if row["hp"] is not None
 }
+
+
+# Per the Slay the Spire wiki, Jaw Worm's HP ranges 40-44 in Act 1 — 44 pins
+# the canonical scenario to its documented maximum.
+JAW_WORM_STARTING_HP = MONSTER_STARTING_HP[MonsterName.JAW_WORM]
+
+
+# Per the Slay the Spire wiki, Gremlin Nob is an Act 1 elite with 82-86 HP.
+# 85 pins the canonical scenario to a challenging but beatable value.
+GREMLIN_NOB_STARTING_HP = MONSTER_STARTING_HP[MonsterName.GREMLIN_NOB]
+
+# Nibbit HP: 42-46 normal, 44-48 on A9. 44 used as canonical value.
+NIBBIT_STARTING_HP = MONSTER_STARTING_HP[MonsterName.NIBBIT]
+
+# Fuzzy Wurm Crawler HP: 55-57 normal. 56 used as canonical value.
+FUZZY_WURM_CRAWLER_STARTING_HP = MONSTER_STARTING_HP[MonsterName.FUZZY_WURM_CRAWLER]
+
+# Twig Slime (S) HP: 7-11 normal. 11 used as canonical value.
+TWIG_SLIME_S_STARTING_HP = MONSTER_STARTING_HP[MonsterName.TWIG_SLIME_S]
+
+# Shrinker Beetle HP: 38-40 normal. 38 used as canonical value.
+SHRINKER_BEETLE_STARTING_HP = MONSTER_STARTING_HP[MonsterName.SHRINKER_BEETLE]
+
+# Leaf Slime (S) HP: 11-15 normal. 13 used as canonical value.
+LEAF_SLIME_S_STARTING_HP = MONSTER_STARTING_HP[MonsterName.LEAF_SLIME_S]
+
+# Leaf Slime (M) HP: 32-35 normal. 33 used as canonical value.
+LEAF_SLIME_M_STARTING_HP = MONSTER_STARTING_HP[MonsterName.LEAF_SLIME_M]
+
+# Twig Slime (M) HP: 26-28 normal. 27 used as canonical value.
+TWIG_SLIME_M_STARTING_HP = MONSTER_STARTING_HP[MonsterName.TWIG_SLIME_M]
+
+# Byrdonis (Act 1 elite) HP: 81-84 normal. 84 pins the canonical scenario to
+# its documented maximum, matching the Gremlin Nob convention.
+BYRDONIS_STARTING_HP = MONSTER_STARTING_HP[MonsterName.BYRDONIS]
+
+# Inklet HP: 11-17 normal. 15 used as canonical value.
+INKLET_STARTING_HP = MONSTER_STARTING_HP[MonsterName.INKLET]
+
+# Vantom (Overgrowth boss) HP: 173 normal, 183 at Ascension 8. 173 used as the
+# canonical value, per the existing "pick one documented number" convention.
+VANTOM_STARTING_HP = MONSTER_STARTING_HP[MonsterName.VANTOM]
+
+# Snapping Jaxfruit HP range: 31-33 normal. 31 used as canonical (minimum).
+SNAPPING_JAXFRUIT_STARTING_HP = MONSTER_STARTING_HP[MonsterName.SNAPPING_JAXFRUIT]
+
+# Axe Ruby Raider HP range: 20-22 normal. 20 used as canonical (minimum).
+AXE_RUBY_RAIDER_STARTING_HP = MONSTER_STARTING_HP[MonsterName.AXE_RUBY_RAIDER]
+
+# Assassin Ruby Raider HP range: 18-23 normal. 18 used as canonical (minimum).
+ASSASSIN_RUBY_RAIDER_STARTING_HP = MONSTER_STARTING_HP[MonsterName.ASSASSIN_RUBY_RAIDER]
+
+# Brute Ruby Raider HP range: 30-33 normal. 30 used as canonical (minimum).
+BRUTE_RUBY_RAIDER_STARTING_HP = MONSTER_STARTING_HP[MonsterName.BRUTE_RUBY_RAIDER]
+
+# Crossbow Ruby Raider HP range: 18-21 normal. 18 used as canonical (minimum).
+CROSSBOW_RUBY_RAIDER_STARTING_HP = MONSTER_STARTING_HP[MonsterName.CROSSBOW_RUBY_RAIDER]
+
+# Slithering Strangler (elite) HP range: 53-55 normal. 54 used as canonical.
+SLITHERING_STRANGLER_STARTING_HP = MONSTER_STARTING_HP[MonsterName.SLITHERING_STRANGLER]
+# Cubex Construct (elite) HP: 65 normal. 65 used as canonical.
+CUBEX_CONSTRUCT_STARTING_HP = MONSTER_STARTING_HP[MonsterName.CUBEX_CONSTRUCT]
+
+# Kin Priest HP: 190 normal, 199 at Ascension 8. 190 used as canonical.
+KIN_PRIEST_STARTING_HP = MONSTER_STARTING_HP[MonsterName.KIN_PRIEST]
+
+# Kin Follower HP: 58-59 normal, 62-63 at Ascension 8. 59 used as canonical.
+KIN_FOLLOWER_STARTING_HP = MONSTER_STARTING_HP[MonsterName.KIN_FOLLOWER]
+
+# Phrog Parasite (elite) HP: 61-64 normal. 64 used as canonical (max).
+PHROG_PARASITE_STARTING_HP = MONSTER_STARTING_HP[MonsterName.PHROG_PARASITE]
+
+# Wriggler (summoned minion) HP: 17-21 normal. 21 used as canonical (max).
+WRIGGLER_STARTING_HP = MONSTER_STARTING_HP[MonsterName.WRIGGLER]
+
+# Tracker Ruby Raider (normal) HP: 21-25 normal. 21 used as canonical (min).
+TRACKER_RUBY_RAIDER_STARTING_HP = MONSTER_STARTING_HP[MonsterName.TRACKER_RUBY_RAIDER]
+
+# Mawler (elite) HP: 72 normal. 72 used as canonical.
+MAWLER_STARTING_HP = MONSTER_STARTING_HP[MonsterName.MAWLER]
+
+# Vine Shambler (elite) HP: 61-64 normal. 64 used as canonical (max).
+VINE_SHAMBLER_STARTING_HP = MONSTER_STARTING_HP[MonsterName.VINE_SHAMBLER]
+
+# Bygone Effigy (elite) HP: 127 normal, 132 at A8. 132 used as canonical (max).
+BYGONE_EFFIGY_STARTING_HP = MONSTER_STARTING_HP[MonsterName.BYGONE_EFFIGY]
+
+# Per the Overgrowth wiki, Flyconid is an elite with 47-49 HP.
+FLYCONID_STARTING_HP = MONSTER_STARTING_HP[MonsterName.FLYCONID]
+
+# Fogmog (Overgrowth monster) HP: 74-78 normal. 76 used as canonical value.
+# Ceremonial Beast (Overgrowth boss) HP: 252.
+CEREMONIAL_BEAST_STARTING_HP = MONSTER_STARTING_HP[MonsterName.CEREMONIAL_BEAST]
+FOGMOG_STARTING_HP = MONSTER_STARTING_HP[MonsterName.FOGMOG]
 
 
 def ironclad_starter_deck_vs_gremlin_nob(seed, deck=None):

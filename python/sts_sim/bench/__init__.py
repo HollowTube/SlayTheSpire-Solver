@@ -13,7 +13,6 @@ import math
 import statistics
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
@@ -21,6 +20,7 @@ if TYPE_CHECKING:
 
     from .. import RunState
 
+from ..sim._registry import Encounter
 from ..sim.scenarios import (
     PLAYER_STARTING_HP,
     CardName,
@@ -58,50 +58,6 @@ from ..sim.scenarios import (
     ironclad_starter_deck_vs_vine_shambler,
     ironclad_starter_deck_vs_wriggler,
 )
-
-
-class Encounter(str, Enum):
-    """Canonical keys for `run_deck`/`compare`'s `monster=` argument — one
-    per scenario in `sts_sim.sim.scenarios`. A `str` subclass, so existing code
-    passing plain strings (e.g. `monster="jaw-worm"`) keeps working —
-    `Encounter.JAW_WORM == "jaw-worm"` is true and hashes the same, so dict
-    lookups and equality checks behave identically either way. Exists so
-    notebook/bench callers get autocomplete/typo-checking instead of
-    repeating string literals."""
-
-    JAW_WORM = "jaw-worm"
-    GREMLIN_NOB = "gremlin-nob"
-    NIBBIT = "nibbit"
-    FUZZY_WURM_CRAWLER = "fuzzy-wurm-crawler"
-    TWIG_SLIME_S = "twig-slime-s"
-    SHRINKER_BEETLE = "shrinker-beetle"
-    LEAF_SLIME_S = "leaf-slime-s"
-    LEAF_SLIME_M = "leaf-slime-m"
-    TWIG_SLIME_M = "twig-slime-m"
-    SLIMES_WEAK = "slimes-weak"
-    SLIMES_WEAK_TWIG = "slimes-weak-twig"
-    ASSASSIN_RUBY_RAIDER = "assassin-ruby-raider"
-    AXE_RUBY_RAIDER = "axe-ruby-raider"
-    BRUTE_RUBY_RAIDER = "brute-ruby-raider"
-    BYRDONIS = "byrdonis"
-    CROSSBOW_RUBY_RAIDER = "crossbow-ruby-raider"
-    CUBEX_CONSTRUCT = "cubex-construct"
-    INKLET = "inklet"
-    INKLETS = "inklets"
-    PHROG_PARASITE = "phrog-parasite"
-    RUBY_RAIDERS = "ruby-raiders"
-    SLITHERING_STRANGLER = "slithering-strangler"
-    SNAPPING_JAXFRUIT = "snapping-jaxfruit"
-    THE_KIN = "the-kin"
-    VANTOM = "vantom"
-    TRACKER_RUBY_RAIDER = "tracker-ruby-raider"
-    MAWLER = "mawler"
-    VINE_SHAMBLER = "vine-shambler"
-    WRIGGLER = "wriggler"
-    BYGONE_EFFIGY = "bygone-effigy"
-    FLYCONID = "flyconid"
-    FOGMOG = "fogmog"
-    CEREMONIAL_BEAST = "ceremonial-beast"
 
 
 _SCENARIOS = {

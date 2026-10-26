@@ -158,7 +158,7 @@
           "format": "int32"
         },
         "id": {
-          "description": "The game's card class name, e.g. `StrikeIronclad`.",
+          "description": "Parsed from the game's card class name, e.g. `StrikeIronclad`.",
           "type": "string"
         },
         "index": {
@@ -343,7 +343,7 @@
           "format": "int32"
         },
         "id": {
-          "description": "The game's power class name, e.g. `VulnerablePower`.",
+          "description": "Parsed from the game's power class name, e.g. `VulnerablePower`.",
           "type": "string"
         },
         "kind": {

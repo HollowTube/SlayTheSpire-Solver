@@ -6,7 +6,7 @@
 //! completion via the existing MCTS engine, and folds the outcome back in.
 //! A won combat immediately offers a card-reward decision (HOL-64) before
 //! the run advances to its next node.
-use crate::cards::{card_data, CardType, ALL_CARD_NAMES};
+use crate::cards::{card_data, card_pool, CardType};
 use crate::ids::CardId;
 use crate::encounters;
 use crate::mcts::simulate_fight_outcome;
@@ -140,17 +140,15 @@ pub(crate) fn run_is_terminal(state: &RunState) -> bool {
 /// game either). No rarity weighting (flat/uniform) per HOL-64's scope;
 /// HOL-60's `CardRarity` field is for a separate future follow-up.
 fn draw_reward_cards(seed: u64) -> Vec<String> {
-    let pool: Vec<&str> = ALL_CARD_NAMES
-        .iter()
-        .copied()
-        .filter(|name| {
-            CardId::from_str(name).map_or(false, |id| {
-                let data = card_data(id, 0);
-                // Exclude Status cards (monster-inflicted junk) and stub cards
-                // (description-only entries with no implemented effects).
-                data.card_type != CardType::Status && !data.effects.is_empty()
-            })
+    let pool: Vec<&str> = card_pool()
+        .into_iter()
+        .filter(|&id| {
+            let data = card_data(id, 0);
+            // Exclude Status cards (monster-inflicted junk) and stub cards
+            // (description-only entries with no implemented effects).
+            data.card_type != CardType::Status && !data.effects.is_empty()
         })
+        .map(|id| id.as_str())
         .collect();
     let mut rng = Pcg32::seed_from_u64(seed);
     pool.choose_multiple(&mut rng, REWARD_CHOICE_COUNT.min(pool.len()))

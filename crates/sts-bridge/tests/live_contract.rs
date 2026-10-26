@@ -116,7 +116,10 @@ fn combat() {
     assert!(!c.enemies.is_empty(), "a combat has enemies");
     for (i, e) in c.enemies.iter().enumerate() {
         assert_eq!(e.index, i, "enemy indices are contiguous");
-        assert!(!e.entity_id.is_empty() && !e.name.is_empty(), "{e:?}");
+        assert!(
+            !e.entity_id.is_empty() && !e.name.name().is_empty(),
+            "{e:?}"
+        );
         assert!(e.hp <= e.max_hp && e.max_hp > 0 && e.block >= 0, "{e:?}");
         if e.is_alive {
             let intent = e
@@ -135,14 +138,14 @@ fn combat() {
         .iter()
         .chain(c.enemies.iter().flat_map(|e| &e.powers))
     {
-        assert!(!p.id.is_empty(), "{p:?}");
+        assert!(!p.id.name().is_empty(), "{p:?}");
     }
 
     let hand = &c.piles.hand;
     for (i, card) in hand.iter().enumerate() {
         assert_eq!(card.index, i, "hand indices are contiguous");
         assert!(
-            !card.id.is_empty() && !card.kind.is_empty() && !card.target_type.is_empty(),
+            !card.id.name().is_empty() && !card.kind.is_empty() && !card.target_type.is_empty(),
             "{card:?}"
         );
         if card.playable && card.target_type == "AnyEnemy" {
@@ -172,7 +175,10 @@ fn combat() {
         .chain(&c.piles.discard)
         .chain(&c.piles.exhaust)
     {
-        assert!(!card.id.is_empty() && !card.kind.is_empty(), "{card:?}");
+        assert!(
+            !card.id.name().is_empty() && !card.kind.is_empty(),
+            "{card:?}"
+        );
     }
     assert!(
         !(hand.is_empty() && c.piles.draw.is_empty() && c.piles.discard.is_empty()),

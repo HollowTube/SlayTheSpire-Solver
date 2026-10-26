@@ -1,0 +1,10 @@
+[package]
+name = "sts-ids"
+version = "0.1.0"
+edition = "2021"
+description = "The card, monster and status registry shared by the sim, the bridge and Python"
+
+[lib]
+name = "sts_ids"
+
+[dependencies]

@@ -10,7 +10,7 @@ use serde_json::Value;
 
 use crate::backend::BridgeError;
 use crate::state::{
-    AvailableAction, CardRef, CombatView, EnemyView, HandCard, Intent, IntentPart, Piles,
+    AvailableAction, CardRef, CombatView, EnemyView, Entity, HandCard, Intent, IntentPart, Piles,
     PlayerView, Power, RunInfo, Screen,
 };
 
@@ -176,7 +176,7 @@ struct WireCard {
 fn powers(raw: Vec<WirePower>) -> Vec<Power> {
     raw.into_iter()
         .map(|p| Power {
-            id: p.name,
+            id: Entity::parse(p.name),
             amount: p.amount,
             kind: p.kind,
         })
@@ -187,7 +187,7 @@ fn cards(pile: WirePile) -> Vec<CardRef> {
     pile.cards
         .into_iter()
         .map(|c| CardRef {
-            id: c.name,
+            id: Entity::parse(c.name),
             upgraded: c.upgraded,
             cost: c.energy_cost,
             kind: c.kind,
@@ -207,7 +207,7 @@ impl WireCombat {
             .into_iter()
             .map(|c| HandCard {
                 index: c.index,
-                id: c.name,
+                id: Entity::parse(c.name),
                 upgraded: c.upgraded,
                 cost: c.energy_cost,
                 kind: c.kind,
@@ -223,7 +223,7 @@ impl WireCombat {
             .map(|e| EnemyView {
                 index: e.index,
                 entity_id: e.entity_id,
-                name: e.name,
+                name: Entity::parse(e.name),
                 hp: e.hp,
                 max_hp: e.max_hp,
                 block: e.block,

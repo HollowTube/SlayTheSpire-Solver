@@ -1,7 +1,7 @@
-"""Guard: CardName enum in names.py stays in sync with the live Rust binary.
+"""Guard: the Python name enums agree with the live Rust binary.
 
-When a new card is added to ids.rs/cards.rs, this test fails until the
-corresponding entry is added to CardName in python/sts_sim/names.py.
+Both are built from the registry rows in crates/sts-ids/src/registry.rs, so a failure here
+means the extension and the Python package are out of step (rebuild).
 """
 
 from sts_sim._sts_sim import all_card_names, all_monster_names
@@ -32,7 +32,7 @@ def test_card_name_enum_covers_all_rust_cards():
     assert not missing, (
         "Cards in cards.rs but missing from CardName enum in names.py:\n"
         + "\n".join(f"  {c}" for c in sorted(missing))
-        + "\n\nAdd them to the CardName enum in python/sts_sim/names.py."
+        + '\n\nRebuild the extension: uv pip install -e ".[dev]".'
     )
 
 
@@ -46,7 +46,7 @@ def test_card_name_enum_has_no_stale_entries():
             continue
         assert c.value in rust_cards, (
             f"CardName.{c.name} = {c.value!r} is not in cards.rs card_data(). "
-            "Remove it from the enum or add it to cards.rs."
+            "Remove its row from crates/sts-ids/src/registry.rs or add it to cards.rs."
         )
 
 
@@ -60,7 +60,7 @@ def test_card_normalisation_round_trips():
         assert result_w == c.value or result_b == c.value, (
             f"CardName.{c.name} = {c.value!r} doesn't round-trip through names.card(). "
             f"Got {result_w!r} (with suffix) or {result_b!r} (bare). "
-            "Add an entry to _CARD_OVERRIDES in names.py."
+            "Add a bridge alias to its row in crates/sts-ids/src/registry.rs."
         )
 
 
@@ -75,7 +75,7 @@ def test_monster_name_enum_covers_all_rust_monsters():
     assert not missing, (
         "Monsters in ids.rs but missing from MonsterName enum in names.py:\n"
         + "\n".join(f"  {m}" for m in sorted(missing))
-        + "\n\nAdd them to the MonsterName enum in python/sts_sim/names.py."
+        + '\n\nRebuild the extension: uv pip install -e ".[dev]".'
     )
 
 
@@ -85,7 +85,7 @@ def test_monster_name_enum_has_no_stale_entries():
     for m in MonsterName:
         assert m.value in rust_monsters, (
             f"MonsterName.{m.name} = {m.value!r} is not in MonsterId::all() in ids.rs. "
-            "Remove it from the enum or add it to ids.rs."
+            "Remove its row from crates/sts-ids/src/registry.rs."
         )
 
 
@@ -95,5 +95,5 @@ def test_monster_name_enum_covered_by_bridge_map():
     for m in MonsterName:
         assert m.value in covered, (
             f"MonsterName.{m.name} = {m.value!r} has no entry in _MONSTER_MAP. "
-            "Add the bridge class name → sim name mapping in names.py."
+            "Add `bridge = [...]` to its row in crates/sts-ids/src/registry.rs."
         )

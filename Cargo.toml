@@ -12,9 +12,11 @@ pyo3 = { version = "0.23", features = ["extension-module"] }
 rand = "0.8"
 rand_pcg = "0.3"
 rayon = "1"
+sts-ids = { path = "crates/sts-ids" }
 
 [workspace]
-members = [".", "crates/sts-bridge"]
-# `cargo check` at the root covers both crates. Run the bridge tests with
-# `cargo test -p sts-bridge`: a bare `cargo test` also links the pyo3 cdylib.
-default-members = [".", "crates/sts-bridge"]
+members = [".", "crates/sts-bridge", "crates/sts-ids"]
+# `cargo check` at the root covers every crate. Run the library tests with
+# `cargo test -p sts-ids -p sts-bridge`: a bare `cargo test` also links the
+# pyo3 cdylib.
+default-members = [".", "crates/sts-bridge", "crates/sts-ids"]
