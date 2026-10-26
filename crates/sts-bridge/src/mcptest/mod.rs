@@ -8,7 +8,9 @@ use std::time::Instant;
 use serde::Deserialize;
 use serde_json::Value;
 
-pub use transport::{ReplayTransport, TcpTransport, Transport, DEFAULT_PORT, DEFAULT_TIMEOUT, MAX_RESPONSE_BYTES};
+pub use transport::{
+    ReplayTransport, TcpTransport, Transport, DEFAULT_PORT, DEFAULT_TIMEOUT, MAX_RESPONSE_BYTES,
+};
 
 use crate::backend::{Backend, BridgeError};
 use crate::state::{Actions, GameState, Health, Screen};
@@ -34,7 +36,11 @@ impl<T: Transport> McpTestBackend<T> {
         &self.transport
     }
 
-    pub(crate) fn call(&mut self, method: &str, params: Option<&Value>) -> Result<Value, BridgeError> {
+    pub(crate) fn call(
+        &mut self,
+        method: &str,
+        params: Option<&Value>,
+    ) -> Result<Value, BridgeError> {
         let raw = self.transport.send(method, params)?;
         transport::decode(method, &raw)
     }
@@ -74,7 +80,11 @@ impl<T: Transport> Backend for McpTestBackend<T> {
             None
         };
 
-        Ok(GameState { screen, run, combat })
+        Ok(GameState {
+            screen,
+            run,
+            combat,
+        })
     }
 
     fn actions(&mut self) -> Result<Actions, BridgeError> {

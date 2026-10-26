@@ -68,7 +68,10 @@ impl TcpTransport {
             .next()
             .ok_or_else(|| BridgeError::Io {
                 method: method.to_string(),
-                source: std::io::Error::new(ErrorKind::NotFound, format!("{} did not resolve", self.addr())),
+                source: std::io::Error::new(
+                    ErrorKind::NotFound,
+                    format!("{} did not resolve", self.addr()),
+                ),
             })
     }
 
@@ -165,10 +168,16 @@ impl ReplayTransport {
 
 impl Transport for ReplayTransport {
     fn send(&mut self, method: &str, _params: Option<&Value>) -> Result<Vec<u8>, BridgeError> {
-        self.responses.get(method).cloned().ok_or_else(|| BridgeError::Io {
-            method: method.to_string(),
-            source: std::io::Error::new(ErrorKind::NotFound, format!("replay has no response for `{method}`")),
-        })
+        self.responses
+            .get(method)
+            .cloned()
+            .ok_or_else(|| BridgeError::Io {
+                method: method.to_string(),
+                source: std::io::Error::new(
+                    ErrorKind::NotFound,
+                    format!("replay has no response for `{method}`"),
+                ),
+            })
     }
 }
 
@@ -187,7 +196,10 @@ pub(crate) fn decode(method: &str, raw: &[u8]) -> Result<Value, BridgeError> {
     if text.is_empty() {
         return Err(protocol(ProtocolError::Empty));
     }
-    let parse = |s: &str| serde_json::from_str::<Value>(s).map_err(|e| protocol(ProtocolError::InvalidJson(e.to_string())));
+    let parse = |s: &str| {
+        serde_json::from_str::<Value>(s)
+            .map_err(|e| protocol(ProtocolError::InvalidJson(e.to_string())))
+    };
     let mut value = parse(text)?;
     if let Value::String(inner) = &value {
         value = parse(inner)?;
@@ -196,7 +208,12 @@ pub(crate) fn decode(method: &str, raw: &[u8]) -> Result<Value, BridgeError> {
     for _ in 0..2 {
         check_remote_error(method, &value)?;
         match value {
-            Value::Object(mut obj) if obj.contains_key("result") && obj.keys().all(|k| matches!(k.as_str(), "result" | "id" | "jsonrpc")) => {
+            Value::Object(mut obj)
+                if obj.contains_key("result")
+                    && obj
+                        .keys()
+                        .all(|k| matches!(k.as_str(), "result" | "id" | "jsonrpc")) =>
+            {
                 value = obj.remove("result").unwrap_or(Value::Null);
             }
             other => {

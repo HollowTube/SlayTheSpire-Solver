@@ -22,7 +22,9 @@ fn stub(reply: impl FnOnce(TcpStream, String) + Send + 'static) -> u16 {
     thread::spawn(move || {
         let (stream, _) = listener.accept().unwrap();
         let mut request = String::new();
-        BufReader::new(stream.try_clone().unwrap()).read_line(&mut request).unwrap();
+        BufReader::new(stream.try_clone().unwrap())
+            .read_line(&mut request)
+            .unwrap();
         reply(stream, request);
     });
     port
@@ -46,7 +48,10 @@ fn sends_a_newline_terminated_json_rpc_request_and_decodes_the_reply() {
     let (tx, rx) = std::sync::mpsc::channel();
     let port = stub(move |mut s, request| {
         tx.send(request).unwrap();
-        s.write_all(b"\xef\xbb\xbf{\"result\":{\"status\":\"ok\",\"mod\":\"MCPTest\"},\"id\":1}\r\n").unwrap();
+        s.write_all(
+            b"\xef\xbb\xbf{\"result\":{\"status\":\"ok\",\"mod\":\"MCPTest\"},\"id\":1}\r\n",
+        )
+        .unwrap();
     });
     let health = backend(port).health().unwrap();
     assert!(health.ok);
@@ -57,8 +62,15 @@ fn sends_a_newline_terminated_json_rpc_request_and_decodes_the_reply() {
 
 #[test]
 fn refused_connection_is_refused() {
-    let port = TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
-    assert!(matches!(backend(port).state(), Err(BridgeError::Refused { .. })));
+    let port = TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port();
+    assert!(matches!(
+        backend(port).state(),
+        Err(BridgeError::Refused { .. })
+    ));
 }
 
 #[test]
@@ -75,12 +87,19 @@ fn silent_listener_times_out_within_the_configured_timeout() {
         }
         other => panic!("expected a Timeout, got {other:?}"),
     }
-    assert!(started.elapsed() < TIMEOUT * 3, "took {:?}", started.elapsed());
+    assert!(
+        started.elapsed() < TIMEOUT * 3,
+        "took {:?}",
+        started.elapsed()
+    );
 }
 
 #[test]
 fn empty_reply_is_a_protocol_error() {
-    assert_eq!(protocol_kind(backend(replying(Vec::new())).health()), ProtocolError::Empty);
+    assert_eq!(
+        protocol_kind(backend(replying(Vec::new())).health()),
+        ProtocolError::Empty
+    );
 }
 
 #[test]
@@ -91,7 +110,10 @@ fn non_json_reply_is_a_protocol_error() {
 
 #[test]
 fn non_utf8_reply_is_a_protocol_error() {
-    assert_eq!(protocol_kind(backend(replying(b"\xff\xfe{}\n".to_vec())).health()), ProtocolError::NonUtf8);
+    assert_eq!(
+        protocol_kind(backend(replying(b"\xff\xfe{}\n".to_vec())).health()),
+        ProtocolError::NonUtf8
+    );
 }
 
 #[test]
@@ -99,7 +121,9 @@ fn oversize_reply_is_a_protocol_error() {
     let port = replying(vec![b' '; MAX_RESPONSE_BYTES + 8192]);
     assert_eq!(
         protocol_kind(backend(port).health()),
-        ProtocolError::TooLarge { limit: MAX_RESPONSE_BYTES }
+        ProtocolError::TooLarge {
+            limit: MAX_RESPONSE_BYTES
+        }
     );
 }
 

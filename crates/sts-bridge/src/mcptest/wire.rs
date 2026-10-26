@@ -9,7 +9,10 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::backend::BridgeError;
-use crate::state::{AvailableAction, CardRef, CombatView, EnemyView, HandCard, Intent, IntentPart, Piles, PlayerView, Power, RunInfo, Screen};
+use crate::state::{
+    AvailableAction, CardRef, CombatView, EnemyView, HandCard, Intent, IntentPart, Piles,
+    PlayerView, Power, RunInfo, Screen,
+};
 
 pub(crate) fn parse<T: DeserializeOwned>(method: &str, value: Value) -> Result<T, BridgeError> {
     serde_path_to_error::deserialize(value).map_err(|e| BridgeError::Schema {
@@ -20,11 +23,14 @@ pub(crate) fn parse<T: DeserializeOwned>(method: &str, value: Value) -> Result<T
 }
 
 fn first_player<P>(method: &str, players: Vec<P>) -> Result<P, BridgeError> {
-    players.into_iter().next().ok_or_else(|| BridgeError::Schema {
-        method: method.to_string(),
-        path: "players".to_string(),
-        message: "expected at least one player".to_string(),
-    })
+    players
+        .into_iter()
+        .next()
+        .ok_or_else(|| BridgeError::Schema {
+            method: method.to_string(),
+            path: "players".to_string(),
+            message: "expected at least one player".to_string(),
+        })
 }
 
 #[derive(Deserialize)]
@@ -190,7 +196,11 @@ fn cards(pile: WirePile) -> Vec<CardRef> {
 }
 
 impl WireCombat {
-    pub fn into_combat_view(self, method: &str, piles: WireCardPiles) -> Result<CombatView, BridgeError> {
+    pub fn into_combat_view(
+        self,
+        method: &str,
+        piles: WireCardPiles,
+    ) -> Result<CombatView, BridgeError> {
         let p = first_player(method, self.players)?;
         let hand = p
             .hand

@@ -23,10 +23,14 @@ pub trait Backend {
 
 #[derive(Debug, thiserror::Error)]
 pub enum BridgeError {
-    #[error("bridge refused the connection at {addr}: is the game running with the MCPTest mod loaded?")]
+    #[error(
+        "bridge refused the connection at {addr}: is the game running with the MCPTest mod loaded?"
+    )]
     Refused { addr: String },
 
-    #[error("bridge did not answer `{method}` within {after:?}: the game may be loading or wedged")]
+    #[error(
+        "bridge did not answer `{method}` within {after:?}: the game may be loading or wedged"
+    )]
     Timeout { method: String, after: Duration },
 
     #[error("bridge I/O failed during `{method}`: {source}")]

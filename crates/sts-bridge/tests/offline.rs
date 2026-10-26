@@ -7,7 +7,9 @@ use sts_bridge::mcptest::ReplayTransport;
 use sts_bridge::{schema, Backend, BridgeError, GameState, McpTestBackend};
 
 fn fixture_dir(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/mcptest").join(name)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/mcptest")
+        .join(name)
 }
 
 fn replay(name: &str) -> ReplayTransport {
@@ -36,29 +38,53 @@ fn combat_state_populates_run_enemies_hand_and_piles() {
     assert_eq!(state.screen.as_str(), "COMBAT_PLAYER_TURN");
 
     let run = state.run.expect("run info in combat");
-    assert_eq!((run.act, run.floor, run.hp, run.max_hp, run.gold), (1, 2, 70, 80, 99));
+    assert_eq!(
+        (run.act, run.floor, run.hp, run.max_hp, run.gold),
+        (1, 2, 70, 80, 99)
+    );
     assert_eq!(run.character.as_deref(), Some("Ironclad"));
     assert_eq!(run.seed, "SOLVER01");
 
     let combat = state.combat.expect("combat view in combat");
     assert_eq!((combat.round, combat.is_player_turn), (2, true));
-    assert_eq!((combat.player.hp, combat.player.energy, combat.player.max_energy, combat.player.block), (70, 3, 3, 3));
+    assert_eq!(
+        (
+            combat.player.hp,
+            combat.player.energy,
+            combat.player.max_energy,
+            combat.player.block
+        ),
+        (70, 3, 3, 3)
+    );
     assert_eq!(combat.player.powers[0].id, "StrengthPower");
 
     assert_eq!(combat.enemies.len(), 2);
     let first = &combat.enemies[0];
-    assert_eq!((first.entity_id.as_str(), first.hp, first.max_hp), ("Nibbit_0", 38, 44));
+    assert_eq!(
+        (first.entity_id.as_str(), first.hp, first.max_hp),
+        ("Nibbit_0", 38, 44)
+    );
     assert_eq!(first.powers[0].id, "VulnerablePower");
     assert_eq!(first.powers[0].amount, 2);
     let intent = combat.enemies[1].intent.as_ref().expect("intent");
     assert_eq!(intent.move_id, "SLICE_AND_HISS");
-    assert_eq!((intent.parts[0].damage, intent.parts[0].hits, intent.parts[0].total_damage), (Some(6), Some(2), Some(12)));
+    assert_eq!(
+        (
+            intent.parts[0].damage,
+            intent.parts[0].hits,
+            intent.parts[0].total_damage
+        ),
+        (Some(6), Some(2), Some(12))
+    );
     assert_eq!(intent.parts[1].kind, "Buff");
     assert_eq!(intent.parts[1].damage, None);
 
     let hand = &combat.piles.hand;
     assert_eq!(hand.len(), 5);
-    assert_eq!((hand[2].id.as_str(), hand[2].cost, hand[2].upgraded), ("Bash", 2, true));
+    assert_eq!(
+        (hand[2].id.as_str(), hand[2].cost, hand[2].upgraded),
+        ("Bash", 2, true)
+    );
     assert_eq!(hand[0].valid_targets.as_deref(), Some(&[0, 1][..]));
     assert_eq!(hand[1].valid_targets, None);
     assert!(!hand[4].playable);
@@ -110,7 +136,8 @@ fn health_reports_ping_fields() {
 
 fn with_combat_state_edit(edit: impl FnOnce(&mut Value)) -> McpTestBackend<ReplayTransport> {
     let mut transport = replay("combat");
-    let mut envelope: Value = serde_json::from_slice(transport.get("get_combat_state").unwrap()).unwrap();
+    let mut envelope: Value =
+        serde_json::from_slice(transport.get("get_combat_state").unwrap()).unwrap();
     edit(&mut envelope["result"]);
     transport.insert("get_combat_state", envelope.to_string());
     McpTestBackend::new(transport)
@@ -122,7 +149,11 @@ fn missing_required_field_is_a_schema_error_naming_the_path() {
         r["players"][0].as_object_mut().unwrap().remove("energy");
     });
     match backend.state() {
-        Err(BridgeError::Schema { method, path, message }) => {
+        Err(BridgeError::Schema {
+            method,
+            path,
+            message,
+        }) => {
             assert_eq!(method, "get_combat_state");
             assert_eq!(path, "players[0]");
             assert!(message.contains("energy"), "{message}");
@@ -143,7 +174,10 @@ fn mistyped_field_is_a_schema_error_naming_the_path() {
 #[test]
 fn remote_error_in_a_sub_call_fails_state() {
     let mut transport = replay("combat");
-    transport.insert("get_card_piles", r#"{"result":{"error":"Not in combat"},"id":4}"#);
+    transport.insert(
+        "get_card_piles",
+        r#"{"result":{"error":"Not in combat"},"id":4}"#,
+    );
     match McpTestBackend::new(transport).state() {
         Err(BridgeError::Remote { method, message }) => {
             assert_eq!(method, "get_card_piles");
@@ -156,8 +190,14 @@ fn remote_error_in_a_sub_call_fails_state() {
 #[test]
 fn top_level_error_is_a_remote_error() {
     let mut transport = replay("main_menu");
-    transport.insert("ping", r#"{"error":"Internal serialization failure","id":0}"#);
-    assert!(matches!(McpTestBackend::new(transport).health(), Err(BridgeError::Remote { .. })));
+    transport.insert(
+        "ping",
+        r#"{"error":"Internal serialization failure","id":0}"#,
+    );
+    assert!(matches!(
+        McpTestBackend::new(transport).health(),
+        Err(BridgeError::Remote { .. })
+    ));
 }
 
 #[test]
@@ -181,7 +221,10 @@ fn parsed_fixtures_validate_against_the_schema() {
     let validator = jsonschema::validator_for(&schema).unwrap();
     for state in [combat_state(), backend("main_menu").state().unwrap()] {
         let instance = serde_json::to_value(&state).unwrap();
-        let errors: Vec<String> = validator.iter_errors(&instance).map(|e| e.to_string()).collect();
+        let errors: Vec<String> = validator
+            .iter_errors(&instance)
+            .map(|e| e.to_string())
+            .collect();
         assert!(errors.is_empty(), "{errors:?}");
     }
 }
