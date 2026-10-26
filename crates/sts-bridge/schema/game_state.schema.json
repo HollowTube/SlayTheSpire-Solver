@@ -1,0 +1,417 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GameState",
+  "description": "Everything a consumer can observe about the game at one instant.",
+  "type": "object",
+  "properties": {
+    "combat": {
+      "description": "`None` outside combat, including while a combat room is loading. Set on\nin-combat overlay screens (`HAND_SELECT`, `CARD_SELECTION`) too.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CombatView"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "run": {
+      "description": "`None` when no run is in progress (main menu, character select).",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RunInfo"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "screen": {
+      "$ref": "#/$defs/Screen"
+    }
+  },
+  "required": [
+    "screen"
+  ],
+  "$defs": {
+    "CardRef": {
+      "type": "object",
+      "properties": {
+        "cost": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "upgraded": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "upgraded",
+        "cost",
+        "kind"
+      ]
+    },
+    "CombatView": {
+      "type": "object",
+      "properties": {
+        "enemies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EnemyView"
+          }
+        },
+        "is_player_turn": {
+          "type": "boolean"
+        },
+        "piles": {
+          "$ref": "#/$defs/Piles"
+        },
+        "player": {
+          "$ref": "#/$defs/PlayerView"
+        },
+        "round": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "round",
+        "is_player_turn",
+        "player",
+        "enemies",
+        "piles"
+      ]
+    },
+    "EnemyView": {
+      "type": "object",
+      "properties": {
+        "block": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "entity_id": {
+          "description": "Unique per combat, e.g. `Nibbit_0`, `Nibbit_1`.",
+          "type": "string"
+        },
+        "hp": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "index": {
+          "description": "Position in the enemy list; the target index for card plays.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "intent": {
+          "description": "`None` when the enemy has no next move (e.g. dead).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Intent"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_alive": {
+          "type": "boolean"
+        },
+        "max_hp": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "name": {
+          "type": "string"
+        },
+        "powers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Power"
+          }
+        }
+      },
+      "required": [
+        "index",
+        "entity_id",
+        "name",
+        "hp",
+        "max_hp",
+        "block",
+        "is_alive",
+        "powers"
+      ]
+    },
+    "HandCard": {
+      "type": "object",
+      "properties": {
+        "cost": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "id": {
+          "description": "The game's card class name, e.g. `StrikeIronclad`.",
+          "type": "string"
+        },
+        "index": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "kind": {
+          "description": "`Attack`, `Skill`, `Power`, `Status`, `Curse`.",
+          "type": "string"
+        },
+        "playable": {
+          "type": "boolean"
+        },
+        "target_type": {
+          "description": "e.g. `AnyEnemy`, `Self`, `None`.",
+          "type": "string"
+        },
+        "unplayable_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "upgraded": {
+          "type": "boolean"
+        },
+        "valid_targets": {
+          "description": "Enemy (or ally) indices the card may target; `None` for untargeted or\nunplayable cards.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0
+          }
+        }
+      },
+      "required": [
+        "index",
+        "id",
+        "upgraded",
+        "cost",
+        "kind",
+        "playable",
+        "target_type"
+      ]
+    },
+    "Intent": {
+      "type": "object",
+      "properties": {
+        "move_id": {
+          "type": "string"
+        },
+        "parts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/IntentPart"
+          }
+        }
+      },
+      "required": [
+        "move_id",
+        "parts"
+      ]
+    },
+    "IntentPart": {
+      "description": "One component of an enemy move. Damage numbers are carried exactly as the\ngame reports them; they are `None` for non-attack parts.",
+      "type": "object",
+      "properties": {
+        "damage": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32"
+        },
+        "hits": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32"
+        },
+        "kind": {
+          "description": "e.g. `Attack`, `Defend`, `Buff`, `Debuff`.",
+          "type": "string"
+        },
+        "total_damage": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32"
+        }
+      },
+      "required": [
+        "kind"
+      ]
+    },
+    "Piles": {
+      "type": "object",
+      "properties": {
+        "discard": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CardRef"
+          }
+        },
+        "draw": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CardRef"
+          }
+        },
+        "exhaust": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CardRef"
+          }
+        },
+        "hand": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HandCard"
+          }
+        }
+      },
+      "required": [
+        "hand",
+        "draw",
+        "discard",
+        "exhaust"
+      ]
+    },
+    "PlayerView": {
+      "type": "object",
+      "properties": {
+        "block": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "energy": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "hp": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "max_energy": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "max_hp": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "powers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Power"
+          }
+        }
+      },
+      "required": [
+        "hp",
+        "max_hp",
+        "block",
+        "energy",
+        "max_energy",
+        "powers"
+      ]
+    },
+    "Power": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "id": {
+          "description": "The game's power class name, e.g. `VulnerablePower`.",
+          "type": "string"
+        },
+        "kind": {
+          "description": "`Buff`, `Debuff`, … when the backend reports it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "amount"
+      ]
+    },
+    "RunInfo": {
+      "type": "object",
+      "properties": {
+        "act": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "ascension": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "character": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "floor": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "gold": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "hp": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "max_hp": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "seed": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "act",
+        "floor",
+        "hp",
+        "max_hp",
+        "gold",
+        "ascension",
+        "seed"
+      ]
+    },
+    "Screen": {
+      "description": "The game's screen name (e.g. `MAIN_MENU`, `COMBAT_PLAYER_TURN`). A string\nrather than an enum so a screen added by a game patch is not a parse error.",
+      "type": "string"
+    }
+  }
+}
