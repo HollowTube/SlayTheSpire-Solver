@@ -129,13 +129,18 @@ mypy python/ tests/ --ignore-missing-imports
 python scripts/gen_ids.py --check   # fails if stale
 python scripts/gen_ids.py           # regenerate in place
 
-# Cargo check (Rust only, no Python build)
+# Cargo check (Rust only, no Python build) — covers sts-sim and crates/sts-bridge
 cargo check
+
+# Bridge crate tests (offline; live ones are opt-in — see crates/sts-bridge/README.md)
+cargo test -p sts-bridge
 
 # Restart analysis server (pull latest, rebuild Rust if src/ changed, kill old, start fresh)
 ./scripts/start-server.sh
 ./scripts/start-server.sh --no-pull   # skip git pull during active development
 ```
+
+PyO3 0.23 supports Python ≤ 3.13. If the system Python is newer, create the venv with `uv venv --python 3.12` (CI's version), and point `cargo check` at it with `PYO3_PYTHON=<abs path>/.venv/bin/python`; otherwise pyo3's build script picks the system interpreter and fails.
 
 The `.venv` must be active for `pytest`, `ruff`, `mypy`, `sts-sim`, and `sts2`. The Rust extension (`_sts_sim.*.so`) is required to import `sts_sim` — tests fail at collection without it.
 
