@@ -13,8 +13,8 @@ description: >
 ## Setup
 
 ```bash
-# WSL: sts2 auto-detects the Windows host IP. Only export this if detection
-# picks the wrong address:
+# Native Linux: sts2 connects to 127.0.0.1. WSL: it auto-detects the Windows
+# host IP. Only export this to override (e.g. game on another machine):
 export STS2_BRIDGE_HOST=172.26.176.1   # check /etc/resolv.conf if different
 
 # Verify connection
@@ -66,7 +66,7 @@ sts2 dev                          # dashboard + current screen/HP
 
 ### Navigate
 ```bash
-sts2 dev fight <ID>               # jump to a specific fight (e.g. JAW_WORM, MAWLER)
+sts2 dev fight <ID>               # jump to a specific fight (e.g. NIBBITS_WEAK, MAWLER_NORMAL)
 sts2 dev event <ID>               # jump to a specific event
 ```
 
@@ -96,7 +96,7 @@ sts2 dev relic <ID>               # add a relic
 sts2 dev potion <ID>              # add a potion
 ```
 
-All IDs use SCREAMING_SNAKE_CASE (e.g. `JAW_WORM`, `BASH`, `BURNING_BLOOD`). Run `sts2 dev <cmd> --help` for per-subcommand usage.
+All IDs use SCREAMING_SNAKE_CASE (e.g. `NIBBITS_WEAK`, `BASH`, `BURNING_BLOOD`). Run `sts2 dev <cmd> --help` for per-subcommand usage.
 
 ## Common workflows
 
@@ -105,7 +105,7 @@ All IDs use SCREAMING_SNAKE_CASE (e.g. `JAW_WORM`, `BASH`, `BURNING_BLOOD`). Run
 sts2 actions            # see blessing options by index
 sts2 act <n>            # pick one
 # or skip straight to a fight:
-sts2 dev fight JAW_WORM
+sts2 dev fight NIBBITS_WEAK
 ```
 
 **Inspect and play a combat turn:**
@@ -117,7 +117,7 @@ sts2 act 0              # play first action
 
 **Jump to a specific fight and cheat through it:**
 ```bash
-sts2 dev fight MAWLER
+sts2 dev fight MAWLER_NORMAL
 sts2 dev godmode
 sts2 dev win
 ```
@@ -133,7 +133,7 @@ All output is [TOON](https://toonformat.dev/) — token-efficient, agent-readabl
 
 ## Notes
 
-- Bridge connects via MCPTest on port 21337 (Windows host from WSL)
+- Bridge connects via MCPTest on port 21337 (the Windows host when on WSL)
 - Analysis server runs in WSL on port 8765; the bridge mod connects to it automatically
 - `sts2 log` shows `[sts_sim_bridge_mod] analyze response: {...}` with MCTS action values and expected HP lost per action
 - ShrinkPower and other STS2-specific debuffs are not modelled by the Rust sim — the overlay's expected HP values may be optimistic when debuffed
@@ -151,12 +151,12 @@ sts2 setup-hook --app opencode       # OpenCode only
 sts2 setup-hook --remove             # remove all
 ```
 
-Both hooks auto-detect the WSL bridge host from `/etc/resolv.conf` — no `STS2_BRIDGE_HOST` export needed. They fail silently when the bridge is unreachable so sessions open normally even if the game isn't running.
+On WSL both hooks set the bridge host from `/etc/resolv.conf`; on native Linux they set nothing and `sts2` uses `127.0.0.1`. Hooks installed by an older version keep the old command: run `sts2 setup-hook --remove`, then install again. They fail silently when the bridge is unreachable so sessions open normally even if the game isn't running.
 
 **Claude Code** — writes a `SessionStart` hook to `.claude/settings.json` that runs `sts2` and injects output as ambient context.
 
 **OpenCode** — writes `.opencode/plugins/sts2.ts` with two hooks:
-- `shell.env`: sets `STS2_BRIDGE_HOST` automatically
+- `shell.env`: sets `STS2_BRIDGE_HOST` on WSL only
 - `experimental.session.compacting`: injects `sts2` home view into session context on compaction
 
 After installing, restart your agent session to activate.

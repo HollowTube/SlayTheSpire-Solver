@@ -1,0 +1,61 @@
+# Slay the Spire solver — code-task project config (linear backend, via schpet/linear-cli).
+# Schema: references/config.md in the code-task skill.
+project: slay-the-spire-solver
+
+tracker:
+  backend: linear
+  team: HOL
+  project: Slay The Spire Solver
+  # lane → workflow state(s) (+ label to tell lanes sharing a state apart). `move` sets the first state.
+  # Closed is set by Linear's GitHub integration on PR merge, not by groom.
+  lanes:
+    NeedsPlan:      { status: Backlog, label: needs-triage }
+    Planning:       { status: Backlog, label: planning }
+    NeedsReview:    { status: Backlog, label: plan-ready }
+    ReadyForDev:    { status: [Backlog, Todo], label: ready-for-agent, sticky: true }   # kept as the approval record
+    Implementation: { status: In Progress }
+    Review:         { status: In Review }
+    Closed:         { status: Done }
+  skip_labels: [no-automation, needs-info, ready-for-human, wontfix]
+  flag_labels: [needs-rebase, plan-autoadvanced, "human-gate:Review"]
+
+repo:
+  github: HollowTube/SlayTheSpire-Solver
+  checkout: ~/projects/SlayTheSpire-Solver     # cloned on first run if missing
+  readonly: ~/.cache/code-task/slay-the-spire-solver/SlayTheSpire-Solver   # planners' shared store + per-commit snapshots
+  base: main
+  worktrees: .claude/worktrees                 # relative to checkout (matches the repo's AGENTS.md)
+
+review:
+  backend: github
+  pr:
+    draft: true
+    title: "{summary} ({id})"                  # repo convention: conventional-commit summary + (HOL-n)
+    body_footer: "Linear: {url}"
+  ci_timeout_minutes: 20                       # build-and-test runs ~2-3 min
+  commits: single                              # one commit per PR; the agent amends/squashes
+
+build:
+  # Run from the worktree root; the scripts are what CI runs.
+  setup: [scripts/dev-setup.sh]
+  verify: [scripts/verify.sh]
+  format:
+    - .venv/bin/ruff format python/ tests/ integtests/
+
+docs: [AGENTS.md, docs/agents/]   # read before planning/implementing (CLAUDE.md is a symlink to AGENTS.md)
+
+preflight:                                     # scripts/preflight.py, SOP Step 0
+  require_for:
+    implement: ["uv --version", "cargo --version"]
+  probe:                                       # recorded, not required: live tests run only when up
+    - name: game-bridge
+      check: "python3 -c \"import socket; socket.create_connection(('127.0.0.1', 21337), 2).close()\""
+
+onboard:                                       # code graph for planners (scripts/onboard.py)
+  llm: claude-cli                              # public repo: let local Claude name subsystems (once per base commit)
+  graphify_version: "0.9.85"
+
+gate:
+  default: human-gate:NeedsReview
+  autoadvance_categories: [doc, refactor, test-only]
+  fenced_paths: [.github/, bridge_mod/, data/]        # never autoadvanced past plan review

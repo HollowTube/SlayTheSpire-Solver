@@ -5,19 +5,21 @@ A Slay the Spire combat simulator and solver — a Rust engine exposed as a Pyth
 ## Requirements
 
 - Rust toolchain (`rustup` — any recent stable)
-- Python 3.10+
+- Python 3.12 for the venv (PyO3 0.23 supports up to 3.13; `scripts/dev-setup.sh` pins 3.12)
 - [uv](https://github.com/astral-sh/uv) (for the virtual environment and package management)
 
 ## Build & install
 
 ```bash
-# 1. Create and activate the virtual environment
-uv venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+# 1. Create the 3.12 venv and install everything (builds the Rust extension and
+#    installs the sts-sim and sts2 entry points, with the dev extras)
+scripts/dev-setup.sh
 
-# 2. Build the Rust extension and install everything (including the sts-sim CLI entry point)
-uv pip install -e .
+# 2. Activate it
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 ```
+
+The script runs `uv venv --python 3.12 --clear` and `uv pip install -e ".[dev]"`.
 
 > **The venv must be active for every command below.** If you open a new terminal, run `source .venv/bin/activate` again before using `sts-sim`, `python -m sts_sim.cli`, or `pytest`.
 
@@ -96,8 +98,17 @@ committed.
 
 ## Run the CI checks locally
 
-CI (`.github/workflows/ci.yml`) runs the following checks against every push and
-pull request. Run them yourself before pushing to catch issues early:
+CI (`.github/workflows/ci.yml`) runs `scripts/dev-setup.sh` and then
+`scripts/verify.sh` against every push and pull request. Run them yourself before
+pushing to catch issues early:
+
+```bash
+scripts/dev-setup.sh    # once per clone or worktree
+scripts/verify.sh       # all checks below; works from any directory, no activation needed
+```
+
+`verify.sh` runs these individually (it sets `PYO3_PYTHON` to the venv Python as an
+absolute path and `RUSTFLAGS="-D warnings"`):
 
 ```bash
 # The registry stub must match the built extension
@@ -115,6 +126,9 @@ mypy python/ tests/ --ignore-missing-imports
 
 # Test suite
 pytest tests/ -q
+
+# Rust crate tests (a bare `cargo test` doesn't link: the root crate is a pyo3 cdylib)
+cargo test -p sts-ids -p sts-bridge
 ```
 
 `ruff` and `mypy` are part of the `dev` extras — install them with:
@@ -331,7 +345,7 @@ sts2 log            # game log
 
 # Dev console shortcuts (see `sts2 dev` for full catalogue)
 sts2 dev                        # dashboard: screen, HP, and all available commands
-sts2 dev fight JAW_WORM         # jump to a specific fight
+sts2 dev fight NIBBITS_WEAK     # jump to a specific fight
 sts2 dev win                    # instantly win the current combat
 sts2 dev kill all               # kill all enemies
 sts2 dev godmode                # toggle invincibility
@@ -343,18 +357,22 @@ sts2 dev power VULNERABLE 3 1   # apply a power (0=player, 1=first enemy)
 
 # Raw console passthrough — any in-game dev console command
 sts2 console "gold 999"
-sts2 console "fight JAW_WORM"
+sts2 console "fight NIBBITS_WEAK"
 sts2 console "bridge_hot_reload <path/to/stssimbridgemod.dll>"
 ```
 
-By default `sts2` auto-detects the WSL gateway (Windows host IP) and falls back to
-`127.0.0.1:21337` if detection fails. Override with `STS2_BRIDGE_HOST` or `--host` if the
-auto-detected IP is wrong:
+By default `sts2` connects to `127.0.0.1:21337`. On WSL, where the game runs on Windows,
+it uses the WSL default gateway (the Windows host IP) instead, and falls back to
+`127.0.0.1` if detection fails. Override with `STS2_BRIDGE_HOST` or `--host`, on either
+platform, if the host is wrong:
 
 ```bash
 export STS2_BRIDGE_HOST=172.26.176.1   # Windows IP as seen from WSL — check /etc/resolv.conf
 sts2 state
 ```
+
+`sts2 setup-hook` exports `STS2_BRIDGE_HOST` on WSL only. A hook installed by an older
+version keeps its old command: run `sts2 setup-hook --remove`, then install it again.
 
 ### Live integration tests
 
@@ -365,6 +383,19 @@ using fixed sleeps, because a console command issued mid-transition can throw a
 `NullReferenceException` in `NCombatUi.Enable()` and permanently wedge the game's
 `CombatManager` (stuck on `MENU_NCombatRoom`, no in-session recovery — a full relaunch is
 required). `setup_fight()` raises `CombatWedgedError` with that guidance if it happens.
+
+#### Native Linux setup
+
+To get the MCPTest bridge answering on native Linux (no WSL):
+
+1. Install the HollowTube fork of sts2-modding-mcp, branch `fix/sts2-v0.107`
+   (`HollowTube/sts2-modding-mcp`), which carries the fixes for game v0.107.
+2. Install the mod as `<game>/mods/mcptest/mcptest.dll`. The directory and file are named
+   after the mod manifest id, and the case matters on Linux.
+3. Set the Steam launch option so Harmony can find libgcc:
+   `LD_PRELOAD="$LD_PRELOAD:/usr/lib/libgcc_s.so.1" %command%`
+
+With the game running, `sts2 ping` should succeed with no environment variable set.
 
 **If you see `NCombatUi.Enable()` `NullReferenceException`s in the game log, don't chase
 window focus.** The log's `MuteInBackground: FocusOut` lines right before the crash look

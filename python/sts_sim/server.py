@@ -69,6 +69,7 @@ import sys
 import threading
 import time
 
+from ._platform import is_wsl
 from . import (
     CombatState,
     Monster,
@@ -553,16 +554,7 @@ def serve(
 def _default_host() -> str:
     """Return 0.0.0.0 when running inside WSL (game connects from Windows),
     127.0.0.1 otherwise."""
-    if "WSL_DISTRO_NAME" in os.environ:
-        return "0.0.0.0"
-    try:
-        import pathlib
-
-        if "microsoft" in pathlib.Path("/proc/version").read_text().lower():
-            return "0.0.0.0"
-    except Exception:
-        pass
-    return "127.0.0.1"
+    return "0.0.0.0" if is_wsl() else "127.0.0.1"
 
 
 def main():
