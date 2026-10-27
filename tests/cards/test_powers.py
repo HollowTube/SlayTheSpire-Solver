@@ -200,7 +200,7 @@ def test_juggernaut_deals_damage_to_enemy_when_block_is_gained():
     after_shrug = apply(after_juggernaut, PlayCardAction("ShrugItOff"))
 
     assert after_shrug.player_block == 8
-    assert state.monsters[0].hp - after_shrug.monsters[0].hp == 5
+    assert state.monsters[0].hp - after_shrug.monsters[0].hp == 6
 
 
 # ── FlameBarrier ──────────────────────────────────────────────────────────────

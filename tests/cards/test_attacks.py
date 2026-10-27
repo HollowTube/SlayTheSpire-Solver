@@ -275,27 +275,22 @@ def test_bully_deals_4_plus_2_per_vulnerable_stack_on_target():
 # ── Conflagration ─────────────────────────────────────────────────────────────
 
 
-def test_conflagration_deals_8_plus_2_per_attack_played_this_turn_to_all_enemies():
+def test_conflagration_deals_2_damage_to_all_enemies_4_times():
     state = CombatState(
         player_hp=80,
         player_energy=3,
         monsters=[Monster(hp=44, attack=6), Monster(hp=44, attack=6)],
         seed=42,
-        hand=["Strike", "Strike", "Conflagration"],
+        hand=["Strike", "Conflagration"],
     )
+    after_strike = apply(apply(state, PlayCardAction("Strike")), SelectTargetAction(0))
 
-    after_strike_1 = apply(
-        apply(state, PlayCardAction("Strike")), SelectTargetAction(0)
-    )
-    after_strike_2 = apply(
-        apply(after_strike_1, PlayCardAction("Strike")), SelectTargetAction(0)
-    )
+    resolved = apply(after_strike, PlayCardAction("Conflagration"))
 
-    resolved = apply(after_strike_2, PlayCardAction("Conflagration"))
-
-    # 8 + 2*2 = 12 damage to each enemy.
-    assert after_strike_2.monsters[0].hp - resolved.monsters[0].hp == 12
-    assert after_strike_2.monsters[1].hp - resolved.monsters[1].hp == 12
+    # Attacks played earlier this turn change neither damage nor cost.
+    assert after_strike.monsters[0].hp - resolved.monsters[0].hp == 8
+    assert after_strike.monsters[1].hp - resolved.monsters[1].hp == 8
+    assert after_strike.player_energy - resolved.player_energy == 1
 
 
 # ── TearAsunder ───────────────────────────────────────────────────────────────
@@ -558,12 +553,12 @@ def test_setup_strike_deals_7_and_grants_2_strength_this_turn_only(make_state):
 # ── Unrelenting ───────────────────────────────────────────────────────────────
 
 
-def test_unrelenting_deals_12_and_makes_next_attack_free(make_state):
-    state = make_state(hand=["Unrelenting", "Strike"], player_energy=1)
+def test_unrelenting_deals_14_and_makes_next_attack_free(make_state):
+    state = make_state(hand=["Unrelenting", "Strike"], player_energy=2)
     after_unrelenting = apply(
         apply(state, PlayCardAction("Unrelenting")), SelectTargetAction(0)
     )
-    assert after_unrelenting.monsters[0].hp == state.monsters[0].hp - 12
+    assert after_unrelenting.monsters[0].hp == state.monsters[0].hp - 14
     assert "FreeAttack" in after_unrelenting.player_statuses
     assert after_unrelenting.player_energy == 0
 

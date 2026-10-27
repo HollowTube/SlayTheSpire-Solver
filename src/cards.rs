@@ -13,15 +13,38 @@ pub(crate) enum CardType {
     Status,
 }
 
-/// Rarity tier of a card, matching STS2's `EntityRarity` enum. Used by
-/// run-level reward logic to weight card-reward draws.
+impl CardType {
+    pub(crate) fn as_str(&self) -> &'static str {
+        match self {
+            CardType::Attack => "Attack",
+            CardType::Skill => "Skill",
+            CardType::Power => "Power",
+            CardType::Status => "Status",
+        }
+    }
+}
+
+/// Rarity tier of a card, matching STS2's `CardRarity` enum (whose `Basic`
+/// is `Starter` here). Reward draws do not read it yet.
 #[derive(Clone, PartialEq)]
 pub(crate) enum CardRarity {
     Starter,
     Common,
     Uncommon,
     Rare,
-    Special,
+    Ancient,
+}
+
+impl CardRarity {
+    pub(crate) fn as_str(&self) -> &'static str {
+        match self {
+            CardRarity::Starter => "Starter",
+            CardRarity::Common => "Common",
+            CardRarity::Uncommon => "Uncommon",
+            CardRarity::Rare => "Rare",
+            CardRarity::Ancient => "Ancient",
+        }
+    }
 }
 
 /// Boolean-ish per-card flags, mirroring STS2's `CardModel.Keywords:
@@ -52,6 +75,19 @@ pub(crate) enum CardKeyword {
     // Retain: card is not discarded at end of turn. Not yet enforced by the
     // engine; recorded so description accuracy is maintained.
     Retain,
+}
+
+impl CardKeyword {
+    pub(crate) fn as_str(&self) -> &'static str {
+        match self {
+            CardKeyword::Exhaust => "Exhaust",
+            CardKeyword::Ethereal => "Ethereal",
+            CardKeyword::Unplayable => "Unplayable",
+            CardKeyword::Innate => "Innate",
+            CardKeyword::Eternal => "Eternal",
+            CardKeyword::Retain => "Retain",
+        }
+    }
 }
 
 /// A card's energy cost and declarative effect pipeline (run once any
@@ -119,6 +155,9 @@ impl UpgradeDelta {
         for keyword in &self.keywords_added {
             data.keywords.insert(keyword.clone());
         }
+        if let Some(desc) = self.description {
+            data.description = desc;
+        }
         if let Some(effects) = &self.effects_override {
             data.effects = effects.clone();
             return data;
@@ -141,9 +180,6 @@ impl UpgradeDelta {
         }
         for status in &self.extra_status_applications {
             data.effects.push(EffectOp::ApplyStatusToTarget(status.clone()));
-        }
-        if let Some(desc) = self.description {
-            data.description = desc;
         }
         data
     }
@@ -197,10 +233,9 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
         CardId::Cinder => Some(UpgradeDelta { damage_delta: 6, description: Some("Deal 24 damage.\nExhaust 1 card at random."), ..Default::default() }),
         // Colossus+: 5 -> 8 block.
         CardId::Colossus => Some(UpgradeDelta { block_delta: 3, description: Some("Gain 8 Block.\nYou receive 50% less damage from Vulnerable enemies this turn."), ..Default::default() }),
-        // Conflagration+: 8 + 2*attacks -> 9 + 3*attacks.
+        // Conflagration+: 4 hits -> 5 hits of 2 to ALL enemies.
         CardId::Conflagration => Some(UpgradeDelta {
-            scaled_base_delta: 1,
-            scaled_per_unit_delta: 1,
+            effects_override: Some(vec![EffectOp::DealDamageToAllEnemies(2); 5]),
             description: Some("Deal 2 damage to ALL enemies 5 times."),
             ..Default::default()
         }),
@@ -215,8 +250,8 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
             description: Some("Deal 6 damage twice.\nGain 4 Strength.\nThe enemy gains 1 Strength."),
             ..Default::default()
         }),
-        // Juggling+: upgrade only adds Innate (deferred).
-        CardId::Juggling => Some(UpgradeDelta { description: Some("Innate.\nAdd a copy of the third Attack you play each turn into your Hand."), ..Default::default() }),
+        // Juggling+: gains the Innate keyword.
+        CardId::Juggling => Some(UpgradeDelta { keywords_added: HashSet::from([CardKeyword::Innate]), description: Some("Innate.\nAdd a copy of the third Attack you play each turn into your Hand."), ..Default::default() }),
         // StoneArmor+: Plating +2 → 6.
         CardId::StoneArmor => Some(UpgradeDelta {
             effects_override: Some(vec![EffectOp::ApplyStatusToSelf(Status::Plating(6))]),
@@ -243,25 +278,29 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
             description: Some("Gain 3 Strength."),
             ..Default::default()
         }),
-        // Sword Boomerang+: 3 hits of 3 → 3 hits of 4.
-        CardId::SwordBoomerang => Some(UpgradeDelta { damage_delta: 1, description: Some("Deal 3 damage to a random enemy 4 times."), ..Default::default() }),
+        // Sword Boomerang+: 3 hits of 3 → 4 hits of 3.
+        CardId::SwordBoomerang => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::DealDamage(3); 4]),
+            description: Some("Deal 3 damage to a random enemy 4 times."),
+            ..Default::default()
+        }),
         // Thunderclap+: 4 damage → 7 damage.
         CardId::Thunderclap => Some(UpgradeDelta { damage_delta: 3, description: Some("Deal 7 damage and apply 1 Vulnerable to ALL enemies."), ..Default::default() }),
         // Rage+: cost 0 → 0 (no stat change — applies the same Rage status).
         CardId::Rage => Some(UpgradeDelta { description: Some("Whenever you play an Attack this turn, gain 5 Block."), ..Default::default() }),
-        // DemonForm+: cost 3 → 2.
-        CardId::DemonForm => Some(UpgradeDelta { cost_delta: -1, description: Some("At the start of your turn, gain 3 Strength."), ..Default::default() }),
-        // CrimsonMantle+: cost 2 → 1.
-        CardId::CrimsonMantle => Some(UpgradeDelta { cost_delta: -1, description: Some("At the start of your turn, lose 1 HP and gain 10 Block."), ..Default::default() }),
-        // Inferno+ (Power): cost 1 → 0.
-        CardId::Inferno => Some(UpgradeDelta { cost_delta: -1, description: Some("At the start of your turn, lose 1 HP.\nWhenever you lose HP on your turn, deal 9 damage to ALL enemies."), ..Default::default() }),
+        // DemonForm+: 2 → 3 Strength per turn (not modelled: the status is binary).
+        CardId::DemonForm => Some(UpgradeDelta { description: Some("At the start of your turn, gain 3 Strength."), ..Default::default() }),
+        // CrimsonMantle+: 8 → 10 Block per turn (not modelled: fixed in the reaction).
+        CardId::CrimsonMantle => Some(UpgradeDelta { description: Some("At the start of your turn, lose 1 HP and gain 10 Block."), ..Default::default() }),
+        // Inferno+: 6 → 9 damage (not modelled: the status is binary).
+        CardId::Inferno => Some(UpgradeDelta { description: Some("At the start of your turn, lose 1 HP.\nWhenever you lose HP on your turn, deal 9 damage to ALL enemies."), ..Default::default() }),
         // DarkEmbrace+: cost 2 → 1.
         CardId::DarkEmbrace => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
-        // FeelNoPain+: cost 1 → 0.
-        CardId::FeelNoPain => Some(UpgradeDelta { cost_delta: -1, description: Some("Whenever a card is Exhausted, gain 4 Block."), ..Default::default() }),
-        // Juggernaut+: Juggernaut 5 → 7 (damage on block gain).
+        // FeelNoPain+: 3 → 4 Block (not modelled: the status is binary).
+        CardId::FeelNoPain => Some(UpgradeDelta { description: Some("Whenever a card is Exhausted, gain 4 Block."), ..Default::default() }),
+        // Juggernaut+: Juggernaut 6 → 8 (damage on block gain).
         CardId::Juggernaut => Some(UpgradeDelta {
-            effects_override: Some(vec![EffectOp::ApplyStatusToSelf(Status::Juggernaut(7))]),
+            effects_override: Some(vec![EffectOp::ApplyStatusToSelf(Status::Juggernaut(8))]),
             description: Some("Whenever you gain Block, deal 8 damage to a random enemy."),
             ..Default::default()
         }),
@@ -269,12 +308,19 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
         CardId::FlameBarrier => Some(UpgradeDelta { block_delta: 4, description: Some("Gain 16 Block.\nWhenever you are attacked this turn, deal 6 damage back."), ..Default::default() }),
         // Corruption+: cost 3 → 2.
         CardId::Corruption => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
-        // Cruelty+: cost 1 → 0.
-        CardId::Cruelty => Some(UpgradeDelta { cost_delta: -1, description: Some("Vulnerable enemies take an additional 50% damage."), ..Default::default() }),
-        // Mangle+: 15 damage → 20 damage.
-        CardId::Mangle => Some(UpgradeDelta { damage_delta: 5, description: Some("Deal 20 damage.\nEnemy loses 15 Strength this turn."), ..Default::default() }),
-        // OneTwoPunch+: cost 1 → 0.
-        CardId::OneTwoPunch => Some(UpgradeDelta { cost_delta: -1, description: Some("This turn, your next 2 Attacks are played an extra time."), ..Default::default() }),
+        // Cruelty+: 25% → 50% (not modelled: the status is binary).
+        CardId::Cruelty => Some(UpgradeDelta { description: Some("Vulnerable enemies take an additional 50% damage."), ..Default::default() }),
+        // Mangle+: 15 → 20 damage, Strength loss 10 → 15.
+        CardId::Mangle => Some(UpgradeDelta {
+            effects_override: Some(vec![
+                EffectOp::DealDamage(20),
+                EffectOp::ApplyStatusToTarget(Status::Strength(-15)),
+            ]),
+            description: Some("Deal 20 damage.\nEnemy loses 15 Strength this turn."),
+            ..Default::default()
+        }),
+        // OneTwoPunch+: next 2 Attacks (not modelled: the status is binary).
+        CardId::OneTwoPunch => Some(UpgradeDelta { description: Some("This turn, your next 2 Attacks are played an extra time."), ..Default::default() }),
         // Pommel Strike+: 9 damage → 10 damage, draw 1 → draw 2.
         CardId::PommelStrike => Some(UpgradeDelta { damage_delta: 1, draw_delta: 1, description: Some("Deal 10 damage.\nDraw 2 cards."), ..Default::default() }),
         // Hemokinesis+: 15 damage → 20 damage.
@@ -289,16 +335,16 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
         }),
         // Impervious+: 30 block → 40 block.
         CardId::Impervious => Some(UpgradeDelta { block_delta: 10, description: Some("Gain 40 Block.\nExhaust."), ..Default::default() }),
-        // NotYet+: heal 10 → heal 14.
+        // NotYet+: heal 10 → heal 13.
         CardId::NotYet => Some(UpgradeDelta {
-            effects_override: Some(vec![EffectOp::Heal(14)]),
+            effects_override: Some(vec![EffectOp::Heal(13)]),
             description: Some("Heal 13 HP.\nExhaust."),
             ..Default::default()
         }),
         // TrueGrit+: 7 block → 9 block.
         CardId::TrueGrit => Some(UpgradeDelta { block_delta: 2, description: Some("Gain 9 Block.\nExhaust 1 card."), ..Default::default() }),
-        // Thrash+: 4+4=8 damage → 5+5=10 damage.
-        CardId::Thrash => Some(UpgradeDelta { damage_delta: 1, description: Some("Deal 6 damage twice.\nExhaust a random Attack in your Hand and add its damage to this card."), ..Default::default() }),
+        // Thrash+: 4+4=8 damage → 6+6=12 damage.
+        CardId::Thrash => Some(UpgradeDelta { damage_delta: 2, description: Some("Deal 6 damage twice.\nExhaust a random Attack in your Hand and add its damage to this card."), ..Default::default() }),
         // SecondWind+: 5 block per card exhausted → 7 block per card.
         CardId::SecondWind => Some(UpgradeDelta {
             effects_override: Some(vec![EffectOp::ExhaustAllFromHand {
@@ -332,8 +378,13 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
         CardId::TwinStrike => Some(UpgradeDelta { damage_delta: 2, description: Some("Deal 7 damage twice."), ..Default::default() }),
         // ShrugItOff+: 8 block → 11 block.
         CardId::ShrugItOff => Some(UpgradeDelta { block_delta: 3, description: Some("Gain 11 Block.\nDraw 1 card."), ..Default::default() }),
-        // Taunt+: 7 block → 10 block.
-        CardId::Taunt => Some(UpgradeDelta { block_delta: 3, description: Some("Gain 8 Block.\nApply 2 Vulnerable."), ..Default::default() }),
+        // Taunt+: 7 → 8 block, 1 → 2 Vulnerable.
+        CardId::Taunt => Some(UpgradeDelta {
+            block_delta: 1,
+            extra_status_applications: vec![Status::Vulnerable],
+            description: Some("Gain 8 Block.\nApply 2 Vulnerable."),
+            ..Default::default()
+        }),
         // Uppercut+: STS2 keeps 13 damage but doubles statuses (2 Vuln + 2 Weak).
         CardId::Uppercut => Some(UpgradeDelta {
             extra_status_applications: vec![Status::Vulnerable, Status::Weak],
@@ -341,7 +392,7 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
             ..Default::default()
         }),
         // PerfectedStrike+: 6 + 2*strikes → 6 + 3*strikes.
-        CardId::PerfectedStrike => Some(UpgradeDelta { scaled_per_unit_delta: 1, description: Some("Deal 15 damage.\nDeals 3 additional damage for ALL your cards containing “Strike”."), ..Default::default() }),
+        CardId::PerfectedStrike => Some(UpgradeDelta { scaled_per_unit_delta: 1, description: Some("Deal 6 damage.\nDeals 3 additional damage for ALL your cards containing “Strike”."), ..Default::default() }),
         // TearAsunder+: 5 damage per hit → 7 damage per hit.
         CardId::TearAsunder => Some(UpgradeDelta {
             effects_override: Some(vec![EffectOp::DealDamageRepeated {
@@ -353,21 +404,21 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
             description: Some("Deal 7 damage.\nHits an additional time for each time you lost HP this combat."),
             ..Default::default()
         }),
-        // Spite+: 5 damage per hit → 8 damage per hit.
+        // Spite+: hits 2 → 3 times if HP was lost this turn.
         CardId::Spite => Some(UpgradeDelta {
             effects_override: Some(vec![EffectOp::DealDamageRepeated {
-                amount: 8,
+                amount: 5,
                 hits_base: 1,
-                hits_per_unit: 1,
+                hits_per_unit: 2,
                 hits_source: ScaleSource::HpLostThisTurn,
             }]),
             description: Some("Deal 5 damage.\nIf you lost HP this turn,\nhits 3 times."),
             ..Default::default()
         }),
-        // Dismantle+: 8 damage per hit → 11 damage per hit.
+        // Dismantle+: 8 damage per hit → 10 damage per hit.
         CardId::Dismantle => Some(UpgradeDelta {
             effects_override: Some(vec![EffectOp::DealDamageRepeated {
-                amount: 11,
+                amount: 10,
                 hits_base: 1,
                 hits_per_unit: 1,
                 hits_source: ScaleSource::TargetHasVulnerable,
@@ -387,10 +438,17 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
         }),
         // MoltenFist+: 10 damage → 14 damage.
         CardId::MoltenFist => Some(UpgradeDelta { damage_delta: 4, description: Some("Deal 14 damage.\nDouble the enemy's Vulnerable.\nExhaust."), ..Default::default() }),
-        // Setup Strike+: 7 damage → 10 damage.
-        CardId::SetupStrike => Some(UpgradeDelta { damage_delta: 3, description: Some("Deal 9 damage.\nGain 3 Strength this turn."), ..Default::default() }),
-        // Unrelenting+: 12 damage → 16 damage.
-        CardId::Unrelenting => Some(UpgradeDelta { damage_delta: 4, description: Some("Deal 20 damage.\nThe next Attack you play costs 0 [E]."), ..Default::default() }),
+        // Setup Strike+: 7 → 9 damage, 2 → 3 Strength this turn.
+        CardId::SetupStrike => Some(UpgradeDelta {
+            effects_override: Some(vec![
+                EffectOp::DealDamage(9),
+                EffectOp::ApplyStatusToSelf(Status::StrengthThisTurn(3)),
+            ]),
+            description: Some("Deal 9 damage.\nGain 3 Strength this turn."),
+            ..Default::default()
+        }),
+        // Unrelenting+: 14 damage → 20 damage.
+        CardId::Unrelenting => Some(UpgradeDelta { damage_delta: 6, description: Some("Deal 20 damage.\nThe next Attack you play costs 0 [E]."), ..Default::default() }),
         // Evil Eye+: 8 block (up to 16) → 11 block (up to 22).
         CardId::EvilEye => Some(UpgradeDelta {
             effects_override: Some(vec![EffectOp::GainBlockScaled {
@@ -411,9 +469,8 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
             description: Some("If you Exhausted a card this turn, gain 4[E].\nExhaust."),
             ..Default::default()
         }),
-        // Pyre+: gains the Innate keyword.
+        // Pyre+: 1 → 2 energy per turn (not modelled: the status is binary).
         CardId::Pyre => Some(UpgradeDelta {
-            keywords_added: HashSet::from([CardKeyword::Innate]),
             description: Some("Gain [E][E] at the start of each turn."),
             ..Default::default()
         }),
@@ -426,10 +483,10 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
             description: Some("Deal 8 damage.\nAdd a copy of this card into your Discard Pile."),
             ..Default::default()
         }),
-        // DrumOfBattle+: draw 2 → draw 3.
-        CardId::DrumOfBattle => Some(UpgradeDelta { draw_delta: 1, description: Some("Draw 2 cards.\nWhen this card is Exhausted, gain [E][E][E]."), ..Default::default() }),
-        // Stomp+: 12 AoE damage → 17 AoE damage.
-        CardId::Stomp => Some(UpgradeDelta { damage_delta: 5, description: Some("Deal 15 damage to ALL enemies.\nCosts 1 less [E] for each Attack played this turn."), ..Default::default() }),
+        // DrumOfBattle+: 2 → 3 energy when Exhausted (not modelled).
+        CardId::DrumOfBattle => Some(UpgradeDelta { description: Some("Draw 2 cards.\nWhen this card is Exhausted, gain [E][E][E]."), ..Default::default() }),
+        // Stomp+: 12 AoE damage → 15 AoE damage.
+        CardId::Stomp => Some(UpgradeDelta { damage_delta: 3, description: Some("Deal 15 damage to ALL enemies.\nCosts 1 less [E] for each Attack played this turn."), ..Default::default() }),
         // Havoc+: cost 1 → 0.
         CardId::Havoc => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
         // BattleTrance+: draw 3 → 4.
@@ -457,6 +514,9 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
             ..Default::default()
         }),
         // ── Stub upgrade deltas (description only) ───────────────────────────
+        CardId::ExpectAFight => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        CardId::Hellraiser => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
+        CardId::Stampede => Some(UpgradeDelta { cost_delta: -1, ..Default::default() }),
         CardId::Armaments => Some(UpgradeDelta { description: Some("Gain 5 Block.\nUpgrade ALL cards in your Hand."), ..Default::default() }),
         CardId::Brand => Some(UpgradeDelta { description: Some("Lose 1 HP.\nExhaust 1 card.\nGain 2 Strength."), ..Default::default() }),
         CardId::Feed => Some(UpgradeDelta { description: Some("Deal 12 damage.\nIf Fatal, raise your Max HP by 4.\nExhaust."), ..Default::default() }),
@@ -649,7 +709,7 @@ fn card_data_base(id: CardId) -> CardData {
         // gain 8 Block and lose HP equal to a counter that starts at 1 and
         // increases by 1 each turn.
         CardId::CrimsonMantle => CardData {
-            cost: 2,
+            cost: 1,
             targeted: false,
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::CrimsonMantle(1))],
@@ -713,13 +773,13 @@ fn card_data_base(id: CardId) -> CardData {
             rarity: CardRarity::Rare,
             description: "Block is not removed at the start of your turn.",
         },
-        // Installs the Juggernaut status: whenever you gain Block, deal 5
+        // Installs the Juggernaut status: whenever you gain Block, deal 6
         // damage to a random enemy.
         CardId::Juggernaut => CardData {
             cost: 2,
             targeted: false,
             card_type: CardType::Power,
-            effects: vec![EffectOp::ApplyStatusToSelf(Status::Juggernaut(5))],
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Juggernaut(6))],
             keywords: HashSet::new(),
             rarity: CardRarity::Rare,
             description: "Whenever you gain Block, deal 6 damage to a random enemy.",
@@ -750,7 +810,7 @@ fn card_data_base(id: CardId) -> CardData {
                 EffectOp::ApplyStatusToSelf(Status::Colossus(1)),
             ],
             keywords: HashSet::new(),
-            rarity: CardRarity::Rare,
+            rarity: CardRarity::Uncommon,
             description: "Gain 5 Block.\nYou receive 50% less damage from Vulnerable enemies this turn.",
         },
         // Installs the Corruption status: Skills cost 0 and Exhaust when
@@ -761,7 +821,7 @@ fn card_data_base(id: CardId) -> CardData {
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Corruption)],
             keywords: HashSet::new(),
-            rarity: CardRarity::Special,
+            rarity: CardRarity::Ancient,
             description: "Skills cost 0 [E].\nWhenever you play a Skill, Exhaust it.",
         },
         // Installs the Cruelty status: damage dealt to Vulnerable targets is
@@ -775,10 +835,10 @@ fn card_data_base(id: CardId) -> CardData {
             rarity: CardRarity::Rare,
             description: "Vulnerable enemies take an additional 25% damage.",
         },
-        // Deal 15 damage. Apply -10 Strength to the target for the rest of
-        // combat.
+        // Deal 15 damage. Apply -10 Strength to the target (permanent here; the
+        // game removes it at end of turn).
         CardId::Mangle => CardData {
-            cost: 1,
+            cost: 3,
             targeted: true,
             card_type: CardType::Attack,
             effects: vec![
@@ -890,7 +950,7 @@ fn card_data_base(id: CardId) -> CardData {
             card_type: CardType::Skill,
             effects: vec![EffectOp::Heal(10)],
             keywords: HashSet::from([CardKeyword::Exhaust]),
-            rarity: CardRarity::Common,
+            rarity: CardRarity::Rare,
             description: "Heal 10 HP.\nExhaust.",
         },
         // The slime monsters' Goop/StickyShot moves stick this into the
@@ -1128,7 +1188,7 @@ fn card_data_base(id: CardId) -> CardData {
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
             ],
             keywords: HashSet::new(),
-            rarity: CardRarity::Special,
+            rarity: CardRarity::Ancient,
             description: "Deal 20 damage.\nApply 5 Vulnerable.",
         },
         // Per the wiki, ShrugItOff costs 1, gains 8 block, and draws 1 card.
@@ -1199,7 +1259,7 @@ fn card_data_base(id: CardId) -> CardData {
             }],
             keywords: HashSet::new(),
             rarity: CardRarity::Common,
-            description: "Deal 12 damage.\nDeals 2 additional damage for ALL your cards containing “Strike”.",
+            description: "Deal 6 damage.\nDeals 2 additional damage for ALL your cards containing “Strike”.",
         },
         // Per the wiki, AshenStrike costs 1 and deals 6 damage plus 3 for
         // every card in the player's exhaust pile.
@@ -1231,17 +1291,12 @@ fn card_data_base(id: CardId) -> CardData {
             rarity: CardRarity::Uncommon,
             description: "Deal 4 damage.\nDeals 2 additional damage for each Vulnerable on the enemy.",
         },
-        // Per the wiki, Conflagration costs 1 and deals 8 damage to ALL
-        // enemies, plus 2 for each Attack played earlier this turn.
+        // Conflagration costs 1 and deals 2 damage to ALL enemies 4 times.
         CardId::Conflagration => CardData {
             cost: 1,
             targeted: false,
             card_type: CardType::Attack,
-            effects: vec![EffectOp::DealDamageScaled {
-                base: 8,
-                per_unit: 2,
-                source: ScaleSource::AttacksPlayedThisTurn,
-            }],
+            effects: vec![EffectOp::DealDamageToAllEnemies(2); 4],
             keywords: HashSet::new(),
             rarity: CardRarity::Rare,
             description: "Deal 2 damage to ALL enemies 4 times.",
@@ -1311,7 +1366,7 @@ fn card_data_base(id: CardId) -> CardData {
         CardId::Dominate => CardData {
             cost: 1,
             targeted: true,
-            card_type: CardType::Attack,
+            card_type: CardType::Skill,
             effects: vec![
                 EffectOp::ApplyStatusToTarget(Status::Vulnerable),
                 EffectOp::GainStrengthEqualToTargetVulnerable,
@@ -1343,13 +1398,13 @@ fn card_data_base(id: CardId) -> CardData {
             rarity: CardRarity::Common,
             description: "Deal 7 damage.\nGain 2 Strength this turn.",
         },
-        // Per the wiki, Unrelenting costs 1, deals 12 damage, and makes the
+        // Unrelenting costs 2, deals 14 damage, and makes the
         // next Attack the player plays cost 0 Energy.
         CardId::Unrelenting => CardData {
-            cost: 1,
+            cost: 2,
             targeted: true,
             card_type: CardType::Attack,
-            effects: vec![EffectOp::DealDamage(12), EffectOp::ApplyStatusToSelf(Status::FreeAttack)],
+            effects: vec![EffectOp::DealDamage(14), EffectOp::ApplyStatusToSelf(Status::FreeAttack)],
             keywords: HashSet::new(),
             rarity: CardRarity::Uncommon,
             description: "Deal 14 damage.\nThe next Attack you play costs 0 [E].",
@@ -1369,12 +1424,12 @@ fn card_data_base(id: CardId) -> CardData {
             rarity: CardRarity::Uncommon,
             description: "Gain 8 Block.\nGain another 8 Block if you have Exhausted a card this turn.",
         },
-        // Per the wiki, Forgotten Ritual costs 0, Exhausts, and grants 3
+        // Forgotten Ritual costs 1, Exhausts, and grants 3
         // Energy if the player has Exhausted a card this turn — its own
         // Exhaust (which resolves before its effects) satisfies that
         // condition, so playing it always nets +3 Energy.
         CardId::ForgottenRitual => CardData {
-            cost: 0,
+            cost: 1,
             targeted: false,
             card_type: CardType::Skill,
             effects: vec![EffectOp::GainEnergyScaled {
@@ -1386,10 +1441,10 @@ fn card_data_base(id: CardId) -> CardData {
             rarity: CardRarity::Uncommon,
             description: "If you Exhausted a card this turn, gain [E][E][E].\nExhaust.",
         },
-        // Per the wiki, Pyre (Power) costs 1. At the start of each turn, gain
+        // Pyre (Power) costs 2. At the start of each turn, gain
         // 1 Energy — identical shape to DemonForm's TurnStart->Strength.
         CardId::Pyre => CardData {
-            cost: 1,
+            cost: 2,
             targeted: false,
             card_type: CardType::Power,
             effects: vec![EffectOp::ApplyStatusToSelf(Status::Pyre)],
@@ -1503,14 +1558,14 @@ fn card_data_base(id: CardId) -> CardData {
             rarity: CardRarity::Rare,
             description: "If you have 3 or more cards in your Exhaust Pile,\ndeal 17 damage to ALL enemies.",
         },
-        // Per the wiki, HowlFromBeyond costs 3, deals 16 AoE damage, Exhausts.
-        // Auto-plays from exhaust pile at the start of each player turn.
+        // HowlFromBeyond costs 3 and deals 16 AoE damage. It does not exhaust
+        // itself; from the exhaust pile it auto-plays at the start of each turn.
         CardId::HowlFromBeyond => CardData {
             cost: 3,
             targeted: false,
             card_type: CardType::Attack,
             effects: vec![EffectOp::DealDamageToAllEnemies(16)],
-            keywords: HashSet::from([CardKeyword::Exhaust]),
+            keywords: HashSet::new(),
             rarity: CardRarity::Uncommon,
             description: "Deal 16 damage to ALL enemies.\nAt the end of your turn, if this is in your Exhaust Pile, play it.",
         },
@@ -1588,26 +1643,26 @@ fn card_data_base(id: CardId) -> CardData {
             targeted: false,
             card_type: CardType::Skill,
             effects: vec![],
-            keywords: HashSet::from([CardKeyword::Exhaust]),
+            keywords: HashSet::new(),
             rarity: CardRarity::Common,
             description: "Gain 5 Block.\nUpgrade a card in your Hand.",
         },
         CardId::Brand => CardData {
-            cost: 1,
-            targeted: false,
-            card_type: CardType::Skill,
-            effects: vec![],
-            keywords: HashSet::from([CardKeyword::Exhaust]),
-            rarity: CardRarity::Uncommon,
-            description: "Lose 1 HP.\nExhaust 1 card.\nGain 1 Strength.",
-        },
-        CardId::ExpectAFight => CardData {
-            cost: 1,
+            cost: 0,
             targeted: false,
             card_type: CardType::Skill,
             effects: vec![],
             keywords: HashSet::new(),
             rarity: CardRarity::Rare,
+            description: "Lose 1 HP.\nExhaust 1 card.\nGain 1 Strength.",
+        },
+        CardId::ExpectAFight => CardData {
+            cost: 2,
+            targeted: false,
+            card_type: CardType::Skill,
+            effects: vec![],
+            keywords: HashSet::new(),
+            rarity: CardRarity::Uncommon,
             description: "Gain [E] for each Attack in your Hand.\nYou cannot gain\nadditional [E] this turn.",
         },
         CardId::Feed => CardData {
@@ -1616,11 +1671,11 @@ fn card_data_base(id: CardId) -> CardData {
             card_type: CardType::Attack,
             effects: vec![],
             keywords: HashSet::from([CardKeyword::Exhaust]),
-            rarity: CardRarity::Uncommon,
+            rarity: CardRarity::Rare,
             description: "Deal 10 damage.\nIf Fatal, raise your Max HP by 3.\nExhaust.",
         },
         CardId::Hellraiser => CardData {
-            cost: 1,
+            cost: 2,
             targeted: false,
             card_type: CardType::Power,
             effects: vec![],
@@ -1629,7 +1684,7 @@ fn card_data_base(id: CardId) -> CardData {
             description: "Whenever you draw a card containing \"Strike\", it is played against a random enemy.",
         },
         CardId::Pillage => CardData {
-            cost: 2,
+            cost: 1,
             targeted: true,
             card_type: CardType::Attack,
             effects: vec![],
@@ -1638,7 +1693,7 @@ fn card_data_base(id: CardId) -> CardData {
             description: "Deal 6 damage.\nDraw cards until you draw a non-Attack card.",
         },
         CardId::PrimalForce => CardData {
-            cost: 2,
+            cost: 0,
             targeted: false,
             card_type: CardType::Skill,
             effects: vec![],
@@ -1652,7 +1707,7 @@ fn card_data_base(id: CardId) -> CardData {
             card_type: CardType::Attack,
             effects: vec![],
             keywords: HashSet::new(),
-            rarity: CardRarity::Common,
+            rarity: CardRarity::Uncommon,
             description: "Deal 9 damage.\nIncrease this card's damage by 5 this combat.",
         },
         CardId::Rupture => CardData {
@@ -1661,11 +1716,11 @@ fn card_data_base(id: CardId) -> CardData {
             card_type: CardType::Power,
             effects: vec![],
             keywords: HashSet::new(),
-            rarity: CardRarity::Rare,
+            rarity: CardRarity::Uncommon,
             description: "Whenever you lose HP on your turn, gain 1 Strength.",
         },
         CardId::Stampede => CardData {
-            cost: 1,
+            cost: 2,
             targeted: false,
             card_type: CardType::Power,
             effects: vec![],
@@ -1674,11 +1729,11 @@ fn card_data_base(id: CardId) -> CardData {
             description: "At the end of your turn, 1 random Attack in your Hand is played against a random enemy.",
         },
         CardId::Stoke => CardData {
-            cost: 2,
+            cost: 1,
             targeted: false,
             card_type: CardType::Skill,
             effects: vec![],
-            keywords: HashSet::from([CardKeyword::Exhaust]),
+            keywords: HashSet::new(),
             rarity: CardRarity::Rare,
             description: "Exhaust your Hand.\nAdd 1 random card into your Hand for each card Exhausted.",
         },

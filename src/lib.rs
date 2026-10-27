@@ -13,7 +13,7 @@ use act::{draw_overgrowth_elite, draw_overgrowth_monster_sequence};
 use action::{EndTurnAction, PlayCardAction, SelectTargetAction};
 use cards::{card_data, CardData, CardKeyword, CardType};
 use crate::ids::{CardId, MonsterId, StatusId};
-use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
+use engine::{fire_event, run_effect_ops, tick_debuffs, Actor, EffectOp, GameEvent, Status};
 use mcts::{
     fight_outcomes_per_fight, hp_lost_per_fight, mcts_action_values, mcts_search,
     simulate_hp_lost,
@@ -50,7 +50,7 @@ impl std::fmt::Display for ActionKind {
 
 /// The Energy cost to play `data`, accounting for Corruption (Skills cost 0
 /// while the player holds it) and Stomp (costs 1 less per Attack played).
-fn effective_cost(state: &CombatState, data: &CardData) -> i32 {
+fn effective_cost(state: &CombatState, id: CardId, data: &CardData) -> i32 {
     let base = if matches!(data.card_type, CardType::Skill) && state.player.statuses.contains(&Status::Corruption) {
         0
     } else if matches!(data.card_type, CardType::Attack) && state.player.statuses.contains(&Status::FreeAttack) {
@@ -63,7 +63,7 @@ fn effective_cost(state: &CombatState, data: &CardData) -> i32 {
             0
         }
         // Stomp costs 1 less for each Attack played this turn (min 0).
-        else if data.effects.iter().any(|op| matches!(op, engine::EffectOp::DealDamageToAllEnemies(_))) {
+        else if id == CardId::Stomp {
             (cost - state.attacks_played_this_turn).max(0)
         } else {
             cost
@@ -106,7 +106,7 @@ pub(crate) fn legal_actions_typed(state: &CombatState) -> Vec<ActionKind> {
                     {
                         let data = card_data(card.id, card.upgrade_level);
                         !data.keywords.contains(&CardKeyword::Unplayable)
-                            && effective_cost(state, &data) <= state.player_energy
+                            && effective_cost(state, card.id, &data) <= state.player_energy
                     }
                 })
                 .map(|card| ActionKind::PlayCard(card.as_str().to_string()))
@@ -386,8 +386,8 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             // HowlFromBeyond auto-play: if it's in the exhaust pile, run
             // its effects against all living enemies before the hand is
             // drawn. It stays in the exhaust pile (don't re-add).
-            if next.exhaust_pile.iter().any(|c| c.id == CardId::HowlFromBeyond) {
-                let data = card_data(CardId::HowlFromBeyond, 0);
+            if let Some(howl) = next.exhaust_pile.iter().find(|c| c.id == CardId::HowlFromBeyond) {
+                let data = card_data(CardId::HowlFromBeyond, howl.upgrade_level);
                 let targets: Vec<Actor> = next
                     .living_monster_indices()
                     .into_iter()
@@ -469,7 +469,7 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                     .iter()
                     .position(|c| c.as_str() == card_name)
                     .ok_or_else(|| PyValueError::new_err(format!("{card_name} is not in hand")))?;
-                let cost = effective_cost(&next, &data);
+                let cost = effective_cost(&next, instance.id, &data);
                 let base_cost = data.cost;
                 // X-cost cards (cost -1): spend all remaining energy, capture
                 // it as `player_energy_x` for effect resolution.
@@ -834,6 +834,125 @@ fn card_rows(py: Python<'_>) -> PyResult<Vec<Bound<'_, PyDict>>> {
         .collect()
 }
 
+fn status_dict<'py>(py: Python<'py>, op: &str, status: &Status) -> PyResult<Bound<'py, PyDict>> {
+    let d = PyDict::new(py);
+    d.set_item("op", op)?;
+    d.set_item("status", status.as_str())?;
+    d.set_item("amount", status.amount())?;
+    Ok(d)
+}
+
+fn effect_dict<'py>(py: Python<'py>, effect: &EffectOp) -> PyResult<Bound<'py, PyDict>> {
+    let d = PyDict::new(py);
+    let op = match effect {
+        EffectOp::ApplyStatusToTarget(s) => return status_dict(py, "ApplyStatusToTarget", s),
+        EffectOp::ApplyStatusToSelf(s) => return status_dict(py, "ApplyStatusToSelf", s),
+        EffectOp::EscalateSelfStatus(s) => return status_dict(py, "EscalateSelfStatus", s),
+        EffectOp::DealDamage(n) => { d.set_item("amount", n)?; "DealDamage" }
+        EffectOp::GainBlock(n) => { d.set_item("amount", n)?; "GainBlock" }
+        EffectOp::DrawCards(n) => { d.set_item("amount", n)?; "DrawCards" }
+        EffectOp::LoseHp(n) => { d.set_item("amount", n)?; "LoseHp" }
+        EffectOp::GainEnergy(n) => { d.set_item("amount", n)?; "GainEnergy" }
+        EffectOp::Heal(n) => { d.set_item("amount", n)?; "Heal" }
+        EffectOp::DealDamageToAllEnemies(n) => { d.set_item("amount", n)?; "DealDamageToAllEnemies" }
+        EffectOp::DealDamageToRandomEnemy(n) => { d.set_item("amount", n)?; "DealDamageToRandomEnemy" }
+        EffectOp::DealDamageToLastAttacker(n) => { d.set_item("amount", n)?; "DealDamageToLastAttacker" }
+        EffectOp::ApplyCardToTarget(c) => { d.set_item("card", c.as_str())?; "ApplyCardToTarget" }
+        EffectOp::AddCardToDiscard(c) => { d.set_item("card", c.as_str())?; "AddCardToDiscard" }
+        EffectOp::AddUpgradedCardToDiscard(c) => { d.set_item("card", c.as_str())?; "AddUpgradedCardToDiscard" }
+        EffectOp::AddCardToHand(c, n) => {
+            d.set_item("card", c.as_str())?;
+            d.set_item("amount", n)?;
+            "AddCardToHand"
+        }
+        EffectOp::AddRandomCardToHand(pool) => {
+            d.set_item("pool", pool.iter().map(|c| c.as_str()).collect::<Vec<_>>())?;
+            "AddRandomCardToHand"
+        }
+        EffectOp::ExhaustRandomFromHand(f) => { d.set_item("filter", f.as_str())?; "ExhaustRandomFromHand" }
+        EffectOp::ReturnRandomDiscardToHand(f) => { d.set_item("filter", f.as_str())?; "ReturnRandomDiscardToHand" }
+        EffectOp::ExhaustAllFromHand { filter, gain_block_per_card } => {
+            d.set_item("filter", filter.as_str())?;
+            d.set_item("gain_block_per_card", gain_block_per_card)?;
+            "ExhaustAllFromHand"
+        }
+        EffectOp::DealDamageScaled { base, per_unit, source } => {
+            d.set_item("base", base)?;
+            d.set_item("per_unit", per_unit)?;
+            d.set_item("source", source.as_str())?;
+            "DealDamageScaled"
+        }
+        EffectOp::GainBlockScaled { base, per_unit, source } => {
+            d.set_item("base", base)?;
+            d.set_item("per_unit", per_unit)?;
+            d.set_item("source", source.as_str())?;
+            "GainBlockScaled"
+        }
+        EffectOp::GainEnergyScaled { base, per_unit, source } => {
+            d.set_item("base", base)?;
+            d.set_item("per_unit", per_unit)?;
+            d.set_item("source", source.as_str())?;
+            "GainEnergyScaled"
+        }
+        EffectOp::DealDamageRepeated { amount, hits_base, hits_per_unit, hits_source } => {
+            d.set_item("amount", amount)?;
+            d.set_item("hits_base", hits_base)?;
+            d.set_item("hits_per_unit", hits_per_unit)?;
+            d.set_item("source", hits_source.as_str())?;
+            "DealDamageRepeated"
+        }
+        EffectOp::PlayTopOfDeck { count, exhaust } => {
+            d.set_item("amount", count)?;
+            d.set_item("exhaust", exhaust)?;
+            "PlayTopOfDeck"
+        }
+        EffectOp::PlayTopOfDeckScaled { count_base, count_per_unit, count_source, exhaust } => {
+            d.set_item("base", count_base)?;
+            d.set_item("per_unit", count_per_unit)?;
+            d.set_item("source", count_source.as_str())?;
+            d.set_item("exhaust", exhaust)?;
+            "PlayTopOfDeckScaled"
+        }
+        EffectOp::SpawnMonster(name, hp) => {
+            d.set_item("monster", name)?;
+            d.set_item("amount", hp)?;
+            "SpawnMonster"
+        }
+        EffectOp::PutRandomDiscardOnTopOfDraw => "PutRandomDiscardOnTopOfDraw",
+        EffectOp::DoubleVulnerableOnTarget => "DoubleVulnerableOnTarget",
+        EffectOp::GainStrengthEqualToTargetVulnerable => "GainStrengthEqualToTargetVulnerable",
+        EffectOp::ExhaustTopOfDrawPile => "ExhaustTopOfDrawPile",
+    };
+    d.set_item("op", op)?;
+    Ok(d)
+}
+
+/// A card's sim data as a dict: `card_spec("Bash")`, `card_spec("Bash+")`.
+#[pyfunction]
+fn card_spec<'py>(py: Python<'py>, name: &str) -> PyResult<Bound<'py, PyDict>> {
+    let card = CardInstance::try_parse(name)
+        .ok_or_else(|| PyValueError::new_err(format!("unknown card: {name}")))?;
+    let data = card_data(card.id, card.upgrade_level);
+    let mut keywords: Vec<&str> = data.keywords.iter().map(|k| k.as_str()).collect();
+    keywords.sort_unstable();
+    let effects = data
+        .effects
+        .iter()
+        .map(|e| effect_dict(py, e))
+        .collect::<PyResult<Vec<_>>>()?;
+    let d = PyDict::new(py);
+    d.set_item("name", card.as_str())?;
+    d.set_item("sts2_id", card.id.sts2_id())?;
+    d.set_item("cost", data.cost)?;
+    d.set_item("targeted", data.targeted)?;
+    d.set_item("card_type", data.card_type.as_str())?;
+    d.set_item("rarity", data.rarity.as_str())?;
+    d.set_item("keywords", keywords)?;
+    d.set_item("description", data.description)?;
+    d.set_item("effects", effects)?;
+    Ok(d)
+}
+
 /// Registry monster rows, in declaration order, for `sts_sim.sim._registry`.
 #[pyfunction(name = "monsters")]
 fn monster_rows(py: Python<'_>) -> PyResult<Vec<Bound<'_, PyDict>>> {
@@ -899,6 +1018,7 @@ fn _sts_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(all_card_names, m)?)?;
     m.add_function(wrap_pyfunction!(all_monster_names, m)?)?;
     m.add_function(wrap_pyfunction!(card_rows, m)?)?;
+    m.add_function(wrap_pyfunction!(card_spec, m)?)?;
     m.add_function(wrap_pyfunction!(monster_rows, m)?)?;
     m.add_function(wrap_pyfunction!(status_rows, m)?)?;
     m.add_function(wrap_pyfunction!(optimal_value, m)?)?;

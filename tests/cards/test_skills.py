@@ -246,9 +246,9 @@ def test_evil_eye_grants_8_block_or_16_if_exhausted_a_card_this_turn(make_state)
 # ── Forgotten Ritual ─────────────────────────────────────────────────────────
 
 
-def test_forgotten_ritual_grants_3_energy_and_exhausts(make_state):
+def test_forgotten_ritual_costs_1_grants_3_energy_and_exhausts(make_state):
     state = make_state(hand=["Forgotten Ritual"], player_energy=1)
     resolved = apply(state, PlayCardAction("Forgotten Ritual"))
-    assert resolved.player_energy == 1 + 3
+    assert resolved.player_energy == 1 - 1 + 3
     assert "Forgotten Ritual" in resolved.exhaust_pile
     assert "Forgotten Ritual" not in resolved.hand

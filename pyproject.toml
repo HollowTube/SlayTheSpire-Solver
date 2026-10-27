@@ -10,7 +10,7 @@ requires-python = ">=3.10"
 dependencies = ["click"]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff==0.15.17", "mypy==2.1.0"]
+dev = ["pytest", "ruff==0.15.17", "mypy==2.1.0", "tree-sitter==0.26.0", "tree-sitter-c-sharp==0.23.5"]
 notebook = ["jupyterlab", "ipykernel", "matplotlib"]
 
 [project.scripts]
