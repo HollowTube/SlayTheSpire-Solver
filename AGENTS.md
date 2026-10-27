@@ -186,6 +186,7 @@ tests/          ← pytest (require the .so to be built)
 | `bridge/translate.py` / `bridge/client.py` | Translate live bridge JSON into `CombatState` / TCP client for the MCPTest bridge mod. |
 | `bridge/cli.py` | `sts2` CLI — AXI-compliant wrapper around the bridge MCPTest protocol. |
 | `cli.py` | `sts-sim` CLI — interactive and step-mode play. |
+| `parity/` | Ironclad card parity: extracts card data from the decompiled game and the PCK into `tests/fixtures/game/<version>/`, and checks `card_spec` against it (`tests/parity/`). After a game patch: `scripts/card_parity.py extract`, then `diff`, then fix or file each mismatch (README "Card parity"). |
 
 ### The registry and monster registration
 

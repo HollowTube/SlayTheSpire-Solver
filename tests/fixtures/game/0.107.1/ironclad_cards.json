@@ -1,0 +1,2495 @@
+{
+  "cards": {
+    "AGGRESSION": {
+      "class": "Aggression",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "At the start of your turn, put a random Attack from your [gold]Discard Pile[/gold] into your [gold]Hand[/gold] and [gold]Upgrade[/gold] it.",
+      "text": {
+        "base": "At the start of your turn, put a random Attack from your Discard Pile into your Hand and Upgrade it.",
+        "upgraded": "Innate.\nAt the start of your turn, put a random Attack from your Discard Pile into your Hand and Upgrade it."
+      },
+      "title": "Aggression",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [
+        "Innate"
+      ],
+      "uses_is_upgraded": false,
+      "vars": {},
+      "x_cost": false
+    },
+    "ANGER": {
+      "class": "Anger",
+      "cost": 0,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nAdd a copy of this card into your [gold]Discard Pile[/gold].",
+      "text": {
+        "base": "Deal 6 damage.\nAdd a copy of this card into your Discard Pile.",
+        "upgraded": "Deal 8 damage.\nAdd a copy of this card into your Discard Pile."
+      },
+      "title": "Anger",
+      "type": "Attack",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 6,
+          "class": "DamageVar",
+          "upgraded": 8
+        }
+      },
+      "x_cost": false
+    },
+    "ARMAMENTS": {
+      "class": "Armaments",
+      "cost": 1,
+      "has_on_upgrade": false,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "Self",
+      "template": "Gain {Block:diff()} [gold]Block[/gold].\n[gold]Upgrade[/gold] {IfUpgraded:show:ALL cards|a card} in your [gold]Hand[/gold].",
+      "text": {
+        "base": "Gain 5 Block.\nUpgrade a card in your Hand.",
+        "upgraded": "Gain 5 Block.\nUpgrade ALL cards in your Hand."
+      },
+      "title": "Armaments",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": true,
+      "vars": {
+        "Block": {
+          "base": 5,
+          "class": "BlockVar",
+          "upgraded": 5
+        }
+      },
+      "x_cost": false
+    },
+    "ASHEN_STRIKE": {
+      "class": "AshenStrike",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AnyEnemy",
+      "template": "Deal {CalculatedDamage:diff()} damage.\nDeals {ExtraDamage:diff()} additional damage for each card in your [gold]Exhaust Pile[/gold].",
+      "text": {
+        "base": "Deal 6 damage.\nDeals 3 additional damage for each card in your Exhaust Pile.",
+        "upgraded": "Deal 6 damage.\nDeals 4 additional damage for each card in your Exhaust Pile."
+      },
+      "title": "Ashen Strike",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "CalculatedDamage": {
+          "base": 6,
+          "class": "CalculatedDamageVar",
+          "formula_sha256": "821e8724e5d358d38be7c1ac68138ba7f8ca271e553dc53e3719dc148c126640",
+          "upgraded": 6
+        },
+        "CalculationBase": {
+          "base": 6,
+          "class": "CalculationBaseVar",
+          "upgraded": 6
+        },
+        "ExtraDamage": {
+          "base": 3,
+          "class": "ExtraDamageVar",
+          "upgraded": 4
+        }
+      },
+      "x_cost": false
+    },
+    "BARRICADE": {
+      "class": "Barricade",
+      "cost": 3,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "[gold]Block[/gold] is not removed at the start of your turn.",
+      "text": {
+        "base": "Block is not removed at the start of your turn.",
+        "upgraded": "Block is not removed at the start of your turn."
+      },
+      "title": "Barricade",
+      "type": "Power",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {},
+      "x_cost": false
+    },
+    "BASH": {
+      "class": "Bash",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Basic",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nApply {VulnerablePower:diff()} [gold]Vulnerable[/gold].",
+      "text": {
+        "base": "Deal 8 damage.\nApply 2 Vulnerable.",
+        "upgraded": "Deal 10 damage.\nApply 3 Vulnerable."
+      },
+      "title": "Bash",
+      "type": "Attack",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 8,
+          "class": "DamageVar",
+          "upgraded": 10
+        },
+        "VulnerablePower": {
+          "base": 2,
+          "class": "PowerVar<VulnerablePower>",
+          "upgraded": 3
+        }
+      },
+      "x_cost": false
+    },
+    "BATTLE_TRANCE": {
+      "class": "BattleTrance",
+      "cost": 0,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Draw {Cards:diff()} cards.\nYou cannot draw additional cards this turn.",
+      "text": {
+        "base": "Draw 3 cards.\nYou cannot draw additional cards this turn.",
+        "upgraded": "Draw 4 cards.\nYou cannot draw additional cards this turn."
+      },
+      "title": "Battle Trance",
+      "type": "Skill",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Cards": {
+          "base": 3,
+          "class": "CardsVar",
+          "upgraded": 4
+        }
+      },
+      "x_cost": false
+    },
+    "BLOODLETTING": {
+      "class": "Bloodletting",
+      "cost": 0,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "Self",
+      "template": "Lose {HpLoss:diff()} HP.\nGain {Energy:energyIcons()}.",
+      "text": {
+        "base": "Lose 3 HP.\nGain [E][E].",
+        "upgraded": "Lose 3 HP.\nGain [E][E][E]."
+      },
+      "title": "Bloodletting",
+      "type": "Skill",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Energy": {
+          "base": 2,
+          "class": "EnergyVar",
+          "upgraded": 3
+        },
+        "HpLoss": {
+          "base": 3,
+          "class": "HpLossVar",
+          "upgraded": 3
+        }
+      },
+      "x_cost": false
+    },
+    "BLOOD_WALL": {
+      "class": "BloodWall",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "Self",
+      "template": "Lose {HpLoss:diff()} HP.\nGain {Block:diff()} [gold]Block[/gold].",
+      "text": {
+        "base": "Lose 2 HP.\nGain 16 Block.",
+        "upgraded": "Lose 2 HP.\nGain 20 Block."
+      },
+      "title": "Blood Wall",
+      "type": "Skill",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Block": {
+          "base": 16,
+          "class": "BlockVar",
+          "upgraded": 20
+        },
+        "HpLoss": {
+          "base": 2,
+          "class": "HpLossVar",
+          "upgraded": 2
+        }
+      },
+      "x_cost": false
+    },
+    "BLUDGEON": {
+      "class": "Bludgeon",
+      "cost": 3,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.",
+      "text": {
+        "base": "Deal 32 damage.",
+        "upgraded": "Deal 42 damage."
+      },
+      "title": "Bludgeon",
+      "type": "Attack",
+      "upgraded_cost": 3,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 32,
+          "class": "DamageVar",
+          "upgraded": 42
+        }
+      },
+      "x_cost": false
+    },
+    "BODY_SLAM": {
+      "class": "BodySlam",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "AnyEnemy",
+      "template": "Deal damage equal to your [gold]Block[/gold].{InCombat:\n(Deals {CalculatedDamage:diff()} damage)|}",
+      "text": {
+        "base": "Deal damage equal to your Block.",
+        "upgraded": "Deal damage equal to your Block."
+      },
+      "title": "Body Slam",
+      "type": "Attack",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "CalculatedDamage": {
+          "base": 0,
+          "class": "CalculatedDamageVar",
+          "formula_sha256": "f801b3eddf3e0747c8bf12e13fbd1b4d7ac2c2045c375351ce8ce503815dbc21",
+          "upgraded": 0
+        },
+        "CalculationBase": {
+          "base": 0,
+          "class": "CalculationBaseVar",
+          "upgraded": 0
+        },
+        "ExtraDamage": {
+          "base": 1,
+          "class": "ExtraDamageVar",
+          "upgraded": 1
+        }
+      },
+      "x_cost": false
+    },
+    "BRAND": {
+      "class": "Brand",
+      "cost": 0,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "Lose {HpLoss:diff()} HP.\n[gold]Exhaust[/gold] 1 card.\nGain {StrengthPower:diff()} [gold]Strength[/gold].",
+      "text": {
+        "base": "Lose 1 HP.\nExhaust 1 card.\nGain 1 Strength.",
+        "upgraded": "Lose 1 HP.\nExhaust 1 card.\nGain 2 Strength."
+      },
+      "title": "Brand",
+      "type": "Skill",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "HpLoss": {
+          "base": 1,
+          "class": "HpLossVar",
+          "upgraded": 1
+        },
+        "StrengthPower": {
+          "base": 1,
+          "class": "PowerVar<StrengthPower>",
+          "upgraded": 2
+        }
+      },
+      "x_cost": false
+    },
+    "BREAK": {
+      "class": "Break",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Ancient",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nApply {VulnerablePower:diff()} [gold]Vulnerable[/gold].",
+      "text": {
+        "base": "Deal 20 damage.\nApply 5 Vulnerable.",
+        "upgraded": "Deal 30 damage.\nApply 7 Vulnerable."
+      },
+      "title": "Break",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 20,
+          "class": "DamageVar",
+          "upgraded": 30
+        },
+        "VulnerablePower": {
+          "base": 5,
+          "class": "PowerVar<VulnerablePower>",
+          "upgraded": 7
+        }
+      },
+      "x_cost": false
+    },
+    "BREAKTHROUGH": {
+      "class": "Breakthrough",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "AllEnemies",
+      "template": "Lose {HpLoss:diff()} HP.\nDeal {Damage:diff()} damage to ALL enemies.",
+      "text": {
+        "base": "Lose 1 HP.\nDeal 9 damage to ALL enemies.",
+        "upgraded": "Lose 1 HP.\nDeal 13 damage to ALL enemies."
+      },
+      "title": "Breakthrough",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 9,
+          "class": "DamageVar",
+          "upgraded": 13
+        },
+        "HpLoss": {
+          "base": 1,
+          "class": "HpLossVar",
+          "upgraded": 1
+        }
+      },
+      "x_cost": false
+    },
+    "BULLY": {
+      "class": "Bully",
+      "cost": 0,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AnyEnemy",
+      "template": "Deal {CalculatedDamage:diff()} damage.\nDeals {ExtraDamage:diff()} additional damage for each [gold]Vulnerable[/gold] on the enemy.",
+      "text": {
+        "base": "Deal 4 damage.\nDeals 2 additional damage for each Vulnerable on the enemy.",
+        "upgraded": "Deal 4 damage.\nDeals 3 additional damage for each Vulnerable on the enemy."
+      },
+      "title": "Bully",
+      "type": "Attack",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "CalculatedDamage": {
+          "base": 4,
+          "class": "CalculatedDamageVar",
+          "formula_sha256": "3f026a337a8aa08303c63821650920c24fd52a0f88bc013f468dfa3151e1ae19",
+          "upgraded": 4
+        },
+        "CalculationBase": {
+          "base": 4,
+          "class": "CalculationBaseVar",
+          "upgraded": 4
+        },
+        "ExtraDamage": {
+          "base": 2,
+          "class": "ExtraDamageVar",
+          "upgraded": 3
+        }
+      },
+      "x_cost": false
+    },
+    "BURNING_PACT": {
+      "class": "BurningPact",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "[gold]Exhaust[/gold] 1 card.\nDraw {Cards:diff()} cards.",
+      "text": {
+        "base": "Exhaust 1 card.\nDraw 2 cards.",
+        "upgraded": "Exhaust 1 card.\nDraw 3 cards."
+      },
+      "title": "Burning Pact",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Cards": {
+          "base": 2,
+          "class": "CardsVar",
+          "upgraded": 3
+        }
+      },
+      "x_cost": false
+    },
+    "CASCADE": {
+      "class": "Cascade",
+      "cost": -1,
+      "has_on_upgrade": false,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "Play the top X{IfUpgraded:show:+1} cards of your [gold]Draw Pile[/gold].",
+      "text": {
+        "base": "Play the top X cards of your Draw Pile.",
+        "upgraded": "Play the top X+1 cards of your Draw Pile."
+      },
+      "title": "Cascade",
+      "type": "Skill",
+      "upgraded_cost": -1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": true,
+      "vars": {},
+      "x_cost": true
+    },
+    "CINDER": {
+      "class": "Cinder",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\n[gold]Exhaust[/gold] 1 card at random.",
+      "text": {
+        "base": "Deal 18 damage.\nExhaust 1 card at random.",
+        "upgraded": "Deal 24 damage.\nExhaust 1 card at random."
+      },
+      "title": "Cinder",
+      "type": "Attack",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 18,
+          "class": "DamageVar",
+          "upgraded": 24
+        }
+      },
+      "x_cost": false
+    },
+    "COLOSSUS": {
+      "class": "Colossus",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Gain {Block:diff()} [gold]Block[/gold].\nYou receive 50% less damage from [gold]Vulnerable[/gold] enemies this turn.",
+      "text": {
+        "base": "Gain 5 Block.\nYou receive 50% less damage from Vulnerable enemies this turn.",
+        "upgraded": "Gain 8 Block.\nYou receive 50% less damage from Vulnerable enemies this turn."
+      },
+      "title": "Colossus",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Block": {
+          "base": 5,
+          "class": "BlockVar",
+          "upgraded": 8
+        },
+        "Colossus": {
+          "base": 1,
+          "class": "DynamicVar",
+          "upgraded": 1
+        }
+      },
+      "x_cost": false
+    },
+    "CONFLAGRATION": {
+      "class": "Conflagration",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "AllEnemies",
+      "template": "Deal {Damage:diff()} damage to ALL enemies {Repeat:diff()} {Repeat:plural:time|times}.",
+      "text": {
+        "base": "Deal 2 damage to ALL enemies 4 times.",
+        "upgraded": "Deal 2 damage to ALL enemies 5 times."
+      },
+      "title": "Conflagration",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 2,
+          "class": "DamageVar",
+          "upgraded": 2
+        },
+        "Repeat": {
+          "base": 4,
+          "class": "RepeatVar",
+          "upgraded": 5
+        }
+      },
+      "x_cost": false
+    },
+    "CORRUPTION": {
+      "class": "Corruption",
+      "cost": 3,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Ancient",
+      "target": "Self",
+      "template": "Skills cost 0 {energyPrefix:energyIcons(1)}.\nWhenever you play a Skill, [gold]Exhaust[/gold] it.",
+      "text": {
+        "base": "Skills cost 0 [E].\nWhenever you play a Skill, Exhaust it.",
+        "upgraded": "Skills cost 0 [E].\nWhenever you play a Skill, Exhaust it."
+      },
+      "title": "Corruption",
+      "type": "Power",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Power": {
+          "base": 1,
+          "class": "DynamicVar",
+          "upgraded": 1
+        }
+      },
+      "x_cost": false
+    },
+    "CRIMSON_MANTLE": {
+      "class": "CrimsonMantle",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "At the start of your turn, lose 1 HP and gain {CrimsonMantlePower:diff()} [gold]Block[/gold].",
+      "text": {
+        "base": "At the start of your turn, lose 1 HP and gain 8 Block.",
+        "upgraded": "At the start of your turn, lose 1 HP and gain 10 Block."
+      },
+      "title": "Crimson Mantle",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "CrimsonMantlePower": {
+          "base": 8,
+          "class": "PowerVar<CrimsonMantlePower>",
+          "upgraded": 10
+        }
+      },
+      "x_cost": false
+    },
+    "CRUELTY": {
+      "class": "Cruelty",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "[gold]Vulnerable[/gold] enemies take an additional {CrueltyPower:diff()}% damage.",
+      "text": {
+        "base": "Vulnerable enemies take an additional 25% damage.",
+        "upgraded": "Vulnerable enemies take an additional 50% damage."
+      },
+      "title": "Cruelty",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "CrueltyPower": {
+          "base": 25,
+          "class": "PowerVar<CrueltyPower>",
+          "upgraded": 50
+        }
+      },
+      "x_cost": false
+    },
+    "DARK_EMBRACE": {
+      "class": "DarkEmbrace",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "Whenever a card is [gold]Exhausted[/gold],\ndraw 1 card.",
+      "text": {
+        "base": "Whenever a card is Exhausted,\ndraw 1 card.",
+        "upgraded": "Whenever a card is Exhausted,\ndraw 1 card."
+      },
+      "title": "Dark Embrace",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {},
+      "x_cost": false
+    },
+    "DEFEND_IRONCLAD": {
+      "class": "DefendIronclad",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Basic",
+      "target": "Self",
+      "template": "Gain {Block:diff()} [gold]Block[/gold].",
+      "text": {
+        "base": "Gain 5 Block.",
+        "upgraded": "Gain 8 Block."
+      },
+      "title": "Defend",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Block": {
+          "base": 5,
+          "class": "BlockVar",
+          "upgraded": 8
+        }
+      },
+      "x_cost": false
+    },
+    "DEMONIC_SHIELD": {
+      "class": "DemonicShield",
+      "cost": 0,
+      "has_on_upgrade": true,
+      "keywords": [
+        "Exhaust"
+      ],
+      "rarity": "Uncommon",
+      "target": "AnyAlly",
+      "template": "Lose {HpLoss:diff()} HP.\nGive another player [gold]Block[/gold] equal to your [gold]Block[/gold].{InCombat:\n(Gives {CalculatedBlock:diff()} [gold]Block[/gold])|}",
+      "text": {
+        "base": "Lose 1 HP.\nGive another player Block equal to your Block.\nExhaust.",
+        "upgraded": "Lose 1 HP.\nGive another player Block equal to your Block."
+      },
+      "title": "Demonic Shield",
+      "type": "Skill",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "CalculatedBlock": {
+          "base": 0,
+          "class": "CalculatedBlockVar",
+          "formula_sha256": "f801b3eddf3e0747c8bf12e13fbd1b4d7ac2c2045c375351ce8ce503815dbc21",
+          "upgraded": 0
+        },
+        "CalculationBase": {
+          "base": 0,
+          "class": "CalculationBaseVar",
+          "upgraded": 0
+        },
+        "CalculationExtra": {
+          "base": 1,
+          "class": "CalculationExtraVar",
+          "upgraded": 1
+        },
+        "HpLoss": {
+          "base": 1,
+          "class": "HpLossVar",
+          "upgraded": 1
+        }
+      },
+      "x_cost": false
+    },
+    "DEMON_FORM": {
+      "class": "DemonForm",
+      "cost": 3,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "At the start of your turn, gain {StrengthPower:diff()} [gold]Strength[/gold].",
+      "text": {
+        "base": "At the start of your turn, gain 2 Strength.",
+        "upgraded": "At the start of your turn, gain 3 Strength."
+      },
+      "title": "Demon Form",
+      "type": "Power",
+      "upgraded_cost": 3,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "StrengthPower": {
+          "base": 2,
+          "class": "PowerVar<StrengthPower>",
+          "upgraded": 3
+        }
+      },
+      "x_cost": false
+    },
+    "DISMANTLE": {
+      "class": "Dismantle",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nIf the enemy is [gold]Vulnerable[/gold], hits twice.",
+      "text": {
+        "base": "Deal 8 damage.\nIf the enemy is Vulnerable, hits twice.",
+        "upgraded": "Deal 10 damage.\nIf the enemy is Vulnerable, hits twice."
+      },
+      "title": "Dismantle",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 8,
+          "class": "DamageVar",
+          "upgraded": 10
+        }
+      },
+      "x_cost": false
+    },
+    "DOMINATE": {
+      "class": "Dominate",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [
+        "Exhaust"
+      ],
+      "rarity": "Uncommon",
+      "target": "AnyEnemy",
+      "template": "Apply {VulnerablePower:diff()} [gold]Vulnerable[/gold].\nGain {StrengthPerVulnerable:diff()} [gold]Strength[/gold] for each [gold]Vulnerable[/gold] on the enemy.",
+      "text": {
+        "base": "Apply 1 Vulnerable.\nGain 1 Strength for each Vulnerable on the enemy.\nExhaust.",
+        "upgraded": "Apply 2 Vulnerable.\nGain 1 Strength for each Vulnerable on the enemy.\nExhaust."
+      },
+      "title": "Dominate",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [
+        "Exhaust"
+      ],
+      "uses_is_upgraded": false,
+      "vars": {
+        "StrengthPerVulnerable": {
+          "base": 1,
+          "class": "DynamicVar",
+          "upgraded": 1
+        },
+        "VulnerablePower": {
+          "base": 1,
+          "class": "PowerVar<VulnerablePower>",
+          "upgraded": 2
+        }
+      },
+      "x_cost": false
+    },
+    "DRUM_OF_BATTLE": {
+      "class": "DrumOfBattle",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Draw {Cards:diff()} {Cards:plural:card|cards}.\nWhen this card is [gold]Exhausted[/gold], gain {Energy:energyIcons()}.",
+      "text": {
+        "base": "Draw 2 cards.\nWhen this card is Exhausted, gain [E][E].",
+        "upgraded": "Draw 2 cards.\nWhen this card is Exhausted, gain [E][E][E]."
+      },
+      "title": "Drum of Battle",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Cards": {
+          "base": 2,
+          "class": "CardsVar",
+          "upgraded": 2
+        },
+        "Energy": {
+          "base": 2,
+          "class": "EnergyVar",
+          "upgraded": 3
+        }
+      },
+      "x_cost": false
+    },
+    "EVIL_EYE": {
+      "class": "EvilEye",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Gain {Block:diff()} [gold]Block[/gold].\nGain another {Block:diff()} [gold]Block[/gold] if you have [gold]Exhausted[/gold] a card this turn.",
+      "text": {
+        "base": "Gain 8 Block.\nGain another 8 Block if you have Exhausted a card this turn.",
+        "upgraded": "Gain 11 Block.\nGain another 11 Block if you have Exhausted a card this turn."
+      },
+      "title": "Evil Eye",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Block": {
+          "base": 8,
+          "class": "BlockVar",
+          "upgraded": 11
+        }
+      },
+      "x_cost": false
+    },
+    "EXPECT_A_FIGHT": {
+      "class": "ExpectAFight",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Gain {energyPrefix:energyIcons(1)} for each Attack in your [gold]Hand[/gold].\nYou cannot gain\nadditional {energyPrefix:energyIcons(1)} this turn.{InCombat:\n(Gain {CalculatedEnergy:energyIcons()})|}",
+      "text": {
+        "base": "Gain [E] for each Attack in your Hand.\nYou cannot gain\nadditional [E] this turn.",
+        "upgraded": "Gain [E] for each Attack in your Hand.\nYou cannot gain\nadditional [E] this turn."
+      },
+      "title": "Expect a Fight",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "CalculatedEnergy": {
+          "base": 0,
+          "class": "CalculatedVar",
+          "formula_sha256": "e496879d47c8dbb7b591cfe53a4dc5411fb22e6ef5e15fae917d5fef4c47f92c",
+          "upgraded": 0
+        },
+        "CalculationBase": {
+          "base": 0,
+          "class": "CalculationBaseVar",
+          "upgraded": 0
+        },
+        "CalculationExtra": {
+          "base": 1,
+          "class": "CalculationExtraVar",
+          "upgraded": 1
+        },
+        "Energy": {
+          "base": 0,
+          "class": "EnergyVar",
+          "upgraded": 0
+        }
+      },
+      "x_cost": false
+    },
+    "FEED": {
+      "class": "Feed",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [
+        "Exhaust"
+      ],
+      "rarity": "Rare",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nIf [gold]Fatal[/gold], raise your Max HP by {MaxHp:diff()}.",
+      "text": {
+        "base": "Deal 10 damage.\nIf Fatal, raise your Max HP by 3.\nExhaust.",
+        "upgraded": "Deal 12 damage.\nIf Fatal, raise your Max HP by 4.\nExhaust."
+      },
+      "title": "Feed",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [
+        "Exhaust"
+      ],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 10,
+          "class": "DamageVar",
+          "upgraded": 12
+        },
+        "MaxHp": {
+          "base": 3,
+          "class": "MaxHpVar",
+          "upgraded": 4
+        }
+      },
+      "x_cost": false
+    },
+    "FEEL_NO_PAIN": {
+      "class": "FeelNoPain",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Whenever a card is [gold]Exhausted[/gold], gain {Power:diff()} [gold]Block[/gold].",
+      "text": {
+        "base": "Whenever a card is Exhausted, gain 3 Block.",
+        "upgraded": "Whenever a card is Exhausted, gain 4 Block."
+      },
+      "title": "Feel No Pain",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Power": {
+          "base": 3,
+          "class": "DynamicVar",
+          "upgraded": 4
+        }
+      },
+      "x_cost": false
+    },
+    "FIEND_FIRE": {
+      "class": "FiendFire",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [
+        "Exhaust"
+      ],
+      "rarity": "Rare",
+      "target": "AnyEnemy",
+      "template": "[gold]Exhaust[/gold] your [gold]Hand[/gold].\nDeal {Damage:diff()} damage for each card [gold]Exhausted[/gold].",
+      "text": {
+        "base": "Exhaust your Hand.\nDeal 7 damage for each card Exhausted.\nExhaust.",
+        "upgraded": "Exhaust your Hand.\nDeal 10 damage for each card Exhausted.\nExhaust."
+      },
+      "title": "Fiend Fire",
+      "type": "Attack",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [
+        "Exhaust"
+      ],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 7,
+          "class": "DamageVar",
+          "upgraded": 10
+        }
+      },
+      "x_cost": false
+    },
+    "FIGHT_ME": {
+      "class": "FightMe",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage twice.\nGain {StrengthPower:diff()} [gold]Strength[/gold].\nThe enemy gains {EnemyStrength:diff()} [gold]Strength[/gold].",
+      "text": {
+        "base": "Deal 5 damage twice.\nGain 3 Strength.\nThe enemy gains 1 Strength.",
+        "upgraded": "Deal 6 damage twice.\nGain 4 Strength.\nThe enemy gains 1 Strength."
+      },
+      "title": "Fight Me!",
+      "type": "Attack",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 5,
+          "class": "DamageVar",
+          "upgraded": 6
+        },
+        "EnemyStrength": {
+          "base": 1,
+          "class": "DynamicVar",
+          "upgraded": 1
+        },
+        "Repeat": {
+          "base": 2,
+          "class": "RepeatVar",
+          "upgraded": 2
+        },
+        "StrengthPower": {
+          "base": 3,
+          "class": "PowerVar<StrengthPower>",
+          "upgraded": 4
+        }
+      },
+      "x_cost": false
+    },
+    "FLAME_BARRIER": {
+      "class": "FlameBarrier",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Gain {Block:diff()} [gold]Block[/gold].\nWhenever you are attacked this turn, deal {DamageBack:diff()} damage back.",
+      "text": {
+        "base": "Gain 12 Block.\nWhenever you are attacked this turn, deal 4 damage back.",
+        "upgraded": "Gain 16 Block.\nWhenever you are attacked this turn, deal 6 damage back."
+      },
+      "title": "Flame Barrier",
+      "type": "Skill",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Block": {
+          "base": 12,
+          "class": "BlockVar",
+          "upgraded": 16
+        },
+        "DamageBack": {
+          "base": 4,
+          "class": "DynamicVar",
+          "upgraded": 6
+        }
+      },
+      "x_cost": false
+    },
+    "FORGOTTEN_RITUAL": {
+      "class": "ForgottenRitual",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [
+        "Exhaust"
+      ],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "If you [gold]Exhausted[/gold] a card this turn, gain {Energy:energyIcons()}.",
+      "text": {
+        "base": "If you Exhausted a card this turn, gain [E][E][E].\nExhaust.",
+        "upgraded": "If you Exhausted a card this turn, gain 4[E].\nExhaust."
+      },
+      "title": "Forgotten Ritual",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [
+        "Exhaust"
+      ],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Energy": {
+          "base": 3,
+          "class": "EnergyVar",
+          "upgraded": 4
+        }
+      },
+      "x_cost": false
+    },
+    "HAVOC": {
+      "class": "Havoc",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "Self",
+      "template": "Play the top card of your [gold]Draw Pile[/gold] and [gold]Exhaust[/gold] it.",
+      "text": {
+        "base": "Play the top card of your Draw Pile and Exhaust it.",
+        "upgraded": "Play the top card of your Draw Pile and Exhaust it."
+      },
+      "title": "Havoc",
+      "type": "Skill",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {},
+      "x_cost": false
+    },
+    "HEADBUTT": {
+      "class": "Headbutt",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nPut a card from your [gold]Discard Pile[/gold] on top of your [gold]Draw Pile[/gold].",
+      "text": {
+        "base": "Deal 9 damage.\nPut a card from your Discard Pile on top of your Draw Pile.",
+        "upgraded": "Deal 12 damage.\nPut a card from your Discard Pile on top of your Draw Pile."
+      },
+      "title": "Headbutt",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 9,
+          "class": "DamageVar",
+          "upgraded": 12
+        }
+      },
+      "x_cost": false
+    },
+    "HELLRAISER": {
+      "class": "Hellraiser",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "Whenever you draw a card containing “Strike”, it is played against a random enemy.",
+      "text": {
+        "base": "Whenever you draw a card containing “Strike”, it is played against a random enemy.",
+        "upgraded": "Whenever you draw a card containing “Strike”, it is played against a random enemy."
+      },
+      "title": "Hellraiser",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {},
+      "x_cost": false
+    },
+    "HEMOKINESIS": {
+      "class": "Hemokinesis",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AnyEnemy",
+      "template": "Lose {HpLoss:diff()} HP.\nDeal {Damage:diff()} damage.",
+      "text": {
+        "base": "Lose 2 HP.\nDeal 15 damage.",
+        "upgraded": "Lose 2 HP.\nDeal 20 damage."
+      },
+      "title": "Hemokinesis",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 15,
+          "class": "DamageVar",
+          "upgraded": 20
+        },
+        "HpLoss": {
+          "base": 2,
+          "class": "HpLossVar",
+          "upgraded": 2
+        }
+      },
+      "x_cost": false
+    },
+    "HOWL_FROM_BEYOND": {
+      "class": "HowlFromBeyond",
+      "cost": 3,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AllEnemies",
+      "template": "Deal {Damage:diff()} damage to ALL enemies.\nAt the end of your turn, if this is in your [gold]Exhaust Pile[/gold], play it.",
+      "text": {
+        "base": "Deal 16 damage to ALL enemies.\nAt the end of your turn, if this is in your Exhaust Pile, play it.",
+        "upgraded": "Deal 21 damage to ALL enemies.\nAt the end of your turn, if this is in your Exhaust Pile, play it."
+      },
+      "title": "Howl from Beyond",
+      "type": "Attack",
+      "upgraded_cost": 3,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 16,
+          "class": "DamageVar",
+          "upgraded": 21
+        }
+      },
+      "x_cost": false
+    },
+    "IMPERVIOUS": {
+      "class": "Impervious",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [
+        "Exhaust"
+      ],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "Gain {Block:diff()} [gold]Block[/gold].",
+      "text": {
+        "base": "Gain 30 Block.\nExhaust.",
+        "upgraded": "Gain 40 Block.\nExhaust."
+      },
+      "title": "Impervious",
+      "type": "Skill",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [
+        "Exhaust"
+      ],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Block": {
+          "base": 30,
+          "class": "BlockVar",
+          "upgraded": 40
+        }
+      },
+      "x_cost": false
+    },
+    "INFERNAL_BLADE": {
+      "class": "InfernalBlade",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [
+        "Exhaust"
+      ],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Add a random Attack into your [gold]Hand[/gold]. It's free to play this turn.",
+      "text": {
+        "base": "Add a random Attack into your Hand. It's free to play this turn.\nExhaust.",
+        "upgraded": "Add a random Attack into your Hand. It's free to play this turn.\nExhaust."
+      },
+      "title": "Infernal Blade",
+      "type": "Skill",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [
+        "Exhaust"
+      ],
+      "uses_is_upgraded": false,
+      "vars": {},
+      "x_cost": false
+    },
+    "INFERNO": {
+      "class": "Inferno",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "At the start of your turn, lose 1 HP.\nWhenever you lose HP on your turn, deal {InfernoPower:diff()} damage to ALL enemies.",
+      "text": {
+        "base": "At the start of your turn, lose 1 HP.\nWhenever you lose HP on your turn, deal 6 damage to ALL enemies.",
+        "upgraded": "At the start of your turn, lose 1 HP.\nWhenever you lose HP on your turn, deal 9 damage to ALL enemies."
+      },
+      "title": "Inferno",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "InfernoPower": {
+          "base": 6,
+          "class": "PowerVar<InfernoPower>",
+          "upgraded": 9
+        }
+      },
+      "x_cost": false
+    },
+    "INFLAME": {
+      "class": "Inflame",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Gain {StrengthPower:diff()} [gold]Strength[/gold].",
+      "text": {
+        "base": "Gain 2 Strength.",
+        "upgraded": "Gain 3 Strength."
+      },
+      "title": "Inflame",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "StrengthPower": {
+          "base": 2,
+          "class": "PowerVar<StrengthPower>",
+          "upgraded": 3
+        }
+      },
+      "x_cost": false
+    },
+    "IRON_WAVE": {
+      "class": "IronWave",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "AnyEnemy",
+      "template": "Gain {Block:diff()} [gold]Block[/gold].\nDeal {Damage:diff()} damage.",
+      "text": {
+        "base": "Gain 5 Block.\nDeal 5 damage.",
+        "upgraded": "Gain 7 Block.\nDeal 7 damage."
+      },
+      "title": "Iron Wave",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Block": {
+          "base": 5,
+          "class": "BlockVar",
+          "upgraded": 7
+        },
+        "Damage": {
+          "base": 5,
+          "class": "DamageVar",
+          "upgraded": 7
+        }
+      },
+      "x_cost": false
+    },
+    "JUGGERNAUT": {
+      "class": "Juggernaut",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "Whenever you gain [gold]Block[/gold], deal {JuggernautPower:diff()} damage to a random enemy.",
+      "text": {
+        "base": "Whenever you gain Block, deal 6 damage to a random enemy.",
+        "upgraded": "Whenever you gain Block, deal 8 damage to a random enemy."
+      },
+      "title": "Juggernaut",
+      "type": "Power",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "JuggernautPower": {
+          "base": 6,
+          "class": "PowerVar<JuggernautPower>",
+          "upgraded": 8
+        }
+      },
+      "x_cost": false
+    },
+    "JUGGLING": {
+      "class": "Juggling",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Add a copy of the third [gold]Attack[/gold] you play each turn into your [gold]Hand[/gold].",
+      "text": {
+        "base": "Add a copy of the third Attack you play each turn into your Hand.",
+        "upgraded": "Innate.\nAdd a copy of the third Attack you play each turn into your Hand."
+      },
+      "title": "Juggling",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [
+        "Innate"
+      ],
+      "uses_is_upgraded": false,
+      "vars": {},
+      "x_cost": false
+    },
+    "MANGLE": {
+      "class": "Mangle",
+      "cost": 3,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nEnemy loses {StrengthLoss:diff()} [gold]Strength[/gold] this turn.",
+      "text": {
+        "base": "Deal 15 damage.\nEnemy loses 10 Strength this turn.",
+        "upgraded": "Deal 20 damage.\nEnemy loses 15 Strength this turn."
+      },
+      "title": "Mangle",
+      "type": "Attack",
+      "upgraded_cost": 3,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 15,
+          "class": "DamageVar",
+          "upgraded": 20
+        },
+        "StrengthLoss": {
+          "base": 10,
+          "class": "DynamicVar",
+          "upgraded": 15
+        }
+      },
+      "x_cost": false
+    },
+    "MOLTEN_FIST": {
+      "class": "MoltenFist",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [
+        "Exhaust"
+      ],
+      "rarity": "Common",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nDouble the enemy's [gold]Vulnerable[/gold].",
+      "text": {
+        "base": "Deal 10 damage.\nDouble the enemy's Vulnerable.\nExhaust.",
+        "upgraded": "Deal 14 damage.\nDouble the enemy's Vulnerable.\nExhaust."
+      },
+      "title": "Molten Fist",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [
+        "Exhaust"
+      ],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 10,
+          "class": "DamageVar",
+          "upgraded": 14
+        }
+      },
+      "x_cost": false
+    },
+    "NOT_YET": {
+      "class": "NotYet",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [
+        "Exhaust"
+      ],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "Heal {Heal:diff()} HP.",
+      "text": {
+        "base": "Heal 10 HP.\nExhaust.",
+        "upgraded": "Heal 13 HP.\nExhaust."
+      },
+      "title": "Not Yet",
+      "type": "Skill",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [
+        "Exhaust"
+      ],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Heal": {
+          "base": 10,
+          "class": "HealVar",
+          "upgraded": 13
+        }
+      },
+      "x_cost": false
+    },
+    "OFFERING": {
+      "class": "Offering",
+      "cost": 0,
+      "has_on_upgrade": true,
+      "keywords": [
+        "Exhaust"
+      ],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "Lose {HpLoss:diff()} HP.\nGain {Energy:energyIcons()}.\nDraw {Cards:diff()} cards.",
+      "text": {
+        "base": "Lose 6 HP.\nGain [E][E].\nDraw 3 cards.\nExhaust.",
+        "upgraded": "Lose 6 HP.\nGain [E][E].\nDraw 5 cards.\nExhaust."
+      },
+      "title": "Offering",
+      "type": "Skill",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [
+        "Exhaust"
+      ],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Cards": {
+          "base": 3,
+          "class": "CardsVar",
+          "upgraded": 5
+        },
+        "Energy": {
+          "base": 2,
+          "class": "EnergyVar",
+          "upgraded": 2
+        },
+        "HpLoss": {
+          "base": 6,
+          "class": "HpLossVar",
+          "upgraded": 6
+        }
+      },
+      "x_cost": false
+    },
+    "ONE_TWO_PUNCH": {
+      "class": "OneTwoPunch",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "This turn, your next {Attacks:cond:>1?{Attacks:diff()} Attacks are|Attack is} played an extra time.",
+      "text": {
+        "base": "This turn, your next Attack is played an extra time.",
+        "upgraded": "This turn, your next 2 Attacks are played an extra time."
+      },
+      "title": "One-Two Punch",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Attacks": {
+          "base": 1,
+          "class": "DynamicVar",
+          "upgraded": 2
+        }
+      },
+      "x_cost": false
+    },
+    "PACTS_END": {
+      "class": "PactsEnd",
+      "cost": 0,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "AllEnemies",
+      "template": "If you have {Cards:diff()} or more {Cards:plural:card|cards} in your [gold]Exhaust Pile[/gold],\ndeal {Damage:diff()} damage to ALL enemies.",
+      "text": {
+        "base": "If you have 3 or more cards in your Exhaust Pile,\ndeal 17 damage to ALL enemies.",
+        "upgraded": "If you have 3 or more cards in your Exhaust Pile,\ndeal 23 damage to ALL enemies."
+      },
+      "title": "Pact's End",
+      "type": "Attack",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Cards": {
+          "base": 3,
+          "class": "CardsVar",
+          "upgraded": 3
+        },
+        "Damage": {
+          "base": 17,
+          "class": "DamageVar",
+          "upgraded": 23
+        }
+      },
+      "x_cost": false
+    },
+    "PERFECTED_STRIKE": {
+      "class": "PerfectedStrike",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "AnyEnemy",
+      "template": "Deal {CalculatedDamage:diff()} damage.\nDeals {ExtraDamage:diff()} additional damage for ALL your cards containing “Strike”.",
+      "text": {
+        "base": "Deal 6 damage.\nDeals 2 additional damage for ALL your cards containing “Strike”.",
+        "upgraded": "Deal 6 damage.\nDeals 3 additional damage for ALL your cards containing “Strike”."
+      },
+      "title": "Perfected Strike",
+      "type": "Attack",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "CalculatedDamage": {
+          "base": 6,
+          "class": "CalculatedDamageVar",
+          "formula_sha256": "a104403b3ad5f43c85d8194baee079218d4384a78da372b0bb6828f79f3ae319",
+          "upgraded": 6
+        },
+        "CalculationBase": {
+          "base": 6,
+          "class": "CalculationBaseVar",
+          "upgraded": 6
+        },
+        "ExtraDamage": {
+          "base": 2,
+          "class": "ExtraDamageVar",
+          "upgraded": 3
+        }
+      },
+      "x_cost": false
+    },
+    "PILLAGE": {
+      "class": "Pillage",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nDraw cards until you draw a non-Attack card.",
+      "text": {
+        "base": "Deal 6 damage.\nDraw cards until you draw a non-Attack card.",
+        "upgraded": "Deal 9 damage.\nDraw cards until you draw a non-Attack card."
+      },
+      "title": "Pillage",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 6,
+          "class": "DamageVar",
+          "upgraded": 9
+        }
+      },
+      "x_cost": false
+    },
+    "POMMEL_STRIKE": {
+      "class": "PommelStrike",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nDraw {Cards:diff()} {Cards:plural:card|cards}.",
+      "text": {
+        "base": "Deal 9 damage.\nDraw 1 card.",
+        "upgraded": "Deal 10 damage.\nDraw 2 cards."
+      },
+      "title": "Pommel Strike",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Cards": {
+          "base": 1,
+          "class": "CardsVar",
+          "upgraded": 2
+        },
+        "Damage": {
+          "base": 9,
+          "class": "DamageVar",
+          "upgraded": 10
+        }
+      },
+      "x_cost": false
+    },
+    "PRIMAL_FORCE": {
+      "class": "PrimalForce",
+      "cost": 0,
+      "has_on_upgrade": false,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "Transform all Attacks in your [gold]Hand[/gold] into [gold]{IfUpgraded:show:Giant Rock+|Giant Rock}[/gold].",
+      "text": {
+        "base": "Transform all Attacks in your Hand into Giant Rock.",
+        "upgraded": "Transform all Attacks in your Hand into Giant Rock+."
+      },
+      "title": "Primal Force",
+      "type": "Skill",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": true,
+      "vars": {},
+      "x_cost": false
+    },
+    "PYRE": {
+      "class": "Pyre",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "Gain {Energy:energyIcons()} at the start of each turn.",
+      "text": {
+        "base": "Gain [E] at the start of each turn.",
+        "upgraded": "Gain [E][E] at the start of each turn."
+      },
+      "title": "Pyre",
+      "type": "Power",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Energy": {
+          "base": 1,
+          "class": "EnergyVar",
+          "upgraded": 2
+        }
+      },
+      "x_cost": false
+    },
+    "RAGE": {
+      "class": "Rage",
+      "cost": 0,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Whenever you play an Attack this turn, gain {Power:diff()} [gold]Block[/gold].",
+      "text": {
+        "base": "Whenever you play an Attack this turn, gain 3 Block.",
+        "upgraded": "Whenever you play an Attack this turn, gain 5 Block."
+      },
+      "title": "Rage",
+      "type": "Skill",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Power": {
+          "base": 3,
+          "class": "DynamicVar",
+          "upgraded": 5
+        }
+      },
+      "x_cost": false
+    },
+    "RAMPAGE": {
+      "class": "Rampage",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nIncrease this card's damage by {Increase:diff()} this combat.",
+      "text": {
+        "base": "Deal 9 damage.\nIncrease this card's damage by 5 this combat.",
+        "upgraded": "Deal 9 damage.\nIncrease this card's damage by 9 this combat."
+      },
+      "title": "Rampage",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 9,
+          "class": "DamageVar",
+          "upgraded": 9
+        },
+        "Increase": {
+          "base": 5,
+          "class": "DynamicVar",
+          "upgraded": 9
+        }
+      },
+      "x_cost": false
+    },
+    "RUPTURE": {
+      "class": "Rupture",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Whenever you lose HP on your turn, gain {StrengthPower:diff()} [gold]Strength[/gold].",
+      "text": {
+        "base": "Whenever you lose HP on your turn, gain 1 Strength.",
+        "upgraded": "Whenever you lose HP on your turn, gain 2 Strength."
+      },
+      "title": "Rupture",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "StrengthPower": {
+          "base": 1,
+          "class": "PowerVar<StrengthPower>",
+          "upgraded": 2
+        }
+      },
+      "x_cost": false
+    },
+    "SECOND_WIND": {
+      "class": "SecondWind",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "[gold]Exhaust[/gold] all non-Attack cards in your [gold]Hand[/gold]. Gain {Block:diff()} [gold]Block[/gold] for each card [gold]Exhausted[/gold].",
+      "text": {
+        "base": "Exhaust all non-Attack cards in your Hand. Gain 5 Block for each card Exhausted.",
+        "upgraded": "Exhaust all non-Attack cards in your Hand. Gain 7 Block for each card Exhausted."
+      },
+      "title": "Second Wind",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Block": {
+          "base": 5,
+          "class": "BlockVar",
+          "upgraded": 7
+        }
+      },
+      "x_cost": false
+    },
+    "SETUP_STRIKE": {
+      "class": "SetupStrike",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nGain {StrengthPower:diff()} [gold]Strength[/gold] this turn.",
+      "text": {
+        "base": "Deal 7 damage.\nGain 2 Strength this turn.",
+        "upgraded": "Deal 9 damage.\nGain 3 Strength this turn."
+      },
+      "title": "Setup Strike",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 7,
+          "class": "DamageVar",
+          "upgraded": 9
+        },
+        "StrengthPower": {
+          "base": 2,
+          "class": "PowerVar<StrengthPower>",
+          "upgraded": 3
+        }
+      },
+      "x_cost": false
+    },
+    "SHRUG_IT_OFF": {
+      "class": "ShrugItOff",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "Self",
+      "template": "Gain {Block:diff()} [gold]Block[/gold].\nDraw {Cards:diff()} card.",
+      "text": {
+        "base": "Gain 8 Block.\nDraw 1 card.",
+        "upgraded": "Gain 11 Block.\nDraw 1 card."
+      },
+      "title": "Shrug It Off",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Block": {
+          "base": 8,
+          "class": "BlockVar",
+          "upgraded": 11
+        },
+        "Cards": {
+          "base": 1,
+          "class": "CardsVar",
+          "upgraded": 1
+        }
+      },
+      "x_cost": false
+    },
+    "SPITE": {
+      "class": "Spite",
+      "cost": 0,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nIf you lost HP this turn,\nhits {Repeat:diff()} times.",
+      "text": {
+        "base": "Deal 5 damage.\nIf you lost HP this turn,\nhits 2 times.",
+        "upgraded": "Deal 5 damage.\nIf you lost HP this turn,\nhits 3 times."
+      },
+      "title": "Spite",
+      "type": "Attack",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 5,
+          "class": "DamageVar",
+          "upgraded": 5
+        },
+        "Repeat": {
+          "base": 2,
+          "class": "RepeatVar",
+          "upgraded": 3
+        }
+      },
+      "x_cost": false
+    },
+    "STAMPEDE": {
+      "class": "Stampede",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "At the end of your turn, {Power:diff()} random {Power:plural:Attack in your [gold]Hand[/gold] is played against a random enemy.|Attacks in your [gold]Hand[/gold] are played against random enemies.}",
+      "text": {
+        "base": "At the end of your turn, 1 random Attack in your Hand is played against a random enemy.",
+        "upgraded": "At the end of your turn, 1 random Attack in your Hand is played against a random enemy."
+      },
+      "title": "Stampede",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Power": {
+          "base": 1,
+          "class": "DynamicVar",
+          "upgraded": 1
+        }
+      },
+      "x_cost": false
+    },
+    "STOKE": {
+      "class": "Stoke",
+      "cost": 1,
+      "has_on_upgrade": false,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "[gold]Exhaust[/gold] your [gold]Hand[/gold].\nAdd 1 random {IfUpgraded:show:[gold]Upgraded[/gold] |}card into your [gold]Hand[/gold] for each card [gold]Exhausted[/gold].",
+      "text": {
+        "base": "Exhaust your Hand.\nAdd 1 random card into your Hand for each card Exhausted.",
+        "upgraded": "Exhaust your Hand.\nAdd 1 random Upgraded card into your Hand for each card Exhausted."
+      },
+      "title": "Stoke",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": true,
+      "vars": {},
+      "x_cost": false
+    },
+    "STOMP": {
+      "class": "Stomp",
+      "cost": 3,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AllEnemies",
+      "template": "Deal {Damage:diff()} damage to ALL enemies.\nCosts 1 less {energyPrefix:energyIcons(1)} for each Attack played this turn.",
+      "text": {
+        "base": "Deal 12 damage to ALL enemies.\nCosts 1 less [E] for each Attack played this turn.",
+        "upgraded": "Deal 15 damage to ALL enemies.\nCosts 1 less [E] for each Attack played this turn."
+      },
+      "title": "Stomp",
+      "type": "Attack",
+      "upgraded_cost": 3,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 12,
+          "class": "DamageVar",
+          "upgraded": 15
+        }
+      },
+      "x_cost": false
+    },
+    "STONE_ARMOR": {
+      "class": "StoneArmor",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Gain {PlatingPower:diff()} [gold]Plating[/gold].",
+      "text": {
+        "base": "Gain 4 Plating.",
+        "upgraded": "Gain 6 Plating."
+      },
+      "title": "Stone Armor",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "PlatingPower": {
+          "base": 4,
+          "class": "PowerVar<PlatingPower>",
+          "upgraded": 6
+        }
+      },
+      "x_cost": false
+    },
+    "STRIKE_IRONCLAD": {
+      "class": "StrikeIronclad",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Basic",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.",
+      "text": {
+        "base": "Deal 6 damage.",
+        "upgraded": "Deal 9 damage."
+      },
+      "title": "Strike",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 6,
+          "class": "DamageVar",
+          "upgraded": 9
+        }
+      },
+      "x_cost": false
+    },
+    "SWORD_BOOMERANG": {
+      "class": "SwordBoomerang",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "RandomEnemy",
+      "template": "Deal {Damage:diff()} damage to a random enemy {Repeat:diff()} times.",
+      "text": {
+        "base": "Deal 3 damage to a random enemy 3 times.",
+        "upgraded": "Deal 3 damage to a random enemy 4 times."
+      },
+      "title": "Sword Boomerang",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 3,
+          "class": "DamageVar",
+          "upgraded": 3
+        },
+        "Repeat": {
+          "base": 3,
+          "class": "RepeatVar",
+          "upgraded": 4
+        }
+      },
+      "x_cost": false
+    },
+    "TANK": {
+      "class": "Tank",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "Take double damage from enemies.\nAllies take half damage from enemies.",
+      "text": {
+        "base": "Take double damage from enemies.\nAllies take half damage from enemies.",
+        "upgraded": "Take double damage from enemies.\nAllies take half damage from enemies."
+      },
+      "title": "Tank",
+      "type": "Power",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {},
+      "x_cost": false
+    },
+    "TAUNT": {
+      "class": "Taunt",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AnyEnemy",
+      "template": "Gain {Block:diff()} [gold]Block[/gold].\nApply {VulnerablePower:diff()} [gold]Vulnerable[/gold].",
+      "text": {
+        "base": "Gain 7 Block.\nApply 1 Vulnerable.",
+        "upgraded": "Gain 8 Block.\nApply 2 Vulnerable."
+      },
+      "title": "Taunt",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Block": {
+          "base": 7,
+          "class": "BlockVar",
+          "upgraded": 8
+        },
+        "VulnerablePower": {
+          "base": 1,
+          "class": "PowerVar<VulnerablePower>",
+          "upgraded": 2
+        }
+      },
+      "x_cost": false
+    },
+    "TEAR_ASUNDER": {
+      "class": "TearAsunder",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nHits an additional time for each time you lost HP this combat.{InCombat:\n(Hits {CalculatedHits:diff()} {CalculatedHits:plural:time|times})|}",
+      "text": {
+        "base": "Deal 5 damage.\nHits an additional time for each time you lost HP this combat.",
+        "upgraded": "Deal 7 damage.\nHits an additional time for each time you lost HP this combat."
+      },
+      "title": "Tear Asunder",
+      "type": "Attack",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "CalculatedHits": {
+          "base": 0,
+          "class": "CalculatedVar",
+          "formula_sha256": "50e27420ded39cc2741438f317d2b2aeb199e1525e8d41b043d25a48e43bfea8",
+          "upgraded": 0
+        },
+        "CalculationBase": {
+          "base": 0,
+          "class": "CalculationBaseVar",
+          "upgraded": 0
+        },
+        "CalculationExtra": {
+          "base": 1,
+          "class": "CalculationExtraVar",
+          "upgraded": 1
+        },
+        "Damage": {
+          "base": 5,
+          "class": "DamageVar",
+          "upgraded": 7
+        },
+        "Repeat": {
+          "base": 1,
+          "class": "RepeatVar",
+          "upgraded": 1
+        }
+      },
+      "x_cost": false
+    },
+    "THRASH": {
+      "class": "Thrash",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage twice.\n[gold]Exhaust[/gold] a random Attack in your [gold]Hand[/gold] and add its damage to this card.",
+      "text": {
+        "base": "Deal 4 damage twice.\nExhaust a random Attack in your Hand and add its damage to this card.",
+        "upgraded": "Deal 6 damage twice.\nExhaust a random Attack in your Hand and add its damage to this card."
+      },
+      "title": "Thrash",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 4,
+          "class": "DamageVar",
+          "upgraded": 6
+        }
+      },
+      "x_cost": false
+    },
+    "THUNDERCLAP": {
+      "class": "Thunderclap",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "AllEnemies",
+      "template": "Deal {Damage:diff()} damage and apply {VulnerablePower:diff()} [gold]Vulnerable[/gold] to ALL enemies.",
+      "text": {
+        "base": "Deal 4 damage and apply 1 Vulnerable to ALL enemies.",
+        "upgraded": "Deal 7 damage and apply 1 Vulnerable to ALL enemies."
+      },
+      "title": "Thunderclap",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 4,
+          "class": "DamageVar",
+          "upgraded": 7
+        },
+        "VulnerablePower": {
+          "base": 1,
+          "class": "PowerVar<VulnerablePower>",
+          "upgraded": 1
+        }
+      },
+      "x_cost": false
+    },
+    "TREMBLE": {
+      "class": "Tremble",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [
+        "Exhaust"
+      ],
+      "rarity": "Common",
+      "target": "AnyEnemy",
+      "template": "Apply {VulnerablePower:diff()} [gold]Vulnerable[/gold].",
+      "text": {
+        "base": "Apply 3 Vulnerable.\nExhaust.",
+        "upgraded": "Apply 4 Vulnerable.\nExhaust."
+      },
+      "title": "Tremble",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [
+        "Exhaust"
+      ],
+      "uses_is_upgraded": false,
+      "vars": {
+        "VulnerablePower": {
+          "base": 3,
+          "class": "PowerVar<VulnerablePower>",
+          "upgraded": 4
+        }
+      },
+      "x_cost": false
+    },
+    "TRUE_GRIT": {
+      "class": "TrueGrit",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "Self",
+      "template": "Gain {Block:diff()} [gold]Block[/gold].\n[gold]Exhaust[/gold] 1 card{IfUpgraded:show:| at random}.",
+      "text": {
+        "base": "Gain 7 Block.\nExhaust 1 card at random.",
+        "upgraded": "Gain 9 Block.\nExhaust 1 card."
+      },
+      "title": "True Grit",
+      "type": "Skill",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": true,
+      "vars": {
+        "Block": {
+          "base": 7,
+          "class": "BlockVar",
+          "upgraded": 9
+        }
+      },
+      "x_cost": false
+    },
+    "TWIN_STRIKE": {
+      "class": "TwinStrike",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Common",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage twice.",
+      "text": {
+        "base": "Deal 5 damage twice.",
+        "upgraded": "Deal 7 damage twice."
+      },
+      "title": "Twin Strike",
+      "type": "Attack",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 5,
+          "class": "DamageVar",
+          "upgraded": 7
+        }
+      },
+      "x_cost": false
+    },
+    "UNMOVABLE": {
+      "class": "Unmovable",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Rare",
+      "target": "Self",
+      "template": "The first time you gain [gold]Block[/gold] from a card each turn, double the amount gained.",
+      "text": {
+        "base": "The first time you gain Block from a card each turn, double the amount gained.",
+        "upgraded": "The first time you gain Block from a card each turn, double the amount gained."
+      },
+      "title": "Unmovable",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {},
+      "x_cost": false
+    },
+    "UNRELENTING": {
+      "class": "Unrelenting",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nThe next Attack you play costs 0 {energyPrefix:energyIcons(1)}.",
+      "text": {
+        "base": "Deal 14 damage.\nThe next Attack you play costs 0 [E].",
+        "upgraded": "Deal 20 damage.\nThe next Attack you play costs 0 [E]."
+      },
+      "title": "Unrelenting",
+      "type": "Attack",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 14,
+          "class": "DamageVar",
+          "upgraded": 20
+        }
+      },
+      "x_cost": false
+    },
+    "UPPERCUT": {
+      "class": "Uppercut",
+      "cost": 2,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AnyEnemy",
+      "template": "Deal {Damage:diff()} damage.\nApply {Power:diff()} [gold]Weak[/gold].\nApply {Power:diff()} [gold]Vulnerable[/gold].",
+      "text": {
+        "base": "Deal 13 damage.\nApply 1 Weak.\nApply 1 Vulnerable.",
+        "upgraded": "Deal 13 damage.\nApply 2 Weak.\nApply 2 Vulnerable."
+      },
+      "title": "Uppercut",
+      "type": "Attack",
+      "upgraded_cost": 2,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 13,
+          "class": "DamageVar",
+          "upgraded": 13
+        },
+        "Power": {
+          "base": 1,
+          "class": "DynamicVar",
+          "upgraded": 2
+        }
+      },
+      "x_cost": false
+    },
+    "VICIOUS": {
+      "class": "Vicious",
+      "cost": 1,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "Self",
+      "template": "Whenever you apply [gold]Vulnerable[/gold], draw {Cards:diff()} {Cards:plural:card|cards}.",
+      "text": {
+        "base": "Whenever you apply Vulnerable, draw 1 card.",
+        "upgraded": "Whenever you apply Vulnerable, draw 2 cards."
+      },
+      "title": "Vicious",
+      "type": "Power",
+      "upgraded_cost": 1,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Cards": {
+          "base": 1,
+          "class": "CardsVar",
+          "upgraded": 2
+        }
+      },
+      "x_cost": false
+    },
+    "WHIRLWIND": {
+      "class": "Whirlwind",
+      "cost": 0,
+      "has_on_upgrade": true,
+      "keywords": [],
+      "rarity": "Uncommon",
+      "target": "AllEnemies",
+      "template": "Deal {Damage:diff()} damage to ALL enemies X times.",
+      "text": {
+        "base": "Deal 5 damage to ALL enemies X times.",
+        "upgraded": "Deal 8 damage to ALL enemies X times."
+      },
+      "title": "Whirlwind",
+      "type": "Attack",
+      "upgraded_cost": 0,
+      "upgraded_keywords": [],
+      "uses_is_upgraded": false,
+      "vars": {
+        "Damage": {
+          "base": 5,
+          "class": "DamageVar",
+          "upgraded": 8
+        }
+      },
+      "x_cost": true
+    }
+  },
+  "game_commit": "59260271",
+  "game_version": "0.107.1",
+  "keyword_titles": {
+    "Exhaust": "Exhaust",
+    "Innate": "Innate"
+  },
+  "pool": "IroncladCardPool",
+  "source": "extracted from the game files by scripts/card_parity.py extract"
+}

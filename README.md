@@ -59,6 +59,41 @@ python scripts/gen_ids.py           # rewrite the stub
 python scripts/gen_ids.py --check   # fail if it is stale (CI runs this)
 ```
 
+## Card parity (Ironclad)
+
+`tests/parity/test_card_parity.py` checks every registry Ironclad card's cost,
+type, rarity, targeting, keywords, numbers, upgrade and description against
+`tests/fixtures/game/<version>/ironclad_cards.json`. A failure names the card,
+the field, the game value and the sim value. The fixture is extracted from the
+game files, so CI needs neither the game nor its files. The test run prints a
+coverage report, which `python scripts/card_parity.py report` also prints.
+
+The extractor reads two local, read-only inputs: the decompiled game code (from
+the sts2-modding-mcp setup) and `SlayTheSpire2.pck`. The game doesn't need to
+run. After a game patch:
+
+```bash
+# 1. Extract the new version (it must match release_info.json next to the PCK)
+python scripts/card_parity.py extract --game-version <new> \
+    --decompiled ~/projects/sts2-modding-mcp/decompiled \
+    --pck "<Steam>/steamapps/common/Slay the Spire 2/SlayTheSpire2.pck"
+# (or set $STS2_DECOMPILED and $STS2_PCK)
+
+# 2. See what changed: fields, added and removed cards
+python scripts/card_parity.py diff tests/fixtures/game/0.107.1/ironclad_cards.json \
+    tests/fixtures/game/<new>/ironclad_cards.json
+
+# 3. Set GAME_VERSION in python/sts_sim/parity/fixture.py to <new>, then
+pytest tests/parity -q
+```
+
+Then fix each mismatch. A wrong number or string is fixed in `src/cards.rs`.
+An engine-level gap goes on `KNOWN_FAILURES` in `python/sts_sim/parity/mapping.py`,
+with its own follow-up issue. A game var that the sim models with a different op
+gets a per-card `CARD_PROBES` entry. A changed formula (`formula_sha256`) needs
+its `FORMULAS` description re-checked by hand. The formula source itself is never
+committed.
+
 ## Run the CI checks locally
 
 CI (`.github/workflows/ci.yml`) runs the following checks against every push and

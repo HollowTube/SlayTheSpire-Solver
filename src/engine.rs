@@ -224,6 +224,52 @@ impl Status {
         }
     }
 
+    /// The carried number of an amount-bearing status (`Strength(2)` -> 2);
+    /// `None` for binary statuses, which stack by repetition instead.
+    pub(crate) fn amount(&self) -> Option<i32> {
+        match self {
+            Status::Strength(n)
+            | Status::Enrage(n)
+            | Status::CrimsonMantle(n)
+            | Status::Juggernaut(n)
+            | Status::Colossus(n)
+            | Status::Slippery(n)
+            | Status::StrengthThisTurn(n)
+            | Status::Constrict(n)
+            | Status::Artifact(n)
+            | Status::Frail(n)
+            | Status::Tangled(n)
+            | Status::Slow(n)
+            | Status::Plow(n)
+            | Status::Plating(n)
+            | Status::Vicious(n)
+            | Status::Juggling(n)
+            | Status::Unmovable(n) => Some(*n),
+            Status::Vulnerable
+            | Status::Weak
+            | Status::Rage
+            | Status::Shrink
+            | Status::DemonForm
+            | Status::Inferno
+            | Status::Aggression
+            | Status::DarkEmbrace
+            | Status::FeelNoPain
+            | Status::Barricade
+            | Status::FlameBarrier
+            | Status::Corruption
+            | Status::Cruelty
+            | Status::OneTwoPunch
+            | Status::FreeAttack
+            | Status::Pyre
+            | Status::BattleDrum
+            | Status::Minion { .. }
+            | Status::Stun
+            | Status::Infested { .. }
+            | Status::Ringing
+            | Status::NoDraw => None,
+        }
+    }
+
     /// The reverse of `as_str`, for reconstructing a combatant's status list
     /// from a (name, amount) snapshot — e.g. from an external analysis
     /// server's JSON. For binary statuses (Vulnerable, Weak, Rage) `amount`
@@ -715,9 +761,6 @@ pub(crate) enum ScaleSource {
     ExhaustPileSize,
     // Number of Vulnerable stacks currently on `target` (e.g. Bully).
     VulnerableStacksOnTarget,
-    // Number of Attack cards `actor` has played so far this turn, not
-    // counting the card currently resolving (e.g. Conflagration).
-    AttacksPlayedThisTurn,
     // Number of times the player has lost HP from an attack so far this
     // combat (e.g. TearAsunder).
     DamageTakenThisCombat,
@@ -736,6 +779,21 @@ pub(crate) enum ScaleSource {
 }
 
 impl ScaleSource {
+    pub(crate) fn as_str(&self) -> &'static str {
+        match self {
+            ScaleSource::HandSize => "HandSize",
+            ScaleSource::CurrentBlock => "CurrentBlock",
+            ScaleSource::StrikeCardsInDeck => "StrikeCardsInDeck",
+            ScaleSource::ExhaustPileSize => "ExhaustPileSize",
+            ScaleSource::VulnerableStacksOnTarget => "VulnerableStacksOnTarget",
+            ScaleSource::DamageTakenThisCombat => "DamageTakenThisCombat",
+            ScaleSource::HpLostThisTurn => "HpLostThisTurn",
+            ScaleSource::TargetHasVulnerable => "TargetHasVulnerable",
+            ScaleSource::ExhaustedCardThisTurn => "ExhaustedCardThisTurn",
+            ScaleSource::EnergyX => "EnergyX",
+        }
+    }
+
     fn read(&self, state: &CombatState, actor: Actor, target: Actor) -> i32 {
         match self {
             ScaleSource::HandSize => state.hand.len() as i32,
@@ -754,7 +812,6 @@ impl ScaleSource {
                 .iter()
                 .filter(|s| **s == Status::Vulnerable)
                 .count() as i32,
-            ScaleSource::AttacksPlayedThisTurn => state.attacks_played_this_turn,
             ScaleSource::DamageTakenThisCombat => state.player_times_damaged_this_combat,
             ScaleSource::HpLostThisTurn => state.player_hp_lost_this_turn as i32,
             ScaleSource::TargetHasVulnerable => state
@@ -780,6 +837,14 @@ pub(crate) enum HandFilter {
 }
 
 impl HandFilter {
+    pub(crate) fn as_str(&self) -> &'static str {
+        match self {
+            HandFilter::Any => "Any",
+            HandFilter::Attack => "Attack",
+            HandFilter::NonAttack => "NonAttack",
+        }
+    }
+
     fn matches(&self, id: CardId) -> bool {
         match self {
             HandFilter::Any => true,

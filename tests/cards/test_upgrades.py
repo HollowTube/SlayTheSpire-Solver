@@ -230,22 +230,14 @@ def test_colossus_plus_grants_8_block():
     assert resolved.player_block == 8
 
 
-def test_conflagration_plus_deals_9_plus_3_per_attack_played_this_turn():
+def test_conflagration_plus_deals_2_damage_to_all_enemies_5_times():
     state = _state(
-        hand=["Strike", "Strike", "Conflagration+"],
+        hand=["Conflagration+"],
         monsters=[Monster(hp=99, attack=0), Monster(hp=99, attack=0)],
         player_energy=3,
     )
 
-    after_strike_1 = apply(
-        apply(state, PlayCardAction("Strike")), SelectTargetAction(0)
-    )
-    after_strike_2 = apply(
-        apply(after_strike_1, PlayCardAction("Strike")), SelectTargetAction(0)
-    )
+    resolved = apply(state, PlayCardAction("Conflagration+"))
 
-    resolved = apply(after_strike_2, PlayCardAction("Conflagration+"))
-
-    # 9 + 3*2 = 15 damage to each enemy.
-    assert after_strike_2.monsters[0].hp - resolved.monsters[0].hp == 15
-    assert after_strike_2.monsters[1].hp - resolved.monsters[1].hp == 15
+    assert state.monsters[0].hp - resolved.monsters[0].hp == 10
+    assert state.monsters[1].hp - resolved.monsters[1].hp == 10
