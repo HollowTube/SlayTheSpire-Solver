@@ -3,7 +3,8 @@
 Usage:
     sts2 [--host HOST] [--json] <command>
 
-Set STS2_BRIDGE_HOST env var for WSL (e.g. export STS2_BRIDGE_HOST=172.x.x.1).
+The host defaults to 127.0.0.1, or the Windows host gateway on WSL; set
+STS2_BRIDGE_HOST (e.g. export STS2_BRIDGE_HOST=172.x.x.1) to override.
 """
 
 from __future__ import annotations
@@ -119,7 +120,7 @@ def _call(fn, *args, **kwargs) -> dict:
     if result.get("error"):
         err = result["error"]
         hint = (
-            "Set STS2_BRIDGE_HOST if running from WSL"
+            "Set STS2_BRIDGE_HOST (or --host) if the game is on another machine"
             if any(e in err for e in _CONNECTION_ERRORS)
             else None
         )
@@ -164,7 +165,7 @@ def _home_hints(
     if s in ("MAIN_MENU", "TITLE", "", "?"):
         return [
             "Run `sts2 start` to begin a new run",
-            "Run `sts2 dev fight <ID>` to jump straight into a specific fight (e.g. JAW_WORM)",
+            "Run `sts2 dev fight <ID>` to jump straight into a specific fight (e.g. NIBBITS_WEAK)",
             "Run `sts2 --help` for all commands",
         ]
     if s == "EVENT":
@@ -182,7 +183,7 @@ def _home_hints(
             ]
         return [
             "Run `sts2 actions` to see what you can do on this screen",
-            "Run `sts2 dev fight <ID>` to jump to a fight (e.g. `sts2 dev fight JAW_WORM`)",
+            "Run `sts2 dev fight <ID>` to jump to a fight (e.g. `sts2 dev fight NIBBITS_WEAK`)",
             "Run `sts2 start` to begin a new run",
         ]
     if s == "CARD_SELECTION":
@@ -218,7 +219,7 @@ def _home_hints(
     # Default: no active combat — show how to get into one
     return [
         "Run `sts2 actions` to see what you can do on this screen",
-        "Run `sts2 dev fight <ID>` to jump to a fight (e.g. `sts2 dev fight JAW_WORM`)",
+        "Run `sts2 dev fight <ID>` to jump to a fight (e.g. `sts2 dev fight NIBBITS_WEAK`)",
         "Run `sts2 start` to begin a new run",
     ]
 
@@ -228,7 +229,7 @@ def _home_hints(
     "--host",
     envvar="STS2_BRIDGE_HOST",
     default=None,
-    help="Bridge host. Defaults to client.py's WSL-gateway auto-detection; "
+    help="Bridge host. Defaults to 127.0.0.1, or the Windows host gateway on WSL; "
     "set STS2_BRIDGE_HOST or pass this explicitly to override it.",
 )
 @click.option("--json", "as_json", is_flag=True, help="Output raw JSON.")
@@ -958,7 +959,7 @@ def dev(ctx: click.Context) -> None:
             [
                 {
                     "cmd": "fight <ID>",
-                    "example": "fight JAW_WORM",
+                    "example": "fight NIBBITS_WEAK",
                     "effect": "Jump to a specific fight",
                 },
                 {
@@ -1050,7 +1051,7 @@ def dev(ctx: click.Context) -> None:
 @click.argument("encounter_id")
 @click.pass_context
 def fight(ctx: click.Context, encounter_id: str) -> None:
-    """Jump to a specific fight (e.g. JAW_WORM, MAWLER, TWO_LOUSES)."""
+    """Jump to a specific fight (e.g. NIBBITS_WEAK, MAWLER_NORMAL)."""
     result = _dev_exec(f"fight {encounter_id}")
     _dev_out(f"fight {encounter_id}", result, _screen_context())
     click.echo(_hint(["Run `sts2 actions` to see available actions"]))
@@ -1287,15 +1288,19 @@ _OPENCODE_PLUGIN_TEMPLATE = """
 
 export const Sts2Plugin = async ({ $ }) => {
   return {
-    // Auto-detect WSL bridge host so STS2_BRIDGE_HOST never needs manual export.
+    // On WSL the game runs on Windows, whose IP is the resolv.conf nameserver.
+    // Native Linux needs nothing: the client defaults to 127.0.0.1.
     "shell.env": async (input, output) => {
       if (!process.env.STS2_BRIDGE_HOST) {
         try {
+          const wsl = await $`sh -c 'grep -qi microsoft /proc/version || [ -n "$WSL_DISTRO_NAME" ]'`
+            .then(() => true, () => false)
+          if (!wsl) return
           const ns = await $`grep -m1 '^nameserver' /etc/resolv.conf`.text()
-          const ip = ns.trim().split(/\s+/)[1]
+          const ip = ns.trim().split(/\\s+/)[1]
           if (ip) output.env.STS2_BRIDGE_HOST = ip
         } catch {
-          // Not WSL or resolv.conf missing — leave unset, falls back to 127.0.0.1
+          // resolv.conf missing — leave unset, falls back to 127.0.0.1
         }
       }
     },
@@ -1329,10 +1334,13 @@ def _resolve_bin() -> str:
 def _setup_claude_code(project_root: str, bin_path: str, remove: bool) -> None:
     settings_path = os.path.join(project_root, ".claude", "settings.json")
     hook_command = (
-        f"export STS2_BRIDGE_HOST=$("
-        f"grep '^nameserver' /etc/resolv.conf 2>/dev/null "
-        f"| awk 'NR==1{{print $2}}' || echo 127.0.0.1"
-        f"); {bin_path} 2>/dev/null || true"
+        'if [ -z "${STS2_BRIDGE_HOST:-}" ] && '
+        "{ grep -qi microsoft /proc/version 2>/dev/null "
+        '|| [ -n "${WSL_DISTRO_NAME:-}" ]; }; then '
+        "export STS2_BRIDGE_HOST=$("
+        "grep '^nameserver' /etc/resolv.conf 2>/dev/null "
+        "| awk 'NR==1{print $2}'"
+        f"); fi; {bin_path} 2>/dev/null || true"
     )
     hook_block = {
         "matcher": "",
@@ -1459,8 +1467,9 @@ def setup_hook(project_dir: str | None, app: str, remove: bool) -> None:
     """Install agent session hooks that show live STS2 game state as ambient context.
 
     Supports Claude Code (SessionStart hook in .claude/settings.json) and
-    OpenCode (plugin in .opencode/plugins/sts2.ts). Both auto-detect the WSL
-    bridge host from /etc/resolv.conf — no manual STS2_BRIDGE_HOST export needed.
+    OpenCode (plugin in .opencode/plugins/sts2.ts). On WSL both set the bridge
+    host from /etc/resolv.conf; elsewhere they set nothing (the client uses
+    127.0.0.1). Re-run after `--remove` to refresh an older install.
 
     Examples:
 

@@ -28,7 +28,7 @@ Running `integtests/` (`pytest integtests/ -m live -v`) against a real game requ
 
 ### 1. Start from a Linear issue
 
-Pick a `ready-for-agent` issue via `mcp__linear-server__list_issues` (filter by label). Read its full description with `mcp__linear-server__get_issue`. Update status to In Progress.
+Pick a `ready-for-agent` issue and read its full description. Agents read and write the tracker through the code-task pipeline's `tracker.py` (see `docs/agents/issue-tracker.md`), not the Linear MCP tools. Move the issue to In Progress when you start.
 
 ### 2. Create a worktree
 
@@ -40,7 +40,7 @@ git worktree add .claude/worktrees/<branch-name> -b <branch-name>
 cd .claude/worktrees/<branch-name>
 
 # Build the extension in the worktree's own venv
-uv venv && uv pip install -e ".[dev]"
+scripts/dev-setup.sh
 source .venv/bin/activate
 ```
 
@@ -74,7 +74,7 @@ git push -u origin <branch-name>
 gh-axi pr create --title "..." --body "..." --draft
 ```
 
-Attach the PR URL to the Linear issue with `mcp__linear-server__save_issue` (`links` field) and move it to In Review.
+Put `Linear: <issue url>` in the PR body so the GitHub integration links it, and move the issue to In Review with `tracker.py move`. `tracker.py` lives at `~/.claude/skills/code-task/scripts/tracker.py` and only dry-runs unless `--apply` is passed.
 
 ### 5. Babysit CI with gh-axi
 
@@ -89,23 +89,20 @@ gh-axi run view <run-id> --log-failed
 gh-axi run rerun <run-id> --failed
 ```
 
-When CI is green, mark the PR ready and merge:
-```bash
-gh-axi pr ready <number>
-gh-axi pr merge <number> --squash --delete-branch
-```
-
-Then update the Linear issue to Done.
+Your job ends at a draft PR with green CI. Leave it a draft: a human marks it ready (`gh-axi pr ready`) and merges it (`gh-axi pr merge --squash`). The merge closes the Linear issue automatically; don't move it to Done.
 
 ---
 
 ## Build and development commands
 
-All commands assume the virtualenv is active (`source .venv/bin/activate`). Run `uv venv && uv pip install -e ".[dev]"` to create one if it doesn't exist.
+All commands assume the virtualenv is active (`source .venv/bin/activate`). Create it with `scripts/dev-setup.sh`; `scripts/verify.sh` runs every CI check (it needs no activation and works from any directory).
 
 ```bash
 # Build Rust extension and install (required after any Rust change)
 uv pip install -e ".[dev]"
+
+# All CI checks in one go (gen_ids, cargo check, ruff, mypy, pytest, cargo test)
+scripts/verify.sh
 
 # Faster rebuild after changing Rust code only
 maturin develop
@@ -140,7 +137,7 @@ cargo test -p sts-ids -p sts-bridge
 ./scripts/start-server.sh --no-pull   # skip git pull during active development
 ```
 
-PyO3 0.23 supports Python ≤ 3.13. If the system Python is newer, create the venv with `uv venv --python 3.12` (CI's version), and point `cargo check` at it with `PYO3_PYTHON=<abs path>/.venv/bin/python`; otherwise pyo3's build script picks the system interpreter and fails.
+PyO3 0.23 supports Python ≤ 3.13, so the venv is 3.12 (CI's version); a bare `uv venv` can pick a newer system Python and the build fails. For a manual `cargo check`, set `PYO3_PYTHON` to the venv Python as an absolute path (`verify.sh` does): pyo3's build script runs from another directory, so a relative path fails. A root `cargo test` doesn't link (the root crate is a pyo3 `extension-module`), hence the `-p` crate names above.
 
 The `.venv` must be active for `pytest`, `ruff`, `mypy`, `sts-sim`, and `sts2`. The Rust extension (`_sts_sim.*.so`) is required to import `sts_sim` — tests fail at collection without it.
 
@@ -215,7 +212,7 @@ Actions are strings at the Python boundary (`"EndTurn"`, `"PlayCard:Strike"`, `"
 
 ### Worktrees and the extension
 
-Each git worktree needs its own `uv venv` + `uv pip install -e ".[dev]"` because the compiled `.so` is placed inside the venv that was active at build time. `conftest.py` at the root inserts the worktree's own `python/` directory first on `sys.path` so local edits are visible without reinstalling.
+Each git worktree needs its own venv (`scripts/dev-setup.sh`) because the compiled `.so` is placed inside the venv that was active at build time. `conftest.py` at the root inserts the worktree's own `python/` directory first on `sys.path` so local edits are visible without reinstalling.
 
 ## Maintaining this file
 

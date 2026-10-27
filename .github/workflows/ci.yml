@@ -11,6 +11,7 @@ jobs:
     env:
       # Job-wide so every cargo invocation (the maturin build in the install
       # step, `cargo check`, `cargo test`) shares one set of build artifacts.
+      # scripts/verify.sh defaults to the same value.
       RUSTFLAGS: "-D warnings"
 
     steps:
@@ -36,36 +37,10 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Create venv and install
-        run: |
-          uv venv
-          uv pip install -e ".[dev]"
+        run: scripts/dev-setup.sh
 
-      - name: Check generated regions are up to date
-        run: python scripts/gen_ids.py --check
-
-      - name: Check Rust (no warnings)
-        run: cargo check
-
-      - name: Test Rust crates
-        # The root crate is a pyo3 cdylib, so a bare `cargo test` would try
-        # to link it; test the library crates by name.
-        run: cargo test -p sts-ids -p sts-bridge
-
-      - name: Lint with ruff
-        run: |
-          source .venv/bin/activate
-          ruff check python/ tests/ integtests/
-          ruff format --check python/ tests/ integtests/
-
-      - name: Type-check with mypy
-        run: |
-          source .venv/bin/activate
-          mypy python/ tests/ --ignore-missing-imports
-
-      - name: Run tests
-        run: |
-          source .venv/bin/activate
-          pytest tests/ -q
+      - name: Verify (generated ids, cargo check, Rust crate tests, ruff, mypy, pytest)
+        run: scripts/verify.sh
 
       - name: Restore bridge_mod (.NET project sanity check)
         # Full `dotnet build` requires the proprietary sts2.dll from a local

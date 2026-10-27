@@ -7,15 +7,18 @@ import sys
 import time
 from typing import Any, Optional, Sequence
 
+from sts_sim._platform import is_wsl
 
-# On WSL, the game runs on the Windows host. The bridge mod binds to all
-# interfaces, but WSL's 127.0.0.1 is a separate network namespace from Windows'.
-# Auto-detect the WSL default gateway (the Windows host IP) so no env var is
-# needed. Override via STS2_BRIDGE_HOST if the gateway detection is wrong.
+
+# On WSL the game runs on the Windows host, and WSL's 127.0.0.1 is a separate
+# network namespace, so use the default-route gateway (the Windows host IP).
+# Everywhere else the game is local. STS2_BRIDGE_HOST overrides both.
 def _default_bridge_host() -> str:
     explicit = os.environ.get("STS2_BRIDGE_HOST")
     if explicit:
         return explicit
+    if not is_wsl():
+        return "127.0.0.1"
     try:
         import subprocess
 

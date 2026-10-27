@@ -3,8 +3,8 @@
 These tests require STS2 running with the bridge mod:
     pytest integtests/ -q
 
-The Windows host IP is auto-detected via the WSL default gateway.
-Override with STS2_BRIDGE_HOST if needed.
+The bridge host is 127.0.0.1 on native Linux and the Windows host (WSL default
+gateway) on WSL. Override with STS2_BRIDGE_HOST if needed.
 """
 
 import re
