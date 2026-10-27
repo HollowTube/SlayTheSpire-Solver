@@ -8,12 +8,19 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      # Job-wide so every cargo invocation (the maturin build in the install
+      # step, `cargo check`, `cargo test`) shares one set of build artifacts.
+      RUSTFLAGS: "-D warnings"
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,6 +45,11 @@ jobs:
 
       - name: Check Rust (no warnings)
         run: cargo check
+
+      - name: Test Rust crates
+        # The root crate is a pyo3 cdylib, so a bare `cargo test` would try
+        # to link it; test the library crates by name.
+        run: cargo test -p sts-ids -p sts-bridge
 
       - name: Lint with ruff
         run: |

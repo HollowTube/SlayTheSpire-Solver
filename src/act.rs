@@ -52,6 +52,7 @@ pub(crate) const OVERGROWTH_ELITE_POOL: &[&str] = &["Byrdonis", "Phrog Parasite"
 /// Boss encounters -- each Overgrowth act ends with a boss fight. Unlike
 /// the other pools, bosses aren't drawn randomly per-run; the pool is
 /// recorded here for completeness and future encounter selection logic.
+#[allow(dead_code)] // unused until boss selection lands (HOL-67)
 pub(crate) const OVERGROWTH_BOSS_POOL: &[&str] = &["Ceremonial Beast", "The Kin", "Vantom"];
 
 /// How many of the leading monster-node slots draw from the weak pool
