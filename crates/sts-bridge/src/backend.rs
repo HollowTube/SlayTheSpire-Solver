@@ -2,10 +2,16 @@
 
 use std::time::Duration;
 
-use crate::state::{Actions, GameState, Health};
+use crate::command::{Ack, Command};
+use crate::state::{Actions, GameState, Health, Screen};
 
-/// Read operations on a live game. `&mut self` keeps one command in flight.
+/// Operations on a live game. `&mut self` keeps one command in flight.
 pub trait Backend {
+    /// Sends one command and returns once the backend accepted it, not once
+    /// its effect is visible ([`crate::Session::act`] waits for that). A
+    /// command the backend rejects is [`BridgeError::ActionRefused`].
+    fn send(&mut self, command: &Command) -> Result<Ack, BridgeError>;
+
     /// The full typed state. Fails if any part of it cannot be read; never
     /// returns a partial or defaulted state.
     fn state(&mut self) -> Result<GameState, BridgeError>;
@@ -22,6 +28,7 @@ pub trait Backend {
 }
 
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum BridgeError {
     #[error(
         "bridge refused the connection at {addr}: is the game running with the MCPTest mod loaded?"
@@ -51,6 +58,30 @@ pub enum BridgeError {
         method: String,
         path: String,
         message: String,
+    },
+
+    /// The command was rejected, by the backend or by a local check against
+    /// the settled state; it had no effect.
+    #[error("`{action}` was refused: {reason}")]
+    ActionRefused { action: String, reason: String },
+
+    /// The game settled, but `expected` did not happen.
+    #[error("`{action}` settled without its effect: expected {expected}, observed {observed}")]
+    PostconditionFailed {
+        action: String,
+        expected: String,
+        observed: String,
+    },
+
+    /// `unmet` did not hold on a stable read within `waited`.
+    #[error(
+        "the game did not settle within {waited:?}: {unmet} never held (last screen: {})",
+        screen.as_ref().map_or("none read", Screen::as_str)
+    )]
+    NotSettled {
+        waited: Duration,
+        screen: Option<Screen>,
+        unmet: String,
     },
 }
 
