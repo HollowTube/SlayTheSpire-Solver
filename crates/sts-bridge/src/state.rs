@@ -107,6 +107,8 @@ pub struct RunInfo {
     pub character: Option<String>,
     pub ascension: u32,
     pub seed: String,
+    /// The player's relics by class name, e.g. `BurningBlood`.
+    pub relics: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -240,4 +242,6 @@ pub struct Health {
     pub screen: Option<Screen>,
     pub run_in_progress: Option<bool>,
     pub in_combat: Option<bool>,
+    /// Whether instant mode is on; `None` when the bridge does not report it.
+    pub fast_mode: Option<bool>,
 }

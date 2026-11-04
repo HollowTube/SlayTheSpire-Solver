@@ -395,6 +395,13 @@
           "type": "integer",
           "format": "int32"
         },
+        "relics": {
+          "description": "The player's relics by class name, e.g. `BurningBlood`.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "seed": {
           "type": "string"
         }
@@ -406,7 +413,8 @@
         "max_hp",
         "gold",
         "ascension",
-        "seed"
+        "seed",
+        "relics"
       ]
     },
     "Screen": {

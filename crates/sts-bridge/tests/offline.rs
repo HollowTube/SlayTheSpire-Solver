@@ -45,6 +45,7 @@ fn combat_state_populates_run_enemies_hand_and_piles() {
     );
     assert_eq!(run.character.as_deref(), Some("Ironclad"));
     assert_eq!(run.seed, "SOLVER01");
+    assert_eq!(run.relics, ["BurningBlood"]);
 
     let combat = state.combat.expect("combat view in combat");
     assert_eq!((combat.round, combat.is_player_turn), (2, true));
@@ -141,6 +142,20 @@ fn health_reports_ping_fields() {
     assert_eq!(health.backend, "MCPTest");
     assert_eq!(health.version.as_deref(), Some("2.0.0"));
     assert_eq!(health.run_in_progress, Some(false));
+    assert_eq!(
+        health.fast_mode, None,
+        "the bridge does not report fast_mode yet"
+    );
+}
+
+#[test]
+fn health_reports_fast_mode_when_the_bridge_does() {
+    let mut transport = replay("main_menu");
+    let mut envelope: Value = serde_json::from_slice(transport.get("ping").unwrap()).unwrap();
+    envelope["result"]["fast_mode"] = Value::Bool(true);
+    transport.insert("ping", envelope.to_string());
+    let health = McpTestBackend::new(transport).health().unwrap();
+    assert_eq!(health.fast_mode, Some(true));
 }
 
 fn with_combat_state_edit(edit: impl FnOnce(&mut Value)) -> McpTestBackend<ReplayTransport> {

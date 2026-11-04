@@ -20,7 +20,10 @@ use crate::command::{Ack, Command, MenuNav};
 use crate::menu::{Probe, ScreenDetail};
 use crate::state::{Actions, GameState, Health, Screen};
 use explorer::Explorer;
-use wire::{parse, WireActions, WireCardPiles, WireCombat, WireCombatFlag, WireRun, WireRunFlag};
+use wire::{
+    parse, WireActions, WireCardPiles, WireCombat, WireCombatFlag, WirePlayerState, WireRun,
+    WireRunFlag,
+};
 
 pub struct McpTestBackend<T: Transport> {
     transport: T,
@@ -145,7 +148,7 @@ impl<T: Transport> McpTestBackend<T> {
         };
         // The bridge reports a rejected play as `success: false`, not an error.
         if reply.get("success") == Some(&Value::Bool(false)) {
-            let detail = ["message", "reason"]
+            let detail = ["message", "reason", "msg"]
                 .iter()
                 .find_map(|k| reply.get(*k).and_then(Value::as_str))
                 .map_or(String::new(), |m| format!(": {m}"));
@@ -205,6 +208,7 @@ impl<T: Transport> Backend for McpTestBackend<T> {
             Command::Navigate(MenuNav::AbandonRun) => return self.navigate(command, "abandon"),
             Command::Navigate(MenuNav::Back) => return self.navigate(command, "back"),
             Command::Navigate(MenuNav::LeaveGameOver) => return self.leave_game_over(command),
+            Command::Console(c) => ("console", Some(json!({ "command": c.line() }))),
         };
         self.send_raw(command, method, params)
     }
@@ -258,7 +262,11 @@ impl<T: Transport> Backend for McpTestBackend<T> {
         const RUN: &str = "get_run_state";
         let run_value = self.call(RUN, None)?;
         let run = if parse::<WireRunFlag>(RUN, &run_value)?.in_progress {
-            Some(parse::<WireRun>(RUN, &run_value)?.into_run_info(RUN)?)
+            let wire = parse::<WireRun>(RUN, &run_value)?;
+            const PLAYER: &str = "get_player_state";
+            let player = self.call(PLAYER, None)?;
+            let relics = parse::<WirePlayerState>(PLAYER, &player)?.relics(PLAYER)?;
+            Some(wire.into_run_info(RUN, relics)?)
         } else {
             None
         };
@@ -307,6 +315,7 @@ impl<T: Transport> Backend for McpTestBackend<T> {
             screen: Option<String>,
             run_in_progress: Option<bool>,
             in_combat: Option<bool>,
+            fast_mode: Option<bool>,
         }
         const METHOD: &str = "ping";
         let started = Instant::now();
@@ -321,6 +330,7 @@ impl<T: Transport> Backend for McpTestBackend<T> {
             screen: ping.screen.map(Screen),
             run_in_progress: ping.run_in_progress,
             in_combat: ping.in_combat,
+            fast_mode: ping.fast_mode,
         })
     }
 }

@@ -15,6 +15,11 @@ they are.
 
 The three combat sets must parse to the same `GameState`.
 
+`get_player_state.json` in each combat set (the player's relics) was
+synthesized from `GetPlayerState` in the same bridge source, with a two-card
+deck and `BurningBlood`; it is not recorded yet. `record_fixtures` records it
+along with the rest.
+
 `recorded/<screen>/` holds real recordings from a live game
 (`STS2_RECORD=1`, see the crate README). `recorded_fixtures_parse` checks every
 recording that is present. Commit them once recorded, and fix any contract field

@@ -24,6 +24,7 @@ pub fn fixture_dir(name: &str) -> PathBuf {
 pub struct WireState {
     pub actions: Value,
     pub run: Value,
+    pub player_state: Value,
     pub combat: Value,
     pub piles: Value,
 }
@@ -39,6 +40,7 @@ impl WireState {
         Self {
             actions: result("combat", "get_available_actions"),
             run: result("combat", "get_run_state"),
+            player_state: result("combat", "get_player_state"),
             combat: result("combat", "get_combat_state"),
             piles: result("combat", "get_card_piles"),
         }
@@ -85,6 +87,9 @@ impl WireState {
         t.push("get_available_actions", wrap(&self.actions));
         t.push("get_run_state", wrap(&self.run));
         let screen = self.actions["screen"].as_str().unwrap_or_default();
+        if self.run["in_progress"] == Value::Bool(true) {
+            t.push("get_player_state", wrap(&self.player_state));
+        }
         if self.run["in_progress"] == Value::Bool(true) && !screen.contains("LOADING") {
             t.push("get_combat_state", wrap(&self.combat));
             if self.combat["in_combat"] == Value::Bool(true) {
@@ -377,6 +382,7 @@ impl Scene {
             let s = WireState::out_of_combat(screen);
             t.insert("get_available_actions", envelope(s.actions));
             t.insert("get_run_state", envelope(s.run));
+            t.insert("get_player_state", envelope(s.player_state));
             t.insert("get_combat_state", envelope(s.combat));
         }
         if self.run {

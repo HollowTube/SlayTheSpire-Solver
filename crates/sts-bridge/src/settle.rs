@@ -152,13 +152,13 @@ pub fn is_interactive(state: &GameState) -> bool {
     true
 }
 
-struct Expired<T> {
-    last: T,
-    stable: bool,
-    waited: Duration,
+pub(crate) struct Expired<T> {
+    pub(crate) last: T,
+    pub(crate) stable: bool,
+    pub(crate) waited: Duration,
 }
 
-fn poll<T: PartialEq>(
+pub(crate) fn poll<T: PartialEq>(
     policy: &SettlePolicy,
     mut read: impl FnMut() -> Result<T, BridgeError>,
     mut accept: impl FnMut(&T) -> bool,
@@ -283,7 +283,7 @@ impl<B: Backend> Session<B> {
         let command = normalize(command);
         // A menu step is refused at once rather than after a settle wait
         // that a loading run would make time out.
-        if matches!(command, Command::Navigate(_)) {
+        if matches!(command, Command::Navigate(_) | Command::Console(_)) {
             refuse_while_loading(&mut self.backend, &command)?;
         }
         let with_actions = matches!(command, Command::Choose(_));
@@ -370,14 +370,17 @@ impl View {
     }
 }
 
-/// A command that can change rooms (`Choose`, `Navigate`) is refused while
+/// A command that can change rooms (`Choose`, `Navigate`, `Console`) is refused while
 /// [`crate::classify`] says a run is loading: `state()` cannot see all of it
 /// (a run with no room yet reads as a settled `MAP`).
-fn refuse_while_loading<B: Backend + ?Sized>(
+pub(crate) fn refuse_while_loading<B: Backend + ?Sized>(
     backend: &mut B,
     command: &Command,
 ) -> Result<(), BridgeError> {
-    if !matches!(command, Command::Choose(_) | Command::Navigate(_)) {
+    if !matches!(
+        command,
+        Command::Choose(_) | Command::Navigate(_) | Command::Console(_)
+    ) {
         return Ok(());
     }
     let probe = match backend.probe() {
@@ -466,10 +469,11 @@ fn precheck(command: &Command, before: &View) -> Result<(), String> {
             Err(format!("no run in progress (screen {})", state.screen))
         }
         Command::Navigate(_) => Ok(()),
+        Command::Console(c) => crate::console::check::precheck(c, state),
     }
 }
 
-fn player_turn(state: &GameState) -> Result<&CombatView, String> {
+pub(crate) fn player_turn(state: &GameState) -> Result<&CombatView, String> {
     match &state.combat {
         Some(c) if state.screen.as_str() == "COMBAT_PLAYER_TURN" && c.is_player_turn => Ok(c),
         _ => Err(format!("not the player's turn (screen {})", state.screen)),
@@ -483,7 +487,7 @@ fn describe_actions(actions: &[AvailableAction]) -> String {
 
 fn postcondition(command: &Command, before: &View, after: &View) -> Result<(), Unmet> {
     let (b, a) = (&before.state, &after.state);
-    if !matches!(command, Command::Choose(_)) && awaits_selection(a) {
+    if !matches!(command, Command::Choose(_) | Command::Console(_)) && awaits_selection(a) {
         return Ok(()); // the effect continues once the caller chooses
     }
     match command {
@@ -585,5 +589,6 @@ fn postcondition(command: &Command, before: &View, after: &View) -> Result<(), U
                 ))
             }
         }
+        Command::Console(c) => crate::console::check::postcondition(c, b, a),
     }
 }
