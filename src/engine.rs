@@ -1,6 +1,6 @@
-use crate::cards::{card_data, CardType};
+use crate::cards::{can_upgrade, card_data, CardType};
 use crate::ids::{CardId, MonsterId};
-use crate::state::{draw_cards, CardInstance, CombatState, Fighter, Monster};
+use crate::state::{draw_cards, CardInstance, CombatState, Fighter, Monster, PendingDecision};
 use rand::seq::SliceRandom;
 use rand::Rng;
 
@@ -743,6 +743,28 @@ pub(crate) enum EffectOp {
         count_source: ScaleSource,
         exhaust: bool,
     },
+    // If the preceding damage op killed a target, raise max HP and heal by `n`
+    // (the game's GainMaxHp heals the same amount).
+    GainMaxHpIfLastAttackKilled(i32),
+    // Deal `base` + the current value of `state.combat_counters[bonus_key]`
+    // damage to each target, then increment `combat_counters[bonus_key]` by
+    // `increment` (Rampage: key "Rampage", base 9, increment 5 or 9+).
+    DealDamageWithCombatBonus {
+        base: i32,
+        bonus_key: &'static str,
+        increment: i32,
+    },
+    // Set `state.pending = PendingDecision::UpgradeFromHand` so the player
+    // must choose a hand card to upgrade in-combat (Armaments base). No-op if
+    // no card in hand is upgradable.
+    PromptUpgradeCardFromHand,
+    // Set `state.pending = PendingDecision::ExhaustFromHand { strength }` so
+    // the player must choose a hand card to exhaust; on resolution the player
+    // gains `strength` Strength (Brand). With an empty hand, Strength is gained
+    // at once.
+    PromptExhaustCardFromHand { strength: i32 },
+    // Upgrade every upgradable card in hand (Armaments+).
+    UpgradeAllCardsInHand,
 }
 
 /// What a `DealDamageScaled` op reads its multiplier from. New scaling
@@ -858,6 +880,15 @@ impl HandFilter {
             }
         }
     }
+}
+
+/// `deal_damage` from a card or move, returning whether the hit was Fatal:
+/// it killed the target, and the target isn't a Minion.
+fn deal_damage_fatal(state: &mut CombatState, attacker: Actor, target: Actor, amount: i32, is_attack_card: bool) -> bool {
+    let was_alive = state.fighter(target).hp > 0;
+    deal_damage(state, attacker, target, amount, is_attack_card, state.cards_played_this_turn);
+    let fighter = state.fighter(target);
+    was_alive && fighter.hp <= 0 && !fighter.statuses.iter().any(|s| matches!(s, Status::Minion { .. }))
 }
 
 /// Deals damage from `attacker` to `target`, running it through both
@@ -1007,11 +1038,14 @@ pub(crate) fn tick_debuffs(statuses: &mut Vec<Status>) {
 /// card (used by `Status::Slow`). Pass `false` for monster moves, status
 /// reactions, and any non-Attack card effects.
 pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor, targets: &[Actor], is_attack_card: bool) {
+    // Whether the most recent damage op was Fatal, for GainMaxHpIfLastAttackKilled.
+    let mut last_damage_killed = false;
     for op in ops {
         match op {
             EffectOp::DealDamage(amount) => {
+                last_damage_killed = false;
                 for &target in targets {
-                    deal_damage(state, actor, target, *amount, is_attack_card, state.cards_played_this_turn);
+                    last_damage_killed |= deal_damage_fatal(state, actor, target, *amount, is_attack_card);
                 }
             }
             EffectOp::GainBlock(amount) => {
@@ -1192,9 +1226,10 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 per_unit,
                 source,
             } => {
+                last_damage_killed = false;
                 for &target in targets {
                     let amount = base + per_unit * source.read(state, actor, target);
-                    deal_damage(state, actor, target, amount, is_attack_card, state.cards_played_this_turn);
+                    last_damage_killed |= deal_damage_fatal(state, actor, target, amount, is_attack_card);
                 }
             }
             EffectOp::DealDamageRepeated {
@@ -1203,10 +1238,11 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 hits_per_unit,
                 hits_source,
             } => {
+                last_damage_killed = false;
                 for &target in targets {
                     let hits = hits_base + hits_per_unit * hits_source.read(state, actor, target);
                     for _ in 0..hits {
-                        deal_damage(state, actor, target, *amount, is_attack_card, state.cards_played_this_turn);
+                        last_damage_killed |= deal_damage_fatal(state, actor, target, *amount, is_attack_card);
                     }
                 }
             }
@@ -1241,20 +1277,23 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                 }
             }
             EffectOp::DealDamageToAllEnemies(amount) => {
+                last_damage_killed = false;
                 for i in state.living_monster_indices() {
-                    deal_damage(state, actor, Actor::Monster(i), *amount, is_attack_card, state.cards_played_this_turn);
+                    last_damage_killed |= deal_damage_fatal(state, actor, Actor::Monster(i), *amount, is_attack_card);
                 }
             }
             EffectOp::DealDamageToRandomEnemy(amount) => {
+                last_damage_killed = false;
                 let living = state.living_monster_indices();
                 if !living.is_empty() {
                     let pick = living[state.rng.gen_range(0..living.len())];
-                    deal_damage(state, actor, Actor::Monster(pick), *amount, is_attack_card, state.cards_played_this_turn);
+                    last_damage_killed = deal_damage_fatal(state, actor, Actor::Monster(pick), *amount, is_attack_card);
                 }
             }
             EffectOp::DealDamageToLastAttacker(amount) => {
+                last_damage_killed = false;
                 if let Some(i) = state.last_attacker {
-                    deal_damage(state, actor, Actor::Monster(i), *amount, is_attack_card, state.cards_played_this_turn);
+                    last_damage_killed = deal_damage_fatal(state, actor, Actor::Monster(i), *amount, is_attack_card);
                 }
             }
             EffectOp::GainBlockScaled { base, per_unit, source } => {
@@ -1294,7 +1333,77 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
                     *count_base + (count_per_unit * count_source.read(state, actor, actor)) as usize;
                 run_play_top_of_deck(state, effective_count, *exhaust);
             }
+            EffectOp::GainMaxHpIfLastAttackKilled(n) => {
+                if last_damage_killed {
+                    state.fighter_mut(actor).max_hp += n;
+                    run_effect_ops(state, &[EffectOp::Heal(*n)], actor, targets, false);
+                }
+            }
+            EffectOp::DealDamageWithCombatBonus { base, bonus_key, increment } => {
+                let bonus = state.combat_counters.get(*bonus_key).copied().unwrap_or(0);
+                let amount = base + bonus;
+                last_damage_killed = false;
+                for &target in targets {
+                    last_damage_killed |= deal_damage_fatal(state, actor, target, amount, is_attack_card);
+                }
+                *state.combat_counters.entry(*bonus_key).or_insert(0) += increment;
+            }
+            // A choice already pending (cards auto-played by Havoc/Cascade, or a
+            // target still resolving) can't be stacked: take the first eligible card.
+            EffectOp::PromptUpgradeCardFromHand => {
+                let first = state.hand.iter().position(|c| can_upgrade(c.id, c.upgrade_level));
+                match first {
+                    Some(pos) if state.pending.is_some() => state.hand[pos].upgrade_level = 1,
+                    Some(_) => state.pending = Some(PendingDecision::UpgradeFromHand),
+                    None => {}
+                }
+            }
+            EffectOp::PromptExhaustCardFromHand { strength } => {
+                if state.hand.is_empty() {
+                    resolve_exhaust_from_hand(state, None, *strength);
+                } else if state.pending.is_some() {
+                    resolve_exhaust_from_hand(state, Some(0), *strength);
+                } else {
+                    state.pending = Some(PendingDecision::ExhaustFromHand { strength: *strength });
+                }
+            }
+            EffectOp::UpgradeAllCardsInHand => {
+                for card in &mut state.hand {
+                    if can_upgrade(card.id, card.upgrade_level) {
+                        card.upgrade_level = 1;
+                    }
+                }
+            }
         }
+    }
+}
+
+/// Brand's resolution: exhaust the hand card at `pos` (if any), then gain
+/// `strength` Strength.
+pub(crate) fn resolve_exhaust_from_hand(state: &mut CombatState, pos: Option<usize>, strength: i32) {
+    if let Some(pos) = pos {
+        let card = state.hand.remove(pos);
+        state.exhaust_pile.push(card);
+        fire_event(state, GameEvent::CardExhausted);
+    }
+    let gain = [EffectOp::ApplyStatusToSelf(Status::Strength(strength))];
+    run_effect_ops(state, &gain, Actor::Player, &[], false);
+}
+
+/// Drops a pending hand choice that no card can satisfy any more (a later
+/// auto-played card upgraded or exhausted them), so legal actions never run out.
+fn settle_hand_choice(state: &mut CombatState) {
+    match state.pending.clone() {
+        Some(PendingDecision::UpgradeFromHand)
+            if !state.hand.iter().any(|c| can_upgrade(c.id, c.upgrade_level)) =>
+        {
+            state.pending = None;
+        }
+        Some(PendingDecision::ExhaustFromHand { strength }) if state.hand.is_empty() => {
+            state.pending = None;
+            resolve_exhaust_from_hand(state, None, strength);
+        }
+        _ => {}
     }
 }
 
@@ -1354,4 +1463,5 @@ fn run_play_top_of_deck(state: &mut CombatState, count: usize, exhaust: bool) {
             state.discard_pile.push(card.clone());
         }
     }
+    settle_hand_choice(state);
 }

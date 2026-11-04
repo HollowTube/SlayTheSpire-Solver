@@ -2079,104 +2079,104 @@
  },
  "reward_offers": {
   "0": [
-   "Take:Breakthrough",
-   "Take:Defend",
-   "Take:Dismantle"
-  ],
-  "1": [
-   "Take:Impervious",
-   "Take:Rage",
+   "Take:DarkEmbrace",
+   "Take:Dismantle",
    "Take:Vicious"
   ],
+  "1": [
+   "Take:Feed",
+   "Take:Pyre",
+   "Take:Uppercut"
+  ],
   "2": [
-   "Take:Bludgeon",
-   "Take:CrimsonMantle",
-   "Take:SecondWind"
+   "Take:HowlFromBeyond",
+   "Take:Pyre",
+   "Take:Tremble"
   ],
   "3": [
-   "Take:PactsEnd",
+   "Take:NotYet",
    "Take:Pyre",
    "Take:Thunderclap"
   ],
   "4": [
-   "Take:FeelNoPain",
-   "Take:FlameBarrier",
-   "Take:Tremble"
+   "Take:FightMe",
+   "Take:MoltenFist",
+   "Take:Rampage"
   ],
   "5": [
-   "Take:Cruelty",
-   "Take:DemonForm",
+   "Take:CrimsonMantle",
+   "Take:Defend",
    "Take:Unrelenting"
   ],
   "6": [
-   "Take:BattleTrance",
-   "Take:Offering",
-   "Take:Strike"
+   "Take:Armaments",
+   "Take:Bash",
+   "Take:Havoc"
   ],
   "7": [
+   "Take:BattleTrance",
    "Take:Dismantle",
-   "Take:Dominate",
-   "Take:Juggling"
+   "Take:Unrelenting"
   ],
   "8": [
-   "Take:Evil Eye",
-   "Take:FlameBarrier",
-   "Take:Strike"
-  ],
-  "9": [
-   "Take:SecondWind",
-   "Take:Strike",
-   "Take:Thunderclap"
-  ],
-  "10": [
-   "Take:FlameBarrier",
-   "Take:Pommel Strike",
-   "Take:Pyre"
-  ],
-  "11": [
-   "Take:BurningPact",
-   "Take:Defend",
-   "Take:MoltenFist"
-  ],
-  "12": [
-   "Take:Evil Eye",
-   "Take:MoltenFist",
+   "Take:DrumOfBattle",
+   "Take:FiendFire",
    "Take:Thrash"
   ],
+  "9": [
+   "Take:BloodWall",
+   "Take:Havoc",
+   "Take:Pommel Strike"
+  ],
+  "10": [
+   "Take:FightMe",
+   "Take:Pommel Strike",
+   "Take:Tremble"
+  ],
+  "11": [
+   "Take:Break",
+   "Take:Breakthrough",
+   "Take:TearAsunder"
+  ],
+  "12": [
+   "Take:DrumOfBattle",
+   "Take:HowlFromBeyond",
+   "Take:MoltenFist"
+  ],
   "13": [
-   "Take:Colossus",
-   "Take:FlameBarrier",
+   "Take:Cinder",
+   "Take:Sword Boomerang",
    "Take:Taunt"
   ],
   "14": [
-   "Take:Hemokinesis",
-   "Take:Setup Strike",
-   "Take:Tremble"
+   "Take:Bloodletting",
+   "Take:Headbutt",
+   "Take:SecondWind"
   ],
   "15": [
-   "Take:Break",
-   "Take:Evil Eye",
-   "Take:Stomp"
+   "Take:DrumOfBattle",
+   "Take:Juggling",
+   "Take:Rampage"
   ],
   "16": [
-   "Take:DemonForm",
-   "Take:Evil Eye",
-   "Take:OneTwoPunch"
+   "Take:Defend",
+   "Take:Inflame",
+   "Take:Stomp"
   ],
   "17": [
-   "Take:FightMe",
-   "Take:TwinStrike",
-   "Take:Uppercut"
+   "Take:Bash",
+   "Take:BodySlam",
+   "Take:Brand"
   ],
   "18": [
-   "Take:Cinder",
-   "Take:Corruption",
-   "Take:Taunt"
+   "Take:Dismantle",
+   "Take:Strike",
+   "Take:Whirlwind"
   ],
   "19": [
-   "Take:Bash",
-   "Take:Impervious",
-   "Take:Offering"
+   "Take:Brand",
+   "Take:Juggernaut",
+   "Take:OneTwoPunch"
   ]
  }
 }

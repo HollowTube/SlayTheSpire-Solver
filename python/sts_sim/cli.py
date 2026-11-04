@@ -14,8 +14,10 @@ import click
 
 from . import (
     EndTurnAction,
+    ExhaustCardFromHandAction,
     PlayCardAction,
     SelectTargetAction,
+    UpgradeCardFromHandAction,
     apply,
     evaluate,
     is_terminal,
@@ -111,6 +113,10 @@ def format_action(action):
         return f"Play {s.removeprefix('PlayCard:')}"
     if s.startswith("SelectTarget:"):
         return f"Target {s.removeprefix('SelectTarget:')}"
+    if s.startswith("UpgradeCardFromHand:"):
+        return f"Upgrade {s.removeprefix('UpgradeCardFromHand:')}"
+    if s.startswith("ExhaustCardFromHand:"):
+        return f"Exhaust {s.removeprefix('ExhaustCardFromHand:')}"
     return s
 
 
@@ -266,7 +272,16 @@ def _parse_action(action):
 
     Used at the CLI/API boundary where history is stored as strings.
     """
-    if isinstance(action, (EndTurnAction, PlayCardAction, SelectTargetAction)):
+    if isinstance(
+        action,
+        (
+            EndTurnAction,
+            PlayCardAction,
+            SelectTargetAction,
+            UpgradeCardFromHandAction,
+            ExhaustCardFromHandAction,
+        ),
+    ):
         return action
     if action == "EndTurn":
         return EndTurnAction()
@@ -275,6 +290,10 @@ def _parse_action(action):
     if action.startswith("SelectTarget:Monster:"):
         idx = int(action.removeprefix("SelectTarget:Monster:"))
         return SelectTargetAction(idx)
+    if action.startswith("UpgradeCardFromHand:"):
+        return UpgradeCardFromHandAction(action.removeprefix("UpgradeCardFromHand:"))
+    if action.startswith("ExhaustCardFromHand:"):
+        return ExhaustCardFromHandAction(action.removeprefix("ExhaustCardFromHand:"))
     raise ValueError(f"unknown action string: {action!r}")
 
 

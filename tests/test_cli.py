@@ -21,6 +21,8 @@ def test_format_action_translates_engine_strings_into_human_readable_labels():
     assert format_action("PlayCard:Bash") == "Play Bash"
     assert format_action("SelectTarget:Monster:0") == "Target Monster:0"
     assert format_action("EndTurn") == "End Turn"
+    assert format_action("UpgradeCardFromHand:Strike") == "Upgrade Strike"
+    assert format_action("ExhaustCardFromHand:Defend") == "Exhaust Defend"
 
 
 def test_render_state_shows_the_information_a_player_needs_to_decide():
