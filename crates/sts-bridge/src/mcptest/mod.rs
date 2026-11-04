@@ -6,13 +6,15 @@ mod wire;
 use std::time::Instant;
 
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 
 pub use transport::{
-    ReplayTransport, TcpTransport, Transport, DEFAULT_PORT, DEFAULT_TIMEOUT, MAX_RESPONSE_BYTES,
+    ReplayTransport, Request, TcpTransport, Transport, DEFAULT_PORT, DEFAULT_TIMEOUT,
+    MAX_RESPONSE_BYTES,
 };
 
 use crate::backend::{Backend, BridgeError};
+use crate::command::{Ack, Command};
 use crate::state::{Actions, GameState, Health, Screen};
 use wire::{parse, WireActions, WireCardPiles, WireCombat, WireCombatFlag, WireRun, WireRunFlag};
 
@@ -36,6 +38,10 @@ impl<T: Transport> McpTestBackend<T> {
         &self.transport
     }
 
+    pub fn transport_mut(&mut self) -> &mut T {
+        &mut self.transport
+    }
+
     pub(crate) fn call(
         &mut self,
         method: &str,
@@ -53,6 +59,55 @@ impl<T: Transport> McpTestBackend<T> {
 }
 
 impl<T: Transport> Backend for McpTestBackend<T> {
+    fn send(&mut self, command: &Command) -> Result<Ack, BridgeError> {
+        let (method, params) = match command {
+            Command::PlayCard { card_index, target } => {
+                let mut params = json!({ "card_index": card_index });
+                if let Some(t) = target {
+                    params["target_index"] = json!(t);
+                }
+                ("play_card", Some(params))
+            }
+            Command::EndTurn => ("end_turn", None),
+            Command::Choose(a) => {
+                let mut params = a.params.clone();
+                params.insert("action".into(), json!(a.action));
+                if let Some(i) = a.card_index {
+                    params.insert("card_index".into(), json!(i));
+                }
+                if let Some(i) = a.target_index {
+                    params.insert("target_index".into(), json!(i));
+                }
+                ("execute_action", Some(Value::Object(params)))
+            }
+        };
+        let refused = |reason: String| BridgeError::ActionRefused {
+            action: command.to_string(),
+            reason,
+        };
+        let raw = self.transport.send(method, params.as_ref())?;
+        // The handler's own `error` means it rejected the command. A
+        // request-level one (dispatch timeout, serialization failure) leaves
+        // the outcome unknown, so it stays `Remote`.
+        let reply = match transport::decode(method, &raw) {
+            Err(BridgeError::Remote { message, .. }) if !transport::is_envelope_error(&raw) => {
+                return Err(refused(message))
+            }
+            other => other?,
+        };
+        // The bridge reports a rejected play as `success: false`, not an error.
+        if reply.get("success") == Some(&Value::Bool(false)) {
+            let detail = ["message", "reason"]
+                .iter()
+                .find_map(|k| reply.get(*k).and_then(Value::as_str))
+                .map_or(String::new(), |m| format!(": {m}"));
+            return Err(refused(format!(
+                "bridge replied success: false{detail} ({reply})"
+            )));
+        }
+        Ok(Ack::new(reply))
+    }
+
     fn state(&mut self) -> Result<GameState, BridgeError> {
         let screen = self.read_actions()?.screen();
 

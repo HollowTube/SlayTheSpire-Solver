@@ -1,7 +1,7 @@
 //! MCPTest wire transport: newline-delimited JSON-RPC over TCP, one connection
 //! per request.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::io::{ErrorKind, Read, Write};
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::Path;
@@ -135,10 +135,21 @@ impl Transport for TcpTransport {
     }
 }
 
+/// One request a [`ReplayTransport`] received.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Request {
+    pub method: String,
+    pub params: Option<Value>,
+}
+
 /// Serves canned response lines per method; for offline tests and replay.
+///
+/// Each method has a queue of replies: every request takes the next one, and
+/// the last stays as the reply to all later requests. Every request is logged.
 #[derive(Debug, Clone, Default)]
 pub struct ReplayTransport {
-    responses: HashMap<String, Vec<u8>>,
+    responses: HashMap<String, VecDeque<Vec<u8>>>,
+    requests: Vec<Request>,
 }
 
 impl ReplayTransport {
@@ -160,28 +171,60 @@ impl ReplayTransport {
         Ok(replay)
     }
 
+    /// Makes `response` the only reply to `method`, for every request.
     pub fn insert(&mut self, method: &str, response: impl Into<Vec<u8>>) -> &mut Self {
-        self.responses.insert(method.to_string(), response.into());
+        self.responses
+            .insert(method.to_string(), VecDeque::from([response.into()]));
         self
     }
 
+    /// Queues `response` after the replies `method` already has.
+    pub fn push(&mut self, method: &str, response: impl Into<Vec<u8>>) -> &mut Self {
+        self.responses
+            .entry(method.to_string())
+            .or_default()
+            .push_back(response.into());
+        self
+    }
+
+    /// The reply the next `method` request gets.
     pub fn get(&self, method: &str) -> Option<&[u8]> {
-        self.responses.get(method).map(Vec::as_slice)
+        self.responses
+            .get(method)
+            .and_then(VecDeque::front)
+            .map(Vec::as_slice)
+    }
+
+    /// Every request received so far, oldest first.
+    pub fn requests(&self) -> &[Request] {
+        &self.requests
+    }
+
+    /// Returns the request log and starts a new one.
+    pub fn take_requests(&mut self) -> Vec<Request> {
+        std::mem::take(&mut self.requests)
     }
 }
 
 impl Transport for ReplayTransport {
-    fn send(&mut self, method: &str, _params: Option<&Value>) -> Result<Vec<u8>, BridgeError> {
-        self.responses
-            .get(method)
-            .cloned()
-            .ok_or_else(|| BridgeError::Io {
-                method: method.to_string(),
-                source: std::io::Error::new(
-                    ErrorKind::NotFound,
-                    format!("replay has no response for `{method}`"),
-                ),
-            })
+    fn send(&mut self, method: &str, params: Option<&Value>) -> Result<Vec<u8>, BridgeError> {
+        self.requests.push(Request {
+            method: method.to_string(),
+            params: params.cloned(),
+        });
+        let queue = self.responses.get_mut(method);
+        let reply = match queue {
+            Some(q) if q.len() > 1 => q.pop_front(),
+            Some(q) => q.front().cloned(),
+            None => None,
+        };
+        reply.ok_or_else(|| BridgeError::Io {
+            method: method.to_string(),
+            source: std::io::Error::new(
+                ErrorKind::NotFound,
+                format!("replay has no response for `{method}`"),
+            ),
+        })
     }
 }
 
@@ -228,6 +271,22 @@ pub(crate) fn decode(method: &str, raw: &[u8]) -> Result<Value, BridgeError> {
     }
     check_remote_error(method, &value)?;
     Ok(value)
+}
+
+/// The bridge's request-level failure (`{"error": …, "id": …}`, no `result`):
+/// it failed around the method handler, not inside it.
+pub(crate) fn is_envelope_error(raw: &[u8]) -> bool {
+    let Ok(text) = std::str::from_utf8(raw) else {
+        return false;
+    };
+    let text = text.strip_prefix('\u{feff}').unwrap_or(text).trim();
+    let mut value: Value = serde_json::from_str(text).unwrap_or(Value::Null);
+    if let Value::String(inner) = &value {
+        value = serde_json::from_str(inner).unwrap_or(Value::Null);
+    }
+    value.get("error").is_some_and(|e| !e.is_null())
+        && value.get("id").is_some()
+        && value.get("result").is_none()
 }
 
 fn check_remote_error(method: &str, value: &Value) -> Result<(), BridgeError> {
