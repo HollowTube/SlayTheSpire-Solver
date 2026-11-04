@@ -280,6 +280,22 @@ fn the_enemy_turn_and_loading_are_never_settled() {
     assert_eq!(reads(&s), 8);
 }
 
+/// While a new run loads, the bridge reports `MAIN_MENU` with the run already
+/// in progress, stably, for tens of seconds. A command sent then can crash
+/// the game, so it is never settled.
+#[test]
+fn the_main_menu_with_a_run_in_progress_is_never_settled() {
+    let mut t = ReplayTransport::new();
+    WireState::out_of_combat("MAIN_MENU").push(&mut t);
+    let mut s = session(t);
+    match s.wait_settled() {
+        Err(BridgeError::NotSettled { screen, .. }) => {
+            assert_eq!(screen.unwrap().as_str(), "MAIN_MENU")
+        }
+        other => panic!("expected NotSettled, got {other:?}"),
+    }
+}
+
 #[test]
 fn a_wait_that_never_settles_is_not_settled_naming_the_screen() {
     let mut t = ReplayTransport::new();
@@ -692,6 +708,24 @@ fn on_map() -> WireState {
     })
 }
 
+/// The probe `act(Choose)` takes to rule out a loading run: on the map, in a
+/// run, with a room (`screen_source` is not `run_state`).
+fn probes_on_map(t: &mut ReplayTransport) {
+    probes_on_map_from(t, "active_screen_context");
+}
+
+fn probes_on_map_from(t: &mut ReplayTransport, source: &str) {
+    t.insert(
+        "ping",
+        json!({"result": {"status": "ok", "mod": "MCPTest", "screen": "MAP", "run_in_progress": true}})
+            .to_string(),
+    );
+    t.insert(
+        "get_screen",
+        json!({"result": {"screen": "MAP", "screen_source": source}}).to_string(),
+    );
+}
+
 /// A state as `act(Choose)` reads it: the state, then the actions again.
 fn push_viewed(w: &WireState, t: &mut ReplayTransport) {
     w.push(t);
@@ -713,6 +747,7 @@ fn choose_returns_once_the_screen_changed() {
     push_viewed(&WireState::out_of_combat("COMBAT_LOADING"), &mut t);
     push_viewed(&fresh_combat(), &mut t);
     t.insert("execute_action", OK);
+    probes_on_map(&mut t);
     let mut s = session(t);
     let state = s.act(&Command::Choose(map_travel())).unwrap();
     assert_eq!(state.screen.as_str(), "COMBAT_PLAYER_TURN");
@@ -729,6 +764,7 @@ fn a_choice_with_no_effect_is_a_postcondition_failure() {
     );
     push_viewed(&on_map(), &mut t);
     t.insert("execute_action", OK);
+    probes_on_map(&mut t);
     match session(t).act(&Command::Choose(map_travel())) {
         Err(BridgeError::PostconditionFailed { observed, .. }) => {
             assert!(observed.contains("MAP"), "{observed}")
@@ -737,10 +773,29 @@ fn a_choice_with_no_effect_is_a_postcondition_failure() {
     }
 }
 
+/// A run with no room yet reads as a settled `MAP` through `state()`; only
+/// the probe's `screen_source: run_state` shows it is still loading.
+#[test]
+fn a_choice_while_the_run_has_no_room_yet_is_refused_without_sending() {
+    let mut t = ReplayTransport::new();
+    push_viewed(&on_map(), &mut t);
+    t.insert("execute_action", OK);
+    probes_on_map_from(&mut t, "run_state");
+    let mut s = session(t);
+    match s.act(&Command::Choose(map_travel())) {
+        Err(BridgeError::ActionRefused { reason, .. }) => {
+            assert!(reason.contains("loading"), "{reason}")
+        }
+        other => panic!("expected ActionRefused, got {other:?}"),
+    }
+    assert!(commands_sent(&s).is_empty());
+}
+
 #[test]
 fn a_choice_not_on_offer_is_refused_without_sending() {
     let mut t = ReplayTransport::new();
     WireState::out_of_combat("MAP").push_n(&mut t, 2);
+    probes_on_map(&mut t);
     let mut s = session(t);
     match s.act(&Command::Choose(map_travel())) {
         Err(BridgeError::ActionRefused { reason, .. }) => {

@@ -77,6 +77,72 @@ Errors from `act`:
 A bridge read that fails during a wait (`Timeout`, `Remote`, …) is returned
 as is; deciding that the game is wedged is up to the caller.
 
+`is_interactive` is false for `MAIN_MENU` while a run is in progress: that is
+a run loading or tearing down, not a menu.
+
+## Loading, the main menu and the game's lifecycle
+
+**Never send a room-changing command (console `fight`, `room`, `event`, …)
+while a run is loading: it crashes the game (SIGSEGV).** After `start_run`
+the bridge reports `MAIN_MENU` with `run_in_progress: true`, stably, for 30 to
+50 s; then `MAP` derived from the run state (no room yet); then the first
+room. `get_run_state` already says `in_progress: true` during it, so
+`state()` reads as a main menu with a run. Call `wait_run_ready` first.
+
+```rust
+use sts_bridge::Game;
+
+let mut game = Game::from_env();          // MCPTest bridge + Steam launcher
+game.start()?;                            // launches through Steam if needed
+game.ensure_main_menu()?;                 // from any screen; verified
+game.backend_mut().request("start_run", Some(&serde_json::json!({"seed": "S"})))?;
+game.wait_run_ready()?;                   // only now may a console `fight` go out
+```
+
+| Item | Module | What it is |
+|---|---|---|
+| `Probe { ok, screen, run_in_progress, in_combat, detail: Option<ScreenDetail>, main_menu_node }` | `menu` | One cheap read: `ping`, `get_screen` (`ScreenDetail { screen, source, room_type, context }`) and, on a no-run `MAIN_MENU`, whether GodotExplorer finds the `MainMenu` node. An `Observation`; equal reads compare equal. |
+| `Backend::probe() -> Result<Probe>` | `backend` | Reads a `Probe`; sends nothing. |
+| `classify(&Probe) -> Phase` | `menu` | The one decision of where the game is. `Phase` (`#[non_exhaustive]`): `Loading` (any `*LOADING*` screen; `MAIN_MENU` with a run in progress; `MAP` from `screen_source: run_state` in a run), `MainMenu` (`MAIN_MENU`, no run: a candidate only, see below), `MenuSubscreen`, `GameOver` (`GAME_OVER`, or the `OVERLAY` whose context is `NGameOverScreen`, which is what the current mod reports), `Transition` (enemy turn, `MENU_NCombatRoom`, other `COMBAT_*`, ping and `get_screen` disagreeing), `InRun` (a stable interactive in-run screen), `Unreadable` (ping without a screen), `Unknown`. |
+| `wait_run_ready(backend, &Timeouts) -> Result<Probe>` | `menu` | Waits, sending nothing, for `InRun` on 3 stable probes spanning at least 1 s, up to `run_load`. The precondition for every room-changing command. `NotSettled` at the deadline (names the last screen); `Wedged` if the bridge stops answering. |
+| `ensure_main_menu(backend, &Timeouts) -> Result<Probe>` | `menu` | From any screen to a **verified main menu**: `MainMenu` on stable probes, the `MainMenu` node present, and `state().run == None`. Waits out `Loading` and `Transition`; abandons a run from `InRun`; leaves `GameOver`; goes back from a menu screen; sends nothing on the main menu. At most `MAX_NAV_STEPS` (8) commands. |
+| `Command::Navigate(MenuNav)` | `command` | `MenuNav::{AbandonRun, Back, LeaveGameOver}`. `LeaveGameOver` tries `navigate_menu return_to_main_menu`; on the current mod's "Unknown target" it remembers that and calls the game-over screen's `ReturnToMainMenu` through GodotExplorer (port 27020) instead. `Session::act` refuses a `Navigate` while loading (`ActionRefused`, "room still loading"). |
+| `McpTestBackend::request(method, params) -> Result<Value>` | `mcptest` | A raw, decoded bridge call: unverified, for test positioning only. |
+| `McpTestBackend::with_explorer(transport)` | `mcptest` | The GodotExplorer client (`from_env` sets it up on port 27020). Without one, or if it refuses, the main-menu check and `LeaveGameOver` fail with `ExplorerUnavailable`. |
+| `Game<B, L: Launcher>` | `lifecycle` | `start`, `stop`, `restart`, `status() -> GameStatus`, `ensure_main_menu`, `wait_run_ready`, `recover(&cause) -> Recovered`, `recoveries()`, `backend_mut`. `Game::from_env()` on Unix. |
+| `Launcher` / `SteamLauncher` | `lifecycle` | `launch`, `pid`, `kill(pid, grace)`. `SteamLauncher` runs `steam -applaunch 2868840` (`STS2_STEAM_APP_ID`, or the whole command from `STS2_LAUNCH_CMD`), finds `SlayTheSpire2` in `/proc`, and stops it with SIGTERM, then SIGKILL. |
+| `GameStatus` | `lifecycle` | `NotRunning`, `Starting { pid }`, `Loading(Probe)`, `Ready(Probe)`, `Wedged { reason, screen }`, `Crashed { pid, last_screen }`. |
+| `Timeouts` | `lifecycle` | `boot` 120 s, `run_load` 300 s, `step` 30 s, `ensure_total` 420 s, `stuck_screen` 15 s, `kill_grace` 10 s, `exit` 30 s, and `probe` (the poll policy: 500 ms, 3 stable reads). `with_*` builders; `uniform` for scripted tests. |
+
+`start()` launches the game only if no `SlayTheSpire2` process exists, and
+then waits for a verified main menu; on a game that is already running it
+returns once the bridge answers, without relaunching or sending anything.
+A game that is still booting (process up, bridge refusing) is waited for,
+never restarted.
+
+`SteamLauncher` sees only local processes: `Game` assumes the game runs on
+this machine. With `STS2_BRIDGE_HOST` pointing at another host, use the
+`menu` functions over `McpTestBackend` directly, not `Game`.
+
+New errors (`backend`):
+
+- `Wedged { screen, reason: WedgeReason }`: `BridgeTimeout` (accepted, never
+  answered: e.g. a SIGSTOPped game), `MainThreadTimeout`, `PingWithoutScreen`,
+  `StuckScreen(screen)` (`MENU_NCombatRoom` past `stuck_screen`),
+  `TransitionTimeout` (the same transition screen held past `step`).
+- `Crashed { pid, last_screen }`: the process `Game` was driving is gone and
+  the bridge refuses or resets the connection.
+- `Lifecycle { op, message }`: launching or killing failed.
+- `ExplorerUnavailable { addr, reason }`: GodotExplorer is not reachable.
+
+`Game::ensure_main_menu` and `Game::wait_run_ready` call `recover` once, and
+only on `Wedged` or `Crashed`: it waits up to `exit` for a crashed process
+that still lingers (its core dump being written), kills what is left,
+relaunches and runs `ensure_main_menu`. A second failure is returned, not
+retried. `NotSettled`, `PostconditionFailed` and `ActionRefused` never
+restart the game: they are bugs a relaunch would hide. `Game::wait_run_ready`
+after a recovery fails with `NotSettled`, since the run it waited for is gone.
+
 ## Tests
 
 ```bash
@@ -86,6 +152,12 @@ cargo test -p sts-bridge
 # Live contract tests: opt-in, serial. Position the game first (main menu or a
 # combat on the player's turn); an unreachable bridge fails the test.
 cargo test -p sts-bridge --test live_contract -- --ignored --test-threads=1
+
+# Live lifecycle tests: opt-in, serial, slow (each starts runs; on a slow
+# machine about 1 s per bridge call). They need Steam logged in and both mods;
+# they launch the game, and kill (SIGKILL) and freeze (SIGSTOP) it to test
+# recovery.
+cargo test -p sts-bridge --test live_lifecycle -- --ignored --test-threads=1
 
 # Regenerate the published schema after changing GameState.
 UPDATE_SCHEMA=1 cargo test -p sts-bridge --test offline
@@ -101,7 +173,10 @@ screen settle before `fight`: sent on the opening `EVENT` a few seconds after
 `start_run` (without a settle check), it crashed the game with a SIGSEGV.
 
 `tests/settle.rs` scripts state sequences by editing the synthesized
-`combat` fixture (`tests/common/mod.rs`, `WireState`).
+`combat` fixture (`tests/common/mod.rs`, `WireState`). `tests/lifecycle.rs`
+scripts screens with `Scene` (ping, `get_screen` and `find_nodes` replies in
+the shapes recorded from the live game), a `FaultTransport` that wraps the
+replay and can refuse or time out, and a `FakeLauncher`.
 
 Run the tests with `-p sts-bridge`: a bare `cargo test` at the workspace root
 also tries to link the pyo3 `sts-sim` cdylib.
