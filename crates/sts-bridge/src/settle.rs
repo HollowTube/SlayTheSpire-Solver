@@ -10,7 +10,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::backend::{Backend, BridgeError};
-use crate::command::{Ack, Command};
+use crate::command::{Ack, Command, MenuNav};
 use crate::state::{Actions, AvailableAction, CardRef, CombatView, GameState, Piles, Screen};
 
 /// How long and how often to poll, and how many identical consecutive reads
@@ -134,10 +134,15 @@ const INTERACTIVE: &str = "an interactive screen";
 
 /// The game accepts input on this screen: not loading, not the enemy turn,
 /// and in combat only on the player's turn or an in-combat overlay
-/// (`HAND_SELECT`, `CARD_SELECTION`). Out of combat, every other screen is.
+/// (`HAND_SELECT`, `CARD_SELECTION`). Out of combat, every other screen is,
+/// except `MAIN_MENU` with a run in progress: that is a run loading or
+/// tearing down (see [`crate::classify`]).
 pub fn is_interactive(state: &GameState) -> bool {
     let screen = state.screen.as_str();
     if state.screen.is_loading() || screen == "COMBAT_ENEMY_TURN" {
+        return false;
+    }
+    if screen == "MAIN_MENU" && state.run.is_some() {
         return false;
     }
     if screen.starts_with("COMBAT") {
@@ -276,6 +281,11 @@ impl<B: Backend> Session<B> {
         extra: impl Fn(&GameState, &GameState) -> Result<(), Unmet>,
     ) -> Result<GameState, BridgeError> {
         let command = normalize(command);
+        // A menu step is refused at once rather than after a settle wait
+        // that a loading run would make time out.
+        if matches!(command, Command::Navigate(_)) {
+            refuse_while_loading(&mut self.backend, &command)?;
+        }
         let with_actions = matches!(command, Command::Choose(_));
         let backend = &mut self.backend;
         let before = match poll(
@@ -296,6 +306,7 @@ impl<B: Backend> Session<B> {
             action: command.to_string(),
             reason,
         })?;
+        refuse_while_loading(&mut self.backend, &command)?;
 
         let _ack: Ack = self.backend.send(&command)?;
 
@@ -357,6 +368,30 @@ impl View {
                 .as_ref()
                 .is_none_or(|a| a.screen == self.state.screen)
     }
+}
+
+/// A command that can change rooms (`Choose`, `Navigate`) is refused while
+/// [`crate::classify`] says a run is loading: `state()` cannot see all of it
+/// (a run with no room yet reads as a settled `MAP`).
+fn refuse_while_loading<B: Backend + ?Sized>(
+    backend: &mut B,
+    command: &Command,
+) -> Result<(), BridgeError> {
+    if !matches!(command, Command::Choose(_) | Command::Navigate(_)) {
+        return Ok(());
+    }
+    let probe = match backend.probe() {
+        // The explorer is read only on a no-run main menu: not loading.
+        Err(BridgeError::ExplorerUnavailable { .. }) => return Ok(()),
+        other => other?,
+    };
+    if crate::menu::classify(&probe) == crate::menu::Phase::Loading {
+        return Err(BridgeError::ActionRefused {
+            action: command.to_string(),
+            reason: "room still loading".to_string(),
+        });
+    }
+    Ok(())
 }
 
 /// The game waits for a card choice: the command's own effect is pending it.
@@ -427,6 +462,10 @@ fn precheck(command: &Command, before: &View) -> Result<(), String> {
                 ))
             }
         }
+        Command::Navigate(MenuNav::AbandonRun) if state.run.is_none() => {
+            Err(format!("no run in progress (screen {})", state.screen))
+        }
+        Command::Navigate(_) => Ok(()),
     }
 }
 
@@ -533,6 +572,16 @@ fn postcondition(command: &Command, before: &View, after: &View) -> Result<(), U
                 Err(Unmet::new(
                     "the state or the actions on offer to change",
                     format!("nothing changed on {}", a.screen),
+                ))
+            }
+        }
+        Command::Navigate(_) => {
+            if a.screen != b.screen || a.run.is_some() != b.run.is_some() {
+                Ok(())
+            } else {
+                Err(Unmet::new(
+                    "the screen to change",
+                    format!("still on {}", a.screen),
                 ))
             }
         }

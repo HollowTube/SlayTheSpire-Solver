@@ -18,6 +18,30 @@ pub enum Command {
     /// Take an action as `Backend::actions` listed it (a map node, an event
     /// option, a reward, …).
     Choose(AvailableAction),
+    /// A menu step: leave a run or a menu screen.
+    Navigate(MenuNav),
+}
+
+/// A step toward the main menu.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum MenuNav {
+    /// Abandon the run in progress; the game shows its game-over screen.
+    AbandonRun,
+    /// Leave the current menu screen or popup.
+    Back,
+    /// Leave the game-over screen for the main menu.
+    LeaveGameOver,
+}
+
+impl MenuNav {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            MenuNav::AbandonRun => "abandon_run",
+            MenuNav::Back => "back",
+            MenuNav::LeaveGameOver => "leave_game_over",
+        }
+    }
 }
 
 impl fmt::Display for Command {
@@ -36,6 +60,7 @@ impl fmt::Display for Command {
                 Some(label) => write!(f, "choose({} {label:?})", a.action),
                 None => write!(f, "choose({})", a.action),
             },
+            Command::Navigate(nav) => write!(f, "navigate({})", nav.as_str()),
         }
     }
 }

@@ -1,8 +1,10 @@
 //! The game interface every consumer uses, independent of the mod behind it.
 
+use std::fmt;
 use std::time::Duration;
 
 use crate::command::{Ack, Command};
+use crate::menu::Probe;
 use crate::state::{Actions, GameState, Health, Screen};
 
 /// Operations on a live game. `&mut self` keeps one command in flight.
@@ -25,6 +27,44 @@ pub trait Backend {
     fn ping(&mut self) -> Result<Health, BridgeError> {
         self.health()
     }
+
+    /// A cheap read of where the game is, from which [`crate::classify`]
+    /// decides its [`crate::Phase`]. Sends nothing that changes the game.
+    fn probe(&mut self) -> Result<Probe, BridgeError>;
+}
+
+/// Why the game is considered wedged.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum WedgeReason {
+    /// The bridge accepted the connection but never answered.
+    BridgeTimeout,
+    /// The bridge answered, but its main-thread dispatch timed out.
+    MainThreadTimeout,
+    /// Ping kept answering without a screen.
+    PingWithoutScreen,
+    /// This screen held past the stuck-screen deadline.
+    StuckScreen(String),
+    /// A transition (e.g. the enemy turn) never completed.
+    TransitionTimeout,
+}
+
+impl fmt::Display for WedgeReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            WedgeReason::BridgeTimeout => f.write_str("the bridge stopped answering"),
+            WedgeReason::MainThreadTimeout => {
+                f.write_str("the game's main thread stopped answering")
+            }
+            WedgeReason::PingWithoutScreen => f.write_str("ping kept answering without a screen"),
+            WedgeReason::StuckScreen(s) => write!(f, "stuck on {s}"),
+            WedgeReason::TransitionTimeout => f.write_str("a transition never completed"),
+        }
+    }
+}
+
+fn screen_name(screen: &Option<Screen>) -> &str {
+    screen.as_ref().map_or("none read", Screen::as_str)
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -83,6 +123,34 @@ pub enum BridgeError {
         screen: Option<Screen>,
         unmet: String,
     },
+
+    /// The game is running but not making progress; a restart recovers it.
+    #[error("the game is wedged: {reason} (last screen: {})", screen_name(screen))]
+    Wedged {
+        screen: Option<Screen>,
+        reason: WedgeReason,
+    },
+
+    /// The game process we were driving is gone and the bridge refuses.
+    #[error(
+        "the game crashed: process {} is gone and the bridge refuses (last screen: {})",
+        pid.map_or_else(|| "?".to_string(), |p| p.to_string()),
+        screen_name(last_screen)
+    )]
+    Crashed {
+        pid: Option<u32>,
+        last_screen: Option<Screen>,
+    },
+
+    /// Launching or stopping the game failed.
+    #[error("game {op} failed: {message}")]
+    Lifecycle { op: String, message: String },
+
+    /// The GodotExplorer mod, which some menu steps need, is unreachable.
+    #[error(
+        "GodotExplorer is unreachable at {addr} ({reason}): is the game running with the GodotExplorer mod (port 27020)?"
+    )]
+    ExplorerUnavailable { addr: String, reason: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
