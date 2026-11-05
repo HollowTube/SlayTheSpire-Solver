@@ -23,6 +23,43 @@ pub enum Command {
     Navigate(MenuNav),
     /// A dev console command; sent verified by [`crate::Session::console`].
     Console(ConsoleCommand),
+    /// Starts a seeded run from the main menu. The run then loads for tens
+    /// of seconds: start it with [`crate::Game::start_run`], which waits.
+    StartRun(RunSpec),
+}
+
+/// A seeded run.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RunSpec {
+    /// The character's class name, e.g. `Ironclad`.
+    pub character: String,
+    pub seed: String,
+    pub ascension: u32,
+}
+
+impl RunSpec {
+    pub fn new(character: impl Into<String>, seed: impl Into<String>) -> Self {
+        Self {
+            character: character.into(),
+            seed: seed.into(),
+            ascension: 0,
+        }
+    }
+
+    pub fn with_ascension(mut self, ascension: u32) -> Self {
+        self.ascension = ascension;
+        self
+    }
+}
+
+impl fmt::Display for RunSpec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} seed {} ascension {}",
+            self.character, self.seed, self.ascension
+        )
+    }
 }
 
 /// A step toward the main menu.
@@ -65,6 +102,7 @@ impl fmt::Display for Command {
             },
             Command::Navigate(nav) => write!(f, "navigate({})", nav.as_str()),
             Command::Console(c) => write!(f, "console({})", c.line()),
+            Command::StartRun(spec) => write!(f, "start_run({spec})"),
         }
     }
 }

@@ -169,6 +169,10 @@ fn every_typed_command_renders_its_console_line() {
             "remove_card BASH hand",
         ),
         (
+            C::RemoveCardFromDeck { card: STRIKE },
+            "remove_card STRIKE_IRONCLAD deck",
+        ),
+        (
             C::RelicAdd(Relic::new("ANCHOR").unwrap()),
             "relic add ANCHOR",
         ),
@@ -573,6 +577,38 @@ fn relics_are_counted_by_their_console_id() {
         state.run.unwrap().relics,
         ["BurningBlood".to_string(), "Anchor".to_string()]
     );
+}
+
+fn deck(w: &mut WireState) -> &mut Vec<Value> {
+    w.player_state["players"][0]["deck"].as_array_mut().unwrap()
+}
+
+#[test]
+fn removing_a_deck_card_drops_one_copy_from_the_master_deck_outside_combat() {
+    let before = WireState::out_of_combat("EVENT");
+    let after = before.clone().edit(|w| {
+        deck(w).remove(0);
+    });
+    let command = ConsoleCommand::RemoveCardFromDeck { card: STRIKE };
+    let mut s = scripted(&Scene::event(), &before, &after);
+    s.console_with(&command, &wait()).unwrap();
+    assert_eq!(console_lines(&s), [command.line()]);
+
+    let mut s = scripted(&Scene::event(), &before, &before);
+    assert!(matches!(
+        s.console_with(&command, &wait()),
+        Err(BridgeError::PostconditionFailed { expected, .. }) if expected.contains("run.deck")
+    ));
+}
+
+#[test]
+fn removing_a_card_that_is_not_in_the_deck_is_refused() {
+    let before = combat();
+    let reason = refused(
+        ConsoleCommand::RemoveCardFromDeck { card: CardId::Bash },
+        &before,
+    );
+    assert!(reason.contains("not in the deck"), "{reason}");
 }
 
 #[test]

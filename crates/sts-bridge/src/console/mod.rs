@@ -155,6 +155,11 @@ pub enum ConsoleCommand {
     RemoveCardFromHand {
         card: CardId,
     },
+    /// Removes the first copy of the card from the master deck, in or out of
+    /// combat; a combat in progress keeps its own copies.
+    RemoveCardFromDeck {
+        card: CardId,
+    },
     RelicAdd(Relic),
     RelicRemove(Relic),
     Draw {
@@ -190,7 +195,7 @@ impl ConsoleCommand {
             C::Energy { .. } => &catalog::ENERGY,
             C::Power { .. } => &catalog::POWER,
             C::AddCard { .. } => &catalog::CARD,
-            C::RemoveCardFromHand { .. } => &catalog::REMOVE_CARD,
+            C::RemoveCardFromHand { .. } | C::RemoveCardFromDeck { .. } => &catalog::REMOVE_CARD,
             C::RelicAdd(_) | C::RelicRemove(_) => &catalog::RELIC,
             C::Draw { .. } => &catalog::DRAW,
             C::Upgrade { .. } => &catalog::UPGRADE,
@@ -248,6 +253,9 @@ impl ConsoleCommand {
             }
             C::RemoveCardFromHand { card } => {
                 format!("{} {} hand", name(&catalog::REMOVE_CARD), card.sts2_id())
+            }
+            C::RemoveCardFromDeck { card } => {
+                format!("{} {} deck", name(&catalog::REMOVE_CARD), card.sts2_id())
             }
             C::RelicAdd(r) => format!("{} add {r}", name(&catalog::RELIC)),
             C::RelicRemove(r) => format!("{} remove {r}", name(&catalog::RELIC)),

@@ -31,6 +31,63 @@ pub trait Backend {
     /// A cheap read of where the game is, from which [`crate::classify`]
     /// decides its [`crate::Phase`]. Sends nothing that changes the game.
     fn probe(&mut self) -> Result<Probe, BridgeError>;
+
+    /// What this backend can set exactly, beyond the dev console.
+    fn setters(&self) -> Setters {
+        Setters::default()
+    }
+}
+
+impl<B: Backend + ?Sized> Backend for &mut B {
+    fn send(&mut self, command: &Command) -> Result<Ack, BridgeError> {
+        (**self).send(command)
+    }
+
+    fn state(&mut self) -> Result<GameState, BridgeError> {
+        (**self).state()
+    }
+
+    fn actions(&mut self) -> Result<Actions, BridgeError> {
+        (**self).actions()
+    }
+
+    fn health(&mut self) -> Result<Health, BridgeError> {
+        (**self).health()
+    }
+
+    fn ping(&mut self) -> Result<Health, BridgeError> {
+        (**self).ping()
+    }
+
+    fn probe(&mut self) -> Result<Probe, BridgeError> {
+        (**self).probe()
+    }
+
+    fn setters(&self) -> Setters {
+        (**self).setters()
+    }
+}
+
+/// Fixture fields a backend can set exactly, which the dev console cannot.
+/// The default is none: console commands only. A flag set here makes
+/// [`crate::fixture::plan`] treat the field as reachable.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct Setters {
+    /// Any hp, including above an enemy's spawned hp or the player's max.
+    pub exact_hp: bool,
+    /// Energy below the turn's start.
+    pub energy: bool,
+    /// Lowering or removing a power.
+    pub remove_power: bool,
+    /// Setting the draw, discard and exhaust piles outright.
+    pub exact_piles: bool,
+    /// Upgraded cards outside the hand.
+    pub upgraded_in_piles: bool,
+    pub round: bool,
+    pub intent: bool,
+    /// Restoring a saved state, in place of a full reset.
+    pub snapshot: bool,
 }
 
 /// Why the game is considered wedged.

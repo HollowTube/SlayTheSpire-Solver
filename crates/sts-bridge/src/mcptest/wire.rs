@@ -63,7 +63,7 @@ struct WireRunPlayer {
 }
 
 impl WireRun {
-    pub fn into_run_info(self, method: &str, relics: Vec<String>) -> Result<RunInfo, BridgeError> {
+    pub fn into_run_info(self, method: &str, owned: Owned) -> Result<RunInfo, BridgeError> {
         let p = first_player(method, self.players)?;
         Ok(RunInfo {
             act: self.act,
@@ -74,20 +74,22 @@ impl WireRun {
             character: p.character,
             ascension: self.ascension,
             seed: self.seed,
-            relics,
+            relics: owned.relics,
+            deck: owned.deck,
         })
     }
 }
 
-/// `get_player_state`: only the relics are read from it.
+/// `get_player_state`: only the relics and the deck are read from it.
 #[derive(Deserialize)]
 pub(crate) struct WirePlayerState {
-    players: Vec<WirePlayerRelics>,
+    players: Vec<WirePlayerOwned>,
 }
 
 #[derive(Deserialize)]
-struct WirePlayerRelics {
+struct WirePlayerOwned {
     relics: Vec<WireRelic>,
+    deck: Vec<WireCard>,
 }
 
 #[derive(Deserialize)]
@@ -95,10 +97,19 @@ struct WireRelic {
     name: String,
 }
 
+/// What the player owns across the run.
+pub(crate) struct Owned {
+    relics: Vec<String>,
+    deck: Vec<CardRef>,
+}
+
 impl WirePlayerState {
-    pub fn relics(self, method: &str) -> Result<Vec<String>, BridgeError> {
+    pub fn owned(self, method: &str) -> Result<Owned, BridgeError> {
         let p = first_player(method, self.players)?;
-        Ok(p.relics.into_iter().map(|r| r.name).collect())
+        Ok(Owned {
+            relics: p.relics.into_iter().map(|r| r.name).collect(),
+            deck: p.deck.into_iter().map(card).collect(),
+        })
     }
 }
 
@@ -207,16 +218,17 @@ fn powers(raw: Vec<WirePower>) -> Vec<Power> {
         .collect()
 }
 
+fn card(c: WireCard) -> CardRef {
+    CardRef {
+        id: Entity::parse(c.name),
+        upgraded: c.upgraded,
+        cost: c.energy_cost,
+        kind: c.kind,
+    }
+}
+
 fn cards(pile: WirePile) -> Vec<CardRef> {
-    pile.cards
-        .into_iter()
-        .map(|c| CardRef {
-            id: Entity::parse(c.name),
-            upgraded: c.upgraded,
-            cost: c.energy_cost,
-            kind: c.kind,
-        })
-        .collect()
+    pile.cards.into_iter().map(card).collect()
 }
 
 impl WireCombat {
