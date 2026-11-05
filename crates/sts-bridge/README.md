@@ -143,6 +143,68 @@ retried. `NotSettled`, `PostconditionFailed` and `ActionRefused` never
 restart the game: they are bugs a relaunch would hide. `Game::wait_run_ready`
 after a recovery fails with `NotSettled`, since the run it waited for is gone.
 
+## Console commands
+
+`Session::console(&ConsoleCommand)` runs a dev console command and returns only
+when the state afterwards shows its effect. The game's console reports success
+for commands that did nothing, and the bridge drops its result, so the reply is
+never trusted: a command that reports success and changes nothing is
+`PostconditionFailed` naming the field (`piles.hand`, `enemies[0].hp`, …).
+
+```rust
+use sts_bridge::{CardId, CombatPile, ConsoleCommand, Session, NIBBITS_WEAK};
+
+let mut game = Session::new(backend);
+game.console(&ConsoleCommand::Fight(NIBBITS_WEAK))?;            // waits for a held in-run screen first
+game.console(&ConsoleCommand::AddCard { card: CardId::Bash, pile: CombatPile::Hand })?;
+game.set_instant(true)?;                                        // a set state, never a blind toggle
+```
+
+| Item | What it is |
+|---|---|
+| `ConsoleCommand` | `#[non_exhaustive]`, typed for what fixtures need: `Fight`, `Damage`, `DamageAllEnemies`, `HealPlayer`, `Block`, `Energy`, `Power`, `AddCard`, `RemoveCardFromHand`, `RelicAdd`, `RelicRemove`, `Draw`, `Upgrade`, `Win`. `line()` renders the exact console string. `Probe(String)` sends a raw line (its first word must be in the catalog) and passes only if the state changed: for checking a no-effect path. `ToggleInstant` exists but `console` refuses it. |
+| `Target` | `Player` or `Enemy(i)`. The console indexes creatures as the player first, then enemies (`damage`, `block`, `power`: `1 + i`); `heal` is player-only here and `kill` is not typed. |
+| `Encounter`, `PowerName`, `Relic` | Id newtypes, checked against the catalog (`UnknownId`); `NIBBITS_WEAK` is a const. A card is a `CardId` and is checked against the catalog's card ids too. |
+| `Session::console` / `console_with(cmd, &ConsoleWait)` | `act` for the console, under a longer timeout (`CONSOLE_TIMEOUT`, 45 s) because a state read is five bridge calls at 0.7 to 1 s each while the game is unfocused. The session's own policy is restored on every path. A room-changing command first waits for a stable in-run screen (`wait_run_ready`; its probe policy is the dwell). |
+| `Session::set_instant(on)` / `set_instant_with` | Reads `Health.fast_mode`, sends nothing if it already matches, otherwise sends one toggle and waits for the mode to read back. `ActionRefused` if the bridge does not report `fast_mode`. |
+| `RunInfo.relics`, `Health.fast_mode` | Class names of the player's relics (read from `get_player_state`, one more call per `state()`); instant mode when the bridge reports it. |
+
+Preconditions are checked on the settled state and refuse without sending (no
+run, not the player's turn, card not in hand, hand full, dead or missing
+target, `power` amount 0, `upgrade` of an upgraded card). Every console command
+is also refused while `classify` says a run is loading, **including the first
+read**: a room-changing command sent then crashes the game (SIGSEGV), and
+`fight`, `event`, `room`, `act` and `ancient` are the commands that change rooms
+(`enters_room` in the catalog, found by the extractor).
+
+What no console command can do (so no fixture can): raise an enemy's hp or set
+an exact hp, clear block, reduce energy, remove a power or use a negative
+amount, remove from the draw, discard or exhaust piles, pick an upgraded copy,
+add an already upgraded card, set the round, or set an enemy's intent.
+`remove_card X discard` is rejected by the game while the bridge says success.
+
+### The command catalog
+
+`catalog/<version>/console_commands.json` lists every console command of one
+game version (name, usage, description, networked, debug-only, `enters_room`, a
+hash of its `Process` body) and the id domains (cards, encounters, powers,
+relics, piles). It is generated from the decompiled game and the PCK's
+`release_info.json`, never edited by hand, and holds no game code:
+
+```bash
+.venv/bin/python scripts/console_catalog.py extract --game-version 0.107.1 \
+    --decompiled ~/projects/sts2-modding-mcp/decompiled \
+    --pck "<Steam>/Slay the Spire 2/SlayTheSpire2.pck"
+.venv/bin/python scripts/console_catalog.py diff old.json new.json   # exit 1 on any change
+```
+
+`build.rs` compiles it into one `const CommandSpec` per command
+(`console::catalog`). Each constructor names its const and pins its usage
+string, so on patch day: extract the new version's catalog, bump `GAME_VERSION`
+in `build.rs`, and `cargo check -p sts-bridge` names each command whose name
+or usage changed. CI never regenerates the catalog (the decompiled game is
+local); it builds and tests against the committed file.
+
 ## Tests
 
 ```bash
@@ -158,6 +220,12 @@ cargo test -p sts-bridge --test live_contract -- --ignored --test-threads=1
 # they launch the game, and kill (SIGKILL) and freeze (SIGSTOP) it to test
 # recovery.
 cargo test -p sts-bridge --test live_lifecycle -- --ignored --test-threads=1
+
+# Live console tests: opt-in, serial, slow (each starts runs). They set the game
+# up themselves: Game::start, ensure_main_menu, a seeded start_run,
+# wait_run_ready, then Session::console(Fight(NIBBITS_WEAK)). --nocapture
+# prints each command's result and duration as it happens.
+cargo test -p sts-bridge --test live_console -- --ignored --test-threads=1 --nocapture
 
 # Regenerate the published schema after changing GameState.
 UPDATE_SCHEMA=1 cargo test -p sts-bridge --test offline

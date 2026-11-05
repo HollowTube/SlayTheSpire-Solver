@@ -234,6 +234,7 @@ fn record_fixtures() {
                 "ping",
                 "get_available_actions",
                 "get_run_state",
+                "get_player_state",
                 "get_combat_state",
                 "get_card_piles",
             ],

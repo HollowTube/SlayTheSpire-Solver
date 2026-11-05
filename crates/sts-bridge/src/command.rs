@@ -3,6 +3,7 @@
 
 use std::fmt;
 
+use crate::console::ConsoleCommand;
 use crate::state::AvailableAction;
 
 /// One command the game can be sent.
@@ -20,6 +21,8 @@ pub enum Command {
     Choose(AvailableAction),
     /// A menu step: leave a run or a menu screen.
     Navigate(MenuNav),
+    /// A dev console command; sent verified by [`crate::Session::console`].
+    Console(ConsoleCommand),
 }
 
 /// A step toward the main menu.
@@ -61,6 +64,7 @@ impl fmt::Display for Command {
                 None => write!(f, "choose({})", a.action),
             },
             Command::Navigate(nav) => write!(f, "navigate({})", nav.as_str()),
+            Command::Console(c) => write!(f, "console({})", c.line()),
         }
     }
 }

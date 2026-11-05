@@ -431,12 +431,12 @@ All commands are passed through `sts2 console "<command>"`. IDs use SCREAMING_SN
 | Command | Args | Description |
 |---|---|---|
 | `gold <n>` | amount | Add gold |
-| `heal <n> [index]` | amount, target (0=player) | Heal HP |
+| `heal <n> [index]` | amount, ally index (allies only; 0=player) | Heal HP |
 | `energy <n>` | amount | Add energy |
 | `block <n> [index]` | amount, target (0=player) | Add block |
 | `draw <n>` | count | Draw cards |
 | `damage <n> [index]` | amount, target (0=player) | Deal damage |
-| `kill [index\|all]` | target or "all" | Kill enemy/enemies |
+| `kill [index\|all]` | enemy index (0=first enemy) or "all" | Kill enemy/enemies |
 | `win` | — | Instantly win the combat |
 | `die` | — | Instantly die |
 | `godmode` | — | Toggle invincibility |
@@ -476,9 +476,11 @@ All commands are passed through `sts2 console "<command>"`. IDs use SCREAMING_SN
 |---|---|---|
 | `unlock <type\|all>` | cards / potions / relics / monsters / events / all | Unlock content |
 | `achievement <unlock\|revoke> [ID]` | operation, achievement ID | Unlock/revoke achievements |
-| `instant` | — | Toggle instant (no animation) mode |
+| `instant` | — | **Toggles** instant (no animation) mode; the output says which way it went. The `sts-bridge` crate's `Session::set_instant(on)` sets it instead |
 | `dump` | — | Dump all model IDs to log |
 | `getlogs [name]` | filename | Zip and open game logs |
+
+> **Target indices.** `damage`, `block` and `power` index the combat's creatures: the player first, then the enemies, so enemy `i` is `1 + i` with one ally. `heal` indexes allies only, `kill` indexes enemies only, and `upgrade` takes a hand position. `power` takes positive amounts only. A command can report success and do nothing (`remove_card X discard` is rejected by the game, `remove_card X` of a card not in hand does nothing); the `sts-bridge` crate's typed `Session::console` checks the effect afterwards (`crates/sts-bridge/README.md`).
 
 > **Game log**: `sts2 log` streams the live game log — useful for seeing console command results, mod warnings, and the raw analyze responses the bridge mod receives from the server.
 

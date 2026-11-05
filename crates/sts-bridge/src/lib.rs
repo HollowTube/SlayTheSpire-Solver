@@ -5,6 +5,7 @@
 
 pub mod backend;
 pub mod command;
+pub mod console;
 pub mod lifecycle;
 pub mod mcptest;
 pub mod menu;
@@ -14,6 +15,10 @@ pub mod state;
 
 pub use backend::{Backend, BridgeError, ProtocolError, WedgeReason};
 pub use command::{Ack, Command, MenuNav};
+pub use console::{
+    CombatPile, ConsoleCommand, ConsoleWait, Encounter, PowerName, Relic, Target, UnknownId,
+    CONSOLE_TIMEOUT, NIBBITS_WEAK,
+};
 #[cfg(unix)]
 pub use lifecycle::SteamLauncher;
 pub use lifecycle::{Game, GameStatus, Launcher, Recovered, Timeouts};

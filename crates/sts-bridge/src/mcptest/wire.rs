@@ -63,7 +63,7 @@ struct WireRunPlayer {
 }
 
 impl WireRun {
-    pub fn into_run_info(self, method: &str) -> Result<RunInfo, BridgeError> {
+    pub fn into_run_info(self, method: &str, relics: Vec<String>) -> Result<RunInfo, BridgeError> {
         let p = first_player(method, self.players)?;
         Ok(RunInfo {
             act: self.act,
@@ -74,7 +74,31 @@ impl WireRun {
             character: p.character,
             ascension: self.ascension,
             seed: self.seed,
+            relics,
         })
+    }
+}
+
+/// `get_player_state`: only the relics are read from it.
+#[derive(Deserialize)]
+pub(crate) struct WirePlayerState {
+    players: Vec<WirePlayerRelics>,
+}
+
+#[derive(Deserialize)]
+struct WirePlayerRelics {
+    relics: Vec<WireRelic>,
+}
+
+#[derive(Deserialize)]
+struct WireRelic {
+    name: String,
+}
+
+impl WirePlayerState {
+    pub fn relics(self, method: &str) -> Result<Vec<String>, BridgeError> {
+        let p = first_player(method, self.players)?;
+        Ok(p.relics.into_iter().map(|r| r.name).collect())
     }
 }
 
