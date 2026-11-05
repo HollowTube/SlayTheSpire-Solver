@@ -5,7 +5,6 @@
 //! (reshuffling) once exhausted rather than erroring. Deliberately verified
 //! here in isolation -- wiring this into `RunState`'s assembled path is a
 //! separate issue (HOL-65).
-use pyo3::prelude::*;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use rand_pcg::Pcg32;
@@ -13,7 +12,7 @@ use rand_pcg::Pcg32;
 /// Overgrowth's weak pool -- the monsters `sts_sim` implements that the real
 /// game's `NibbitsWeak`/`FuzzyWurmCrawlerWeak`/`SlimesWeak`/
 /// `ShrinkerBeetleWeak` encounters draw from.
-pub(crate) const OVERGROWTH_WEAK_POOL: &[&str] = &[
+pub const OVERGROWTH_WEAK_POOL: &[&str] = &[
     "Nibbit",
     "Fuzzy Wurm Crawler",
     "Leaf Slime (S)",
@@ -28,7 +27,7 @@ pub(crate) const OVERGROWTH_WEAK_POOL: &[&str] = &[
 /// the real game they only appear assembled into `TheKinBoss`, never as a
 /// standalone normal-room encounter. Widen this as more Overgrowth monsters
 /// land (HOL-66).
-pub(crate) const OVERGROWTH_NORMAL_POOL: &[&str] = &[
+pub const OVERGROWTH_NORMAL_POOL: &[&str] = &[
     "Inklet",
     "Snapping Jaxfruit",
     "ruby_raiders",
@@ -47,13 +46,13 @@ pub(crate) const OVERGROWTH_NORMAL_POOL: &[&str] = &[
 /// against `Overgrowth.cs` -- several monsters informally called "elite" in
 /// older issue text, e.g. Cubex Construct, are actually `RoomType.Monster`
 /// and belong in `OVERGROWTH_NORMAL_POOL` instead, not here).
-pub(crate) const OVERGROWTH_ELITE_POOL: &[&str] = &["Byrdonis", "Phrog Parasite", "Bygone Effigy"];
+pub const OVERGROWTH_ELITE_POOL: &[&str] = &["Byrdonis", "Phrog Parasite", "Bygone Effigy"];
 
 /// Boss encounters -- each Overgrowth act ends with a boss fight. Unlike
 /// the other pools, bosses aren't drawn randomly per-run; the pool is
 /// recorded here for completeness and future encounter selection logic.
 #[allow(dead_code)] // unused until boss selection lands (HOL-67)
-pub(crate) const OVERGROWTH_BOSS_POOL: &[&str] = &["Ceremonial Beast", "The Kin", "Vantom"];
+pub const OVERGROWTH_BOSS_POOL: &[&str] = &["Ceremonial Beast", "The Kin", "Vantom"];
 
 /// How many of the leading monster-node slots draw from the weak pool
 /// before falling through to the normal pool -- matches the real game's
@@ -61,11 +60,11 @@ pub(crate) const OVERGROWTH_BOSS_POOL: &[&str] = &["Ceremonial Beast", "The Kin"
 /// issue can replace this with a randomized roll (HOL-67) without touching
 /// `draw_monster_sequence`'s signature, since the count is already passed
 /// in by the caller rather than baked into the draw algorithm itself.
-pub(crate) const OVERGROWTH_WEAK_ENCOUNTER_COUNT: usize = 3;
+pub const OVERGROWTH_WEAK_ENCOUNTER_COUNT: usize = 3;
 
 /// The full weak-then-normal draw for `total_slots` monster nodes, seeded
 /// so the same `(seed, total_slots)` always reproduces the same sequence.
-pub(crate) fn draw_monster_sequence(
+pub fn draw_monster_sequence(
     weak_pool: &[&str],
     normal_pool: &[&str],
     weak_encounter_count: usize,
@@ -80,10 +79,9 @@ pub(crate) fn draw_monster_sequence(
     result
 }
 
-/// Python-facing entry point for Overgrowth's draw -- the only Act `sts_sim`
+/// Entry point for Overgrowth's draw -- the only Act `sts_sim`
 /// currently models content for.
-#[pyfunction]
-pub(crate) fn draw_overgrowth_monster_sequence(seed: u64, slots: usize) -> Vec<String> {
+pub fn draw_overgrowth_monster_sequence(seed: u64, slots: usize) -> Vec<String> {
     draw_monster_sequence(
         OVERGROWTH_WEAK_POOL,
         OVERGROWTH_NORMAL_POOL,
@@ -94,8 +92,7 @@ pub(crate) fn draw_overgrowth_monster_sequence(seed: u64, slots: usize) -> Vec<S
 }
 
 /// Draws one elite name from `OVERGROWTH_ELITE_POOL`, seeded.
-#[pyfunction]
-pub(crate) fn draw_overgrowth_elite(seed: u64) -> String {
+pub fn draw_overgrowth_elite(seed: u64) -> String {
     let mut rng = Pcg32::seed_from_u64(seed);
     OVERGROWTH_ELITE_POOL.choose(&mut rng).expect("elite pool is never empty").to_string()
 }

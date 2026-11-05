@@ -1,56 +1,30 @@
-mod act;
-mod action;
-mod cards;
-mod encounters;
-mod engine;
+//! The Slay the Spire combat sim as a plain Rust library. Start at
+//! `rust_api` (`SimAction`, `CombatParts`) and `apply` / `legal_actions`.
+pub mod act;
+pub mod cards;
+pub mod encounters;
+pub mod engine;
+pub mod error;
 pub mod ids;
-mod mcts;
-mod monsters;
-mod run;
-mod state;
+pub mod mcts;
+pub mod monsters;
+pub mod run;
+pub mod rust_api;
+pub mod state;
 
-use act::{draw_overgrowth_elite, draw_overgrowth_monster_sequence};
-use action::{EndTurnAction, ExhaustCardFromHandAction, PlayCardAction, SelectTargetAction, UpgradeCardFromHandAction};
+pub use error::SimError;
+pub use state::CombatState;
+pub use rust_api::{
+    CombatParts, Counters, FighterParts, MonsterCounters, MonsterParts, SimAction,
+};
+
+use crate::ids::{CardId, MonsterId};
 use cards::{can_upgrade, card_data, CardData, CardKeyword, CardType};
-use crate::ids::{CardId, MonsterId, StatusId};
-use engine::{fire_event, resolve_exhaust_from_hand, run_effect_ops, tick_debuffs, Actor, EffectOp, GameEvent, Status};
-use mcts::{
-    fight_outcomes_per_fight, hp_lost_per_fight, mcts_action_values, mcts_search,
-    simulate_hp_lost,
-};
-use monsters::{monster_move, opening_intent, select_next_intent, is_one_time_move};
-use pyo3::exceptions::{PyTypeError, PyValueError};
-use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use engine::{fire_event, resolve_exhaust_from_hand, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
+use monsters::{is_one_time_move, monster_move, opening_intent, select_next_intent};
 use rand::{Rng, RngCore};
-use run::{
-    run_apply, run_is_terminal, run_legal_actions, simulate_run_outcome, simulate_run_outcomes,
-    RunState,
-};
+use state::{draw_cards, CardInstance, Fighter, Monster, PendingDecision, HAND_SIZE};
 use std::collections::{BTreeMap, HashMap};
-use state::{draw_cards, CardInstance, CombatState, Fighter, Monster, PendingDecision, HAND_SIZE};
-
-/// Crate-internal typed action representation — avoids string round-trips
-/// in Rust-only hot paths (random_rollout, optimal_value_rec, mcts.rs).
-pub(crate) enum ActionKind {
-    EndTurn,
-    PlayCard(String),
-    SelectTarget(usize),
-    UpgradeCardFromHand(String),
-    ExhaustCardFromHand(String),
-}
-
-impl std::fmt::Display for ActionKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ActionKind::EndTurn => write!(f, "EndTurn"),
-            ActionKind::PlayCard(name) => write!(f, "PlayCard:{name}"),
-            ActionKind::SelectTarget(i) => write!(f, "SelectTarget:Monster:{i}"),
-            ActionKind::UpgradeCardFromHand(name) => write!(f, "UpgradeCardFromHand:{name}"),
-            ActionKind::ExhaustCardFromHand(name) => write!(f, "ExhaustCardFromHand:{name}"),
-        }
-    }
-}
 
 /// The Energy cost to play `data`, accounting for Corruption (Skills cost 0
 /// while the player holds it) and Stomp (costs 1 less per Attack played).
@@ -93,28 +67,28 @@ fn effective_cost(state: &CombatState, id: CardId, data: &CardData) -> i32 {
     base + tangled_bonus
 }
 
-/// Returns legal actions as typed `ActionKind` values — used by Rust-only hot paths that
-/// dispatch through `apply_action` without any string round-trip.
-pub(crate) fn legal_actions_typed(state: &CombatState) -> Vec<ActionKind> {
+/// The legal actions in `state`, in a stable order: hand plays in hand order,
+/// then `EndTurn`; or the options of the pending decision.
+pub fn legal_actions(state: &CombatState) -> Vec<SimAction> {
     match &state.pending {
         Some(PendingDecision::SelectTarget { .. }) => state
             .living_monster_indices()
             .into_iter()
-            .map(ActionKind::SelectTarget)
+            .map(SimAction::SelectTarget)
             .collect(),
         Some(PendingDecision::UpgradeFromHand) => state
             .hand
             .iter()
             .filter(|c| can_upgrade(c.id, c.upgrade_level))
-            .map(|c| ActionKind::UpgradeCardFromHand(c.as_str()))
+            .map(|c| SimAction::UpgradeFromHand { card: c.id, upgrades: c.upgrade_level })
             .collect(),
         Some(PendingDecision::ExhaustFromHand { .. }) => state
             .hand
             .iter()
-            .map(|c| ActionKind::ExhaustCardFromHand(c.as_str()))
+            .map(|c| SimAction::ExhaustFromHand { card: c.id, upgrades: c.upgrade_level })
             .collect(),
         None => {
-            let mut actions: Vec<ActionKind> = state
+            let mut actions: Vec<SimAction> = state
                 .hand
                 .iter()
                 .filter(|card| {
@@ -124,12 +98,12 @@ pub(crate) fn legal_actions_typed(state: &CombatState) -> Vec<ActionKind> {
                             && effective_cost(state, card.id, &data) <= state.player_energy
                     }
                 })
-                .map(|card| ActionKind::PlayCard(card.as_str().to_string()))
+                .map(|card| SimAction::PlayCard { card: card.id, upgrades: card.upgrade_level })
                 .collect();
             // PactsEnd: only playable when 3+ cards are in the exhaust pile.
             actions.retain(|a| {
                 match a {
-                    ActionKind::PlayCard(name) if name == "PactsEnd" => {
+                    SimAction::PlayCard { card: CardId::PactsEnd, .. } => {
                         state.exhaust_pile.len() >= 3
                     }
                     _ => true,
@@ -138,60 +112,25 @@ pub(crate) fn legal_actions_typed(state: &CombatState) -> Vec<ActionKind> {
             // Ringing: limits player to one PlayCard per turn.
             let ringing_active = state.player.statuses.iter().any(|s| *s == Status::Ringing);
             if ringing_active && state.cards_played_this_turn >= 1 {
-                actions.retain(|a| !matches!(a, ActionKind::PlayCard(_)));
+                actions.retain(|a| !matches!(a, SimAction::PlayCard { .. }));
             }
-            actions.push(ActionKind::EndTurn);
+            actions.push(SimAction::EndTurn);
             actions
         }
     }
 }
 
-/// Python-facing wrapper: converts each typed action into a Python Action object.
-#[pyfunction]
-fn legal_actions(py: Python<'_>, state: &CombatState) -> Vec<PyObject> {
-    legal_actions_typed(state)
-        .into_iter()
-        .map(|a| str_to_action(py, &a.to_string()))
-        .collect()
-}
-
-fn str_to_action(py: Python<'_>, s: &str) -> PyObject {
-    if s == "EndTurn" {
-        return EndTurnAction::new().into_pyobject(py).unwrap().into_any().unbind();
-    }
-    if let Some(card) = s.strip_prefix("PlayCard:") {
-        return PlayCardAction::new(card.to_string()).into_pyobject(py).unwrap().into_any().unbind();
-    }
-    if let Some(idx_str) = s.strip_prefix("SelectTarget:Monster:") {
-        if let Ok(idx) = idx_str.parse::<usize>() {
-            return SelectTargetAction::new(idx).into_pyobject(py).unwrap().into_any().unbind();
-        }
-    }
-    if let Some(card) = s.strip_prefix("UpgradeCardFromHand:") {
-        return UpgradeCardFromHandAction::new(card.to_string()).into_pyobject(py).unwrap().into_any().unbind();
-    }
-    if let Some(card) = s.strip_prefix("ExhaustCardFromHand:") {
-        return ExhaustCardFromHandAction::new(card.to_string()).into_pyobject(py).unwrap().into_any().unbind();
-    }
-    unreachable!("legal_actions only produces well-formed action strings")
-}
-
-/// Core typed dispatch — accepts a crate-internal `ActionKind` and applies it
-/// to `state` without any string parsing. Used by both the Python-facing
-/// `apply` (after it converts the incoming `PyObject`) and the Rust-only hot
-/// paths (`random_rollout`, `optimal_value_rec`).
-pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult<CombatState> {
+/// Applies `action` to a copy of `state`; `state` is left untouched.
+pub fn apply(state: &CombatState, action: &SimAction) -> Result<CombatState, SimError> {
     let hand_choice_pending = matches!(
         state.pending,
         Some(PendingDecision::UpgradeFromHand | PendingDecision::ExhaustFromHand { .. })
     );
-    if hand_choice_pending && matches!(action, ActionKind::EndTurn | ActionKind::PlayCard(_)) {
-        return Err(PyValueError::new_err(format!(
-            "{action} is not legal until the pending hand choice is made"
-        )));
+    if hand_choice_pending && matches!(action, SimAction::EndTurn | SimAction::PlayCard { .. }) {
+        return Err(SimError::HandChoicePending { action: action.to_string() });
     }
     match action {
-        ActionKind::EndTurn => {
+        SimAction::EndTurn => {
             let mut next = state.clone();
             next.turn += 1;
 
@@ -450,48 +389,40 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
             fire_event(&mut next, GameEvent::TurnStart);
             Ok(next)
         }
-        ActionKind::UpgradeCardFromHand(card_name) => match &state.pending {
+        SimAction::UpgradeFromHand { card, upgrades } => match &state.pending {
             Some(PendingDecision::UpgradeFromHand) => {
                 let mut next = state.clone();
                 let pos = next
                     .hand
                     .iter()
-                    .position(|c| c.as_str() == *card_name && can_upgrade(c.id, c.upgrade_level))
-                    .ok_or_else(|| {
-                        PyValueError::new_err(format!("no upgradable {card_name} in hand"))
-                    })?;
+                    .position(|c| c.id == *card && c.upgrade_level == *upgrades && can_upgrade(c.id, c.upgrade_level))
+                    .ok_or_else(|| SimError::NoUpgradable { card: action_card(*card, *upgrades) })?;
                 next.hand[pos].upgrade_level = 1;
                 next.pending = None;
                 Ok(next)
             }
-            _ => Err(PyValueError::new_err(format!(
-                "unknown action: UpgradeCardFromHand:{card_name}"
-            ))),
+            _ => Err(SimError::UnknownAction { action: action.to_string() }),
         },
-        ActionKind::ExhaustCardFromHand(card_name) => match &state.pending {
+        SimAction::ExhaustFromHand { card, upgrades } => match &state.pending {
             Some(PendingDecision::ExhaustFromHand { strength }) => {
                 let strength = *strength;
                 let mut next = state.clone();
                 let pos = next
                     .hand
                     .iter()
-                    .position(|c| c.as_str() == *card_name)
-                    .ok_or_else(|| PyValueError::new_err(format!("{card_name} is not in hand")))?;
+                    .position(|c| c.id == *card && c.upgrade_level == *upgrades)
+                    .ok_or_else(|| SimError::NotInHand { card: action_card(*card, *upgrades) })?;
                 next.pending = None;
                 resolve_exhaust_from_hand(&mut next, Some(pos), strength);
                 Ok(next)
             }
-            _ => Err(PyValueError::new_err(format!(
-                "unknown action: ExhaustCardFromHand:{card_name}"
-            ))),
+            _ => Err(SimError::UnknownAction { action: action.to_string() }),
         },
-        ActionKind::SelectTarget(idx) => match &state.pending {
+        SimAction::SelectTarget(idx) => match &state.pending {
             Some(PendingDecision::SelectTarget { card }) => {
                 let idx = *idx;
                 if idx >= state.monsters.len() {
-                    return Err(PyValueError::new_err(format!(
-                        "unknown action: SelectTarget:Monster:{idx}"
-                    )));
+                    return Err(SimError::UnknownAction { action: action.to_string() });
                 }
                 let mut next = state.clone();
                 let data = card_data(card.id, card.upgrade_level);
@@ -520,30 +451,29 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
                 next.pending = None;
                 Ok(next)
             }
-            _ => Err(PyValueError::new_err(format!(
-                "unknown action: SelectTarget:Monster:{idx}"
-            ))),
+            _ => Err(SimError::UnknownAction { action: action.to_string() }),
         },
-        ActionKind::PlayCard(card_name) => {
-            let card_name = card_name.as_str();
-            let instance = CardInstance::parse(card_name);
+        SimAction::PlayCard { card, upgrades } => {
+            let card_name = action_card(*card, *upgrades);
+            let instance = CardInstance { id: *card, upgrade_level: *upgrades };
                 let data = card_data(instance.id, instance.upgrade_level);
                 let mut next = state.clone();
                 let position = next
                     .hand
                     .iter()
-                    .position(|c| c.as_str() == card_name)
-                    .ok_or_else(|| PyValueError::new_err(format!("{card_name} is not in hand")))?;
+                    .position(|c| *c == instance)
+                    .ok_or_else(|| SimError::NotInHand { card: card_name.clone() })?;
                 let cost = effective_cost(&next, instance.id, &data);
                 let base_cost = data.cost;
                 // X-cost cards (cost -1): spend all remaining energy, capture
                 // it as `player_energy_x` for effect resolution.
                 let is_x_cost = base_cost == -1;
                 if !is_x_cost && cost > next.player_energy {
-                    return Err(PyValueError::new_err(format!(
-                        "cannot afford {card_name}: costs {} but only {} energy available",
-                        cost, next.player_energy
-                    )));
+                    return Err(SimError::CannotAfford {
+                        card: card_name,
+                        cost,
+                        energy: next.player_energy,
+                    });
                 }
                 if is_x_cost {
                     next.player_energy_x = next.player_energy;
@@ -621,6 +551,10 @@ pub(crate) fn apply_action(state: &CombatState, action: &ActionKind) -> PyResult
     }
 }
 
+fn action_card(card: CardId, upgrades: u8) -> String {
+    CardInstance { id: card, upgrade_level: upgrades }.as_str()
+}
+
 /// Ceremonial Beast's Plow threshold: when the holder's HP drops to ≤ n
 /// after taking unblocked damage, strip all Strength, set intent to "Stun",
 /// and remove the Plow status. Fires once per Plow status — the status
@@ -643,53 +577,7 @@ fn check_plow_threshold(state: &mut CombatState) {
     }
 }
 
-/// Rust-internal helper: parse a well-formed action string into `ActionKind`
-/// and apply it. Used by `mcts.rs` for the string boundary in its tree nodes
-/// (action_values_impl, search_impl, simulate_fight_outcome).
-pub(crate) fn apply_str(state: &CombatState, action: &str) -> PyResult<CombatState> {
-    let kind = if action == "EndTurn" {
-        ActionKind::EndTurn
-    } else if let Some(card) = action.strip_prefix("PlayCard:") {
-        ActionKind::PlayCard(card.to_string())
-    } else if let Some(idx_str) = action.strip_prefix("SelectTarget:Monster:") {
-        let idx = idx_str
-            .parse::<usize>()
-            .map_err(|_| PyValueError::new_err(format!("unknown action: {action}")))?;
-        ActionKind::SelectTarget(idx)
-    } else if let Some(card) = action.strip_prefix("UpgradeCardFromHand:") {
-        ActionKind::UpgradeCardFromHand(card.to_string())
-    } else if let Some(card) = action.strip_prefix("ExhaustCardFromHand:") {
-        ActionKind::ExhaustCardFromHand(card.to_string())
-    } else {
-        return Err(PyValueError::new_err(format!("unknown action: {action}")));
-    };
-    apply_action(state, &kind)
-}
-
-/// Python-facing `apply`: accepts typed Action objects only.
-/// Converts to `ActionKind` then delegates to `apply_action`.
-#[pyfunction]
-fn apply(state: &CombatState, action: &Bound<'_, PyAny>) -> PyResult<CombatState> {
-    let kind = if action.is_instance_of::<EndTurnAction>() {
-        ActionKind::EndTurn
-    } else if let Ok(a) = action.extract::<PyRef<PlayCardAction>>() {
-        ActionKind::PlayCard(a.card.clone())
-    } else if let Ok(a) = action.extract::<PyRef<SelectTargetAction>>() {
-        ActionKind::SelectTarget(a.monster_index)
-    } else if let Ok(a) = action.extract::<PyRef<UpgradeCardFromHandAction>>() {
-        ActionKind::UpgradeCardFromHand(a.card.clone())
-    } else if let Ok(a) = action.extract::<PyRef<ExhaustCardFromHandAction>>() {
-        ActionKind::ExhaustCardFromHand(a.card.clone())
-    } else {
-        return Err(PyTypeError::new_err(
-            "action must be a PlayCardAction, SelectTargetAction, EndTurnAction, UpgradeCardFromHandAction, or ExhaustCardFromHandAction",
-        ));
-    };
-    apply_action(state, &kind)
-}
-
-#[pyfunction]
-fn is_terminal(state: &CombatState) -> bool {
+pub fn is_terminal(state: &CombatState) -> bool {
     state.player.hp <= 0 || state.monsters.iter().all(|m| m.fighter.hp <= 0)
 }
 
@@ -710,8 +598,7 @@ fn is_terminal(state: &CombatState) -> bool {
 /// With multiple monsters, "the monsters' fraction" is pooled HP — total
 /// remaining HP over total max HP across all enemies — so it stays in 0..=1
 /// and comparable to the player's fraction regardless of enemy count.
-#[pyfunction]
-fn evaluate(state: &CombatState) -> f64 {
+pub fn evaluate(state: &CombatState) -> f64 {
     let player_fraction = state.player.hp.max(0) as f64 / state.player.max_hp as f64;
     let monsters_hp: i32 = state.monsters.iter().map(|m| m.fighter.hp.max(0)).sum();
     let monsters_max_hp: i32 = state.monsters.iter().map(|m| m.fighter.max_hp).sum();
@@ -722,8 +609,7 @@ fn evaluate(state: &CombatState) -> f64 {
 /// Terminal reward signal: zero while combat is ongoing, otherwise the HP
 /// margin (positive for a win, negative for a loss; magnitude reflects how
 /// decisive the outcome was).
-#[pyfunction]
-fn reward(state: &CombatState) -> f64 {
+pub fn reward(state: &CombatState) -> f64 {
     if is_terminal(state) {
         evaluate(state)
     } else {
@@ -736,8 +622,7 @@ fn reward(state: &CombatState) -> f64 {
 /// `CombatState::redeterminized`. Used by MCTS to sample possible futures a
 /// real player can't actually foresee, rather than solving the single
 /// perfect-information tree implied by `state`'s embedded shuffle/RNG.
-#[pyfunction]
-fn redeterminized(state: &CombatState, seed: u64) -> CombatState {
+pub fn redeterminized(state: &CombatState, seed: u64) -> CombatState {
     state.redeterminized(seed)
 }
 
@@ -746,13 +631,12 @@ fn redeterminized(state: &CombatState, seed: u64) -> CombatState {
 /// per-step Python/Rust FFI overhead that makes the Python rollout ~3x slower
 /// than raw `apply()` throughput — the tree (UCB1, selection, expansion,
 /// backprop) stays in Python so a future neural policy can plug in there.
-#[pyfunction]
-fn random_rollout(state: &CombatState, seed: u64) -> f64 {
+pub fn random_rollout(state: &CombatState, seed: u64) -> f64 {
     let mut s = state.reseeded(seed);
     while !is_terminal(&s) {
-        let actions = legal_actions_typed(&s);
+        let actions = legal_actions(&s);
         let idx = s.rng.gen_range(0..actions.len());
-        s = apply_action(&s, &actions[idx]).expect("legal action is always valid");
+        s = apply(&s, &actions[idx]).expect("legal action is always valid");
     }
     reward(&s)
 }
@@ -860,10 +744,10 @@ fn optimal_value_rec(state: &CombatState, best: &mut f64, memo: &mut HashMap<Sta
         }
         return cached;
     }
-    let mut children: Vec<(f64, CombatState)> = legal_actions_typed(state)
+    let mut children: Vec<(f64, CombatState)> = legal_actions(state)
         .into_iter()
         .map(|action| {
-            let next = apply_action(state, &action).expect("legal action is always valid");
+            let next = apply(state, &action).expect("legal action is always valid");
             (evaluate(&next), next)
         })
         .collect();
@@ -880,242 +764,17 @@ fn optimal_value_rec(state: &CombatState, best: &mut f64, memo: &mut HashMap<Sta
     best_val
 }
 
-/// Python entry point for `optimal_value_rec`: the true optimal `reward`
-/// reachable from `state` (see that function's doc comment).
-#[pyfunction]
-fn all_card_names() -> Vec<&'static str> {
+pub fn all_card_names() -> Vec<&'static str> {
     CardId::all().iter().map(|id| id.as_str()).collect()
 }
 
-#[pyfunction]
-fn all_monster_names() -> Vec<&'static str> {
+pub fn all_monster_names() -> Vec<&'static str> {
     MonsterId::all().iter().map(|id| id.as_str()).collect()
 }
 
-/// Registry card rows, in declaration order, for `sts_sim.sim._registry`.
-#[pyfunction(name = "cards")]
-fn card_rows(py: Python<'_>) -> PyResult<Vec<Bound<'_, PyDict>>> {
-    CardId::all()
-        .iter()
-        .map(|&id| {
-            let row = PyDict::new(py);
-            row.set_item("variant", id.variant())?;
-            row.set_item("display", id.as_str())?;
-            row.set_item("sts2_id", id.sts2_id())?;
-            row.set_item("bridge_names", id.bridge_names())?;
-            row.set_item("in_card_pool", id.in_card_pool())?;
-            Ok(row)
-        })
-        .collect()
-}
-
-fn status_dict<'py>(py: Python<'py>, op: &str, status: &Status) -> PyResult<Bound<'py, PyDict>> {
-    let d = PyDict::new(py);
-    d.set_item("op", op)?;
-    d.set_item("status", status.as_str())?;
-    d.set_item("amount", status.amount())?;
-    Ok(d)
-}
-
-fn effect_dict<'py>(py: Python<'py>, effect: &EffectOp) -> PyResult<Bound<'py, PyDict>> {
-    let d = PyDict::new(py);
-    let op = match effect {
-        EffectOp::ApplyStatusToTarget(s) => return status_dict(py, "ApplyStatusToTarget", s),
-        EffectOp::ApplyStatusToSelf(s) => return status_dict(py, "ApplyStatusToSelf", s),
-        EffectOp::EscalateSelfStatus(s) => return status_dict(py, "EscalateSelfStatus", s),
-        EffectOp::DealDamage(n) => { d.set_item("amount", n)?; "DealDamage" }
-        EffectOp::GainBlock(n) => { d.set_item("amount", n)?; "GainBlock" }
-        EffectOp::DrawCards(n) => { d.set_item("amount", n)?; "DrawCards" }
-        EffectOp::LoseHp(n) => { d.set_item("amount", n)?; "LoseHp" }
-        EffectOp::GainEnergy(n) => { d.set_item("amount", n)?; "GainEnergy" }
-        EffectOp::Heal(n) => { d.set_item("amount", n)?; "Heal" }
-        EffectOp::DealDamageToAllEnemies(n) => { d.set_item("amount", n)?; "DealDamageToAllEnemies" }
-        EffectOp::DealDamageToRandomEnemy(n) => { d.set_item("amount", n)?; "DealDamageToRandomEnemy" }
-        EffectOp::DealDamageToLastAttacker(n) => { d.set_item("amount", n)?; "DealDamageToLastAttacker" }
-        EffectOp::ApplyCardToTarget(c) => { d.set_item("card", c.as_str())?; "ApplyCardToTarget" }
-        EffectOp::AddCardToDiscard(c) => { d.set_item("card", c.as_str())?; "AddCardToDiscard" }
-        EffectOp::AddUpgradedCardToDiscard(c) => { d.set_item("card", c.as_str())?; "AddUpgradedCardToDiscard" }
-        EffectOp::AddCardToHand(c, n) => {
-            d.set_item("card", c.as_str())?;
-            d.set_item("amount", n)?;
-            "AddCardToHand"
-        }
-        EffectOp::AddRandomCardToHand(pool) => {
-            d.set_item("pool", pool.iter().map(|c| c.as_str()).collect::<Vec<_>>())?;
-            "AddRandomCardToHand"
-        }
-        EffectOp::ExhaustRandomFromHand(f) => { d.set_item("filter", f.as_str())?; "ExhaustRandomFromHand" }
-        EffectOp::ReturnRandomDiscardToHand(f) => { d.set_item("filter", f.as_str())?; "ReturnRandomDiscardToHand" }
-        EffectOp::ExhaustAllFromHand { filter, gain_block_per_card } => {
-            d.set_item("filter", filter.as_str())?;
-            d.set_item("gain_block_per_card", gain_block_per_card)?;
-            "ExhaustAllFromHand"
-        }
-        EffectOp::DealDamageScaled { base, per_unit, source } => {
-            d.set_item("base", base)?;
-            d.set_item("per_unit", per_unit)?;
-            d.set_item("source", source.as_str())?;
-            "DealDamageScaled"
-        }
-        EffectOp::GainBlockScaled { base, per_unit, source } => {
-            d.set_item("base", base)?;
-            d.set_item("per_unit", per_unit)?;
-            d.set_item("source", source.as_str())?;
-            "GainBlockScaled"
-        }
-        EffectOp::GainEnergyScaled { base, per_unit, source } => {
-            d.set_item("base", base)?;
-            d.set_item("per_unit", per_unit)?;
-            d.set_item("source", source.as_str())?;
-            "GainEnergyScaled"
-        }
-        EffectOp::DealDamageRepeated { amount, hits_base, hits_per_unit, hits_source } => {
-            d.set_item("amount", amount)?;
-            d.set_item("hits_base", hits_base)?;
-            d.set_item("hits_per_unit", hits_per_unit)?;
-            d.set_item("source", hits_source.as_str())?;
-            "DealDamageRepeated"
-        }
-        EffectOp::PlayTopOfDeck { count, exhaust } => {
-            d.set_item("amount", count)?;
-            d.set_item("exhaust", exhaust)?;
-            "PlayTopOfDeck"
-        }
-        EffectOp::PlayTopOfDeckScaled { count_base, count_per_unit, count_source, exhaust } => {
-            d.set_item("base", count_base)?;
-            d.set_item("per_unit", count_per_unit)?;
-            d.set_item("source", count_source.as_str())?;
-            d.set_item("exhaust", exhaust)?;
-            "PlayTopOfDeckScaled"
-        }
-        EffectOp::SpawnMonster(name, hp) => {
-            d.set_item("monster", name)?;
-            d.set_item("amount", hp)?;
-            "SpawnMonster"
-        }
-        EffectOp::GainMaxHpIfLastAttackKilled(n) => { d.set_item("amount", n)?; "GainMaxHpIfLastAttackKilled" }
-        EffectOp::DealDamageWithCombatBonus { base, bonus_key, increment } => {
-            d.set_item("base", base)?;
-            d.set_item("bonus_key", bonus_key)?;
-            d.set_item("increment", increment)?;
-            "DealDamageWithCombatBonus"
-        }
-        EffectOp::PromptExhaustCardFromHand { strength } => {
-            d.set_item("strength", strength)?;
-            "PromptExhaustCardFromHand"
-        }
-        EffectOp::PromptUpgradeCardFromHand => "PromptUpgradeCardFromHand",
-        EffectOp::UpgradeAllCardsInHand => "UpgradeAllCardsInHand",
-        EffectOp::PutRandomDiscardOnTopOfDraw => "PutRandomDiscardOnTopOfDraw",
-        EffectOp::DoubleVulnerableOnTarget => "DoubleVulnerableOnTarget",
-        EffectOp::GainStrengthEqualToTargetVulnerable => "GainStrengthEqualToTargetVulnerable",
-        EffectOp::ExhaustTopOfDrawPile => "ExhaustTopOfDrawPile",
-    };
-    d.set_item("op", op)?;
-    Ok(d)
-}
-
-/// A card's sim data as a dict: `card_spec("Bash")`, `card_spec("Bash+")`.
-#[pyfunction]
-fn card_spec<'py>(py: Python<'py>, name: &str) -> PyResult<Bound<'py, PyDict>> {
-    let card = CardInstance::try_parse(name)
-        .ok_or_else(|| PyValueError::new_err(format!("unknown card: {name}")))?;
-    let data = card_data(card.id, card.upgrade_level);
-    let mut keywords: Vec<&str> = data.keywords.iter().map(|k| k.as_str()).collect();
-    keywords.sort_unstable();
-    let effects = data
-        .effects
-        .iter()
-        .map(|e| effect_dict(py, e))
-        .collect::<PyResult<Vec<_>>>()?;
-    let d = PyDict::new(py);
-    d.set_item("name", card.as_str())?;
-    d.set_item("sts2_id", card.id.sts2_id())?;
-    d.set_item("cost", data.cost)?;
-    d.set_item("targeted", data.targeted)?;
-    d.set_item("card_type", data.card_type.as_str())?;
-    d.set_item("rarity", data.rarity.as_str())?;
-    d.set_item("keywords", keywords)?;
-    d.set_item("description", data.description)?;
-    d.set_item("effects", effects)?;
-    Ok(d)
-}
-
-/// Registry monster rows, in declaration order, for `sts_sim.sim._registry`.
-#[pyfunction(name = "monsters")]
-fn monster_rows(py: Python<'_>) -> PyResult<Vec<Bound<'_, PyDict>>> {
-    MonsterId::all()
-        .iter()
-        .map(|&id| {
-            let row = PyDict::new(py);
-            row.set_item("variant", id.variant())?;
-            row.set_item("display", id.as_str())?;
-            row.set_item("sts2_id", id.sts2_id())?;
-            row.set_item("bridge_names", id.bridge_names().to_vec())?;
-            row.set_item("hp", id.hp())?;
-            row.set_item("encounter", id.encounter())?;
-            Ok(row)
-        })
-        .collect()
-}
-
-/// Registry status rows, in declaration order, for `sts_sim.sim._registry`.
-#[pyfunction(name = "statuses")]
-fn status_rows(py: Python<'_>) -> PyResult<Vec<Bound<'_, PyDict>>> {
-    StatusId::all()
-        .iter()
-        .map(|&id| {
-            let row = PyDict::new(py);
-            row.set_item("variant", id.variant())?;
-            row.set_item("display", id.as_str())?;
-            row.set_item("bridge_names", id.bridge_names().to_vec())?;
-            Ok(row)
-        })
-        .collect()
-}
-
-#[pyfunction]
-fn optimal_value(state: &CombatState) -> f64 {
+/// The true optimal `reward` reachable from `state` (see `optimal_value_rec`).
+pub fn optimal_value(state: &CombatState) -> f64 {
     let mut best = f64::NEG_INFINITY;
     let mut memo = HashMap::new();
     optimal_value_rec(state, &mut best, &mut memo)
-}
-
-#[pymodule]
-fn _sts_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<EndTurnAction>()?;
-    m.add_class::<PlayCardAction>()?;
-    m.add_class::<SelectTargetAction>()?;
-    m.add_class::<UpgradeCardFromHandAction>()?;
-    m.add_class::<ExhaustCardFromHandAction>()?;
-    m.add_class::<CombatState>()?;
-    m.add_class::<Monster>()?;
-    m.add_class::<RunState>()?;
-    m.add_function(wrap_pyfunction!(run_legal_actions, m)?)?;
-    m.add_function(wrap_pyfunction!(run_apply, m)?)?;
-    m.add_function(wrap_pyfunction!(run_is_terminal, m)?)?;
-    m.add_function(wrap_pyfunction!(simulate_run_outcome, m)?)?;
-    m.add_function(wrap_pyfunction!(simulate_run_outcomes, m)?)?;
-    m.add_function(wrap_pyfunction!(draw_overgrowth_monster_sequence, m)?)?;
-    m.add_function(wrap_pyfunction!(draw_overgrowth_elite, m)?)?;
-    m.add_function(wrap_pyfunction!(legal_actions, m)?)?;
-    m.add_function(wrap_pyfunction!(apply, m)?)?;
-    m.add_function(wrap_pyfunction!(is_terminal, m)?)?;
-    m.add_function(wrap_pyfunction!(evaluate, m)?)?;
-    m.add_function(wrap_pyfunction!(reward, m)?)?;
-    m.add_function(wrap_pyfunction!(random_rollout, m)?)?;
-    m.add_function(wrap_pyfunction!(redeterminized, m)?)?;
-    m.add_function(wrap_pyfunction!(all_card_names, m)?)?;
-    m.add_function(wrap_pyfunction!(all_monster_names, m)?)?;
-    m.add_function(wrap_pyfunction!(card_rows, m)?)?;
-    m.add_function(wrap_pyfunction!(card_spec, m)?)?;
-    m.add_function(wrap_pyfunction!(monster_rows, m)?)?;
-    m.add_function(wrap_pyfunction!(status_rows, m)?)?;
-    m.add_function(wrap_pyfunction!(optimal_value, m)?)?;
-    m.add_function(wrap_pyfunction!(mcts_action_values, m)?)?;
-    m.add_function(wrap_pyfunction!(mcts_search, m)?)?;
-    m.add_function(wrap_pyfunction!(simulate_hp_lost, m)?)?;
-    m.add_function(wrap_pyfunction!(hp_lost_per_fight, m)?)?;
-    m.add_function(wrap_pyfunction!(fight_outcomes_per_fight, m)?)?;
-    Ok(())
 }

@@ -9,7 +9,7 @@ use rand::Rng;
 /// — a `GameEvent` fires once per game action and may produce `EffectOp`s
 /// rather than just numeric modifiers.
 #[derive(Clone, PartialEq)]
-pub(crate) enum GameEvent {
+pub enum GameEvent {
     SkillPlayed,
     /// The name of the Attack card that was played (e.g. for Juggling's
     /// "add a copy of the 3rd attack to hand").
@@ -47,8 +47,8 @@ pub(crate) enum GameEvent {
 /// two pipelines: `modifier_for` (damage calculation, numeric contributions)
 /// and `reactions` (game events, producing `EffectOp`s). Adding a new reactive
 /// status means adding arms to both methods — no new engine logic.
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub(crate) enum Status {
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Status {
     Vulnerable,
     Weak,
     // Carries its stack count — unlike Vulnerable (a binary on/off debuff),
@@ -180,7 +180,7 @@ pub(crate) enum Status {
 }
 
 impl Status {
-    pub(crate) fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             Status::Vulnerable => "Vulnerable",
             Status::Weak => "Weak",
@@ -226,7 +226,7 @@ impl Status {
 
     /// The carried number of an amount-bearing status (`Strength(2)` -> 2);
     /// `None` for binary statuses, which stack by repetition instead.
-    pub(crate) fn amount(&self) -> Option<i32> {
+    pub fn amount(&self) -> Option<i32> {
         match self {
             Status::Strength(n)
             | Status::Enrage(n)
@@ -278,7 +278,7 @@ impl Status {
     /// variant. Unknown names are ignored (returns an empty vec) so a
     /// snapshot from a future, richer game state degrades gracefully rather
     /// than failing to construct.
-    pub(crate) fn from_name_and_amount(name: &str, amount: i32) -> Vec<Status> {
+    pub fn from_name_and_amount(name: &str, amount: i32) -> Vec<Status> {
         match name {
             "Vulnerable" | "VULNERABLE" => vec![Status::Vulnerable; amount.max(0) as usize],
             "Weak" | "WEAK" => vec![Status::Weak; amount.max(0) as usize],
@@ -390,7 +390,7 @@ impl Status {
     /// turn. Debuffs with a duration counter (Vulnerable, Weak) return true;
     /// permanent buffs (Strength, Enrage) return false and are never removed
     /// by `tick_debuffs`.
-    pub(crate) fn decays_per_turn(&self) -> bool {
+    pub fn decays_per_turn(&self) -> bool {
         matches!(
             self,
             Status::Vulnerable
@@ -408,7 +408,7 @@ impl Status {
     /// Whether this status is a debuff (negative effect on the holder).
     /// Artifact blocks only debuff-type status applications; buffs and other
     /// neutral statuses pass through.
-    pub(crate) fn is_debuff(&self) -> bool {
+    pub fn is_debuff(&self) -> bool {
         matches!(
             self,
             Status::Vulnerable | Status::Weak | Status::Shrink | Status::Constrict(_) | Status::Frail(_) | Status::Tangled(_) | Status::Ringing | Status::NoDraw
@@ -417,7 +417,7 @@ impl Status {
 
     /// What `EffectOp`s this status fires when `event` occurs, from the
     /// perspective of the combatant holding it. An empty vec means no reaction.
-    pub(crate) fn reactions(&self, event: GameEvent) -> Vec<EffectOp> {
+    pub fn reactions(&self, event: GameEvent) -> Vec<EffectOp> {
         match (self, event) {
             (Status::Enrage(n), GameEvent::SkillPlayed) => {
                 vec![EffectOp::ApplyStatusToSelf(Status::Strength(*n))]
@@ -596,7 +596,7 @@ fn apply_block_modifiers(base: i32, holder_statuses: &[Status]) -> i32 {
 /// takes an explicit target list, since a player action might target one
 /// monster (Strike), all of them (Thunderclap), or none (Defend).
 #[derive(Clone, Copy, PartialEq)]
-pub(crate) enum Actor {
+pub enum Actor {
     Player,
     Monster(usize),
 }
@@ -605,7 +605,7 @@ pub(crate) enum Actor {
 /// interprets these against a `CombatState`, so that adding an ordinary card
 /// means adding data to `card_data` rather than new engine logic.
 #[derive(Clone, PartialEq)]
-pub(crate) enum EffectOp {
+pub enum EffectOp {
     DealDamage(i32),
     GainBlock(i32),
     // Applies to whichever combatant(s) the action resolved as targets
@@ -771,7 +771,7 @@ pub(crate) enum EffectOp {
 /// sources (e.g. exhaust pile size, current Block) extend this enum without
 /// touching the `DealDamageScaled` arm itself.
 #[derive(Clone, Copy, PartialEq)]
-pub(crate) enum ScaleSource {
+pub enum ScaleSource {
     HandSize,
     // `actor`'s current Block (e.g. BodySlam: damage = current block).
     CurrentBlock,
@@ -801,7 +801,7 @@ pub(crate) enum ScaleSource {
 }
 
 impl ScaleSource {
-    pub(crate) fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             ScaleSource::HandSize => "HandSize",
             ScaleSource::CurrentBlock => "CurrentBlock",
@@ -852,14 +852,14 @@ impl ScaleSource {
 /// eligible — e.g. Thrash only exhausts Attacks, SecondWind only exhausts
 /// non-Attacks.
 #[derive(Clone, Copy, PartialEq)]
-pub(crate) enum HandFilter {
+pub enum HandFilter {
     Any,
     Attack,
     NonAttack,
 }
 
 impl HandFilter {
-    pub(crate) fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             HandFilter::Any => "Any",
             HandFilter::Attack => "Attack",
@@ -958,7 +958,7 @@ fn deal_damage(state: &mut CombatState, attacker: Actor, target: Actor, amount: 
 /// Adding a new reactive status only requires a `Status::reactions` arm — no
 /// changes here. None of today's reactions (Enrage, Rage) target another
 /// combatant, so an empty target list is passed.
-pub(crate) fn fire_event(state: &mut CombatState, event: GameEvent) {
+pub fn fire_event(state: &mut CombatState, event: GameEvent) {
     // Tracks "has the player Exhausted a card this turn" for Evil Eye /
     // Forgotten Ritual — set here, the single chokepoint every
     // CardExhausted-firing path runs through, rather than at each call site.
@@ -1016,7 +1016,7 @@ pub(crate) fn fire_event(state: &mut CombatState, event: GameEvent) {
 /// Enrage) are never affected. Each distinct decaying status (by `as_str()`)
 /// loses one stack per call, so e.g. Vulnerable and a one-turn power like
 /// Colossus can expire independently in the same turn.
-pub(crate) fn tick_debuffs(statuses: &mut Vec<Status>) {
+pub fn tick_debuffs(statuses: &mut Vec<Status>) {
     let mut decremented = std::collections::HashSet::new();
     let mut i = 0;
     while i < statuses.len() {
@@ -1037,7 +1037,7 @@ pub(crate) fn tick_debuffs(statuses: &mut Vec<Status>) {
 /// `is_attack_card` tells the damage pipeline whether the source is an Attack
 /// card (used by `Status::Slow`). Pass `false` for monster moves, status
 /// reactions, and any non-Attack card effects.
-pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor, targets: &[Actor], is_attack_card: bool) {
+pub fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor, targets: &[Actor], is_attack_card: bool) {
     // Whether the most recent damage op was Fatal, for GainMaxHpIfLastAttackKilled.
     let mut last_damage_killed = false;
     for op in ops {
@@ -1380,7 +1380,7 @@ pub(crate) fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: A
 
 /// Brand's resolution: exhaust the hand card at `pos` (if any), then gain
 /// `strength` Strength.
-pub(crate) fn resolve_exhaust_from_hand(state: &mut CombatState, pos: Option<usize>, strength: i32) {
+pub fn resolve_exhaust_from_hand(state: &mut CombatState, pos: Option<usize>, strength: i32) {
     if let Some(pos) = pos {
         let card = state.hand.remove(pos);
         state.exhaust_pile.push(card);

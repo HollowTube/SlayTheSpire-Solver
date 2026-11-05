@@ -4,15 +4,15 @@
 //! fight, many fights) without per-node Python/Rust FFI crossings, for things
 //! like "how does adding this card to my deck change my average HP lost over
 //! the next N fights" run live at a card-reward screen.
+use crate::rust_api::SimAction;
 use crate::state::CombatState;
-use crate::{apply_action, apply_str, is_terminal, legal_actions_typed, random_rollout, reward, ActionKind};
-use pyo3::prelude::*;
+use crate::{apply, is_terminal, legal_actions, random_rollout, reward};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
 use rayon::prelude::*;
 use std::collections::HashMap;
 
-const DEFAULT_DETERMINIZATIONS: u32 = 8;
+pub const DEFAULT_DETERMINIZATIONS: u32 = 8;
 
 /// One decision point in the search tree. Stored in a flat `Vec<Node>` arena
 /// and referenced by index rather than `Rc<RefCell<_>>`, since the tree never
@@ -21,19 +21,19 @@ const DEFAULT_DETERMINIZATIONS: u32 = 8;
 struct Node {
     state: CombatState,
     parent: Option<usize>,
-    action: Option<ActionKind>,
+    action: Option<SimAction>,
     children: Vec<usize>,
-    untried_actions: Vec<ActionKind>,
+    untried_actions: Vec<SimAction>,
     visits: u32,
     total_value: f64,
 }
 
 impl Node {
-    fn new(state: CombatState, parent: Option<usize>, action: Option<ActionKind>) -> Self {
+    fn new(state: CombatState, parent: Option<usize>, action: Option<SimAction>) -> Self {
         let untried_actions = if is_terminal(&state) {
             Vec::new()
         } else {
-            legal_actions_typed(&state)
+            legal_actions(&state)
         };
         Node {
             state,
@@ -75,7 +75,7 @@ fn build_tree(state: &CombatState, iterations: u32, rng: &mut Pcg32) -> Vec<Node
         if !arena[idx].untried_actions.is_empty() {
             let pos = rng.gen_range(0..arena[idx].untried_actions.len());
             let action = arena[idx].untried_actions.remove(pos);
-            let next_state = apply_action(&arena[idx].state, &action).expect("legal action is always valid");
+            let next_state = apply(&arena[idx].state, &action).expect("legal action is always valid");
             let child = Node::new(next_state, Some(idx), Some(action));
             let child_idx = arena.len();
             arena.push(child);
@@ -161,9 +161,9 @@ fn search_impl(state: &CombatState, iterations: u32, rng: &mut Pcg32, determiniz
         .0
 }
 
-#[pyfunction]
-#[pyo3(signature = (state, iterations=200, seed=0, determinize=true, determinizations=DEFAULT_DETERMINIZATIONS))]
-pub(crate) fn mcts_action_values(
+/// Action string -> mean rollout value, averaged over `determinizations`
+/// redeterminized trees (or one tree when `determinize` is false).
+pub fn action_values(
     state: &CombatState,
     iterations: u32,
     seed: u64,
@@ -174,9 +174,8 @@ pub(crate) fn mcts_action_values(
     action_values_impl(state, iterations, &mut rng, determinize, determinizations)
 }
 
-#[pyfunction]
-#[pyo3(signature = (state, iterations=200, seed=0, determinize=true, determinizations=DEFAULT_DETERMINIZATIONS))]
-pub(crate) fn mcts_search(
+/// The search's chosen action string.
+pub fn search(
     state: &CombatState,
     iterations: u32,
     seed: u64,
@@ -203,7 +202,7 @@ pub(crate) fn mcts_search(
 /// `fight_outcomes_per_fight`: plays `state` to terminal via `search_impl`
 /// at every decision and returns `(hp lost, turns taken)`. See
 /// `simulate_hp_lost` for the `max_actions` stalemate caveat.
-pub(crate) fn simulate_fight_outcome(
+pub fn simulate_fight_outcome(
     state: &CombatState,
     iterations: u32,
     seed: u64,
@@ -219,14 +218,13 @@ pub(crate) fn simulate_fight_outcome(
             break;
         }
         let action = search_impl(&s, iterations, &mut rng, determinize, determinizations);
-        s = apply_str(&s, &action).expect("legal action is always valid");
+        let action: SimAction = action.parse().expect("search returns a well-formed action");
+        s = apply(&s, &action).expect("legal action is always valid");
     }
     (starting_hp - s.player.hp.max(0), s.turn)
 }
 
-#[pyfunction]
-#[pyo3(signature = (state, iterations=200, seed=0, determinize=true, determinizations=DEFAULT_DETERMINIZATIONS, max_actions=1000))]
-pub(crate) fn simulate_hp_lost(
+pub fn simulate_hp_lost(
     state: &CombatState,
     iterations: u32,
     seed: u64,
@@ -247,25 +245,18 @@ pub(crate) fn simulate_hp_lost(
 /// same seeds share common random numbers, so per-index differences are
 /// directly comparable (paired) and have much lower variance than the raw
 /// means.
-#[pyfunction]
-#[pyo3(signature = (states, iterations=100, determinize=true, determinizations=DEFAULT_DETERMINIZATIONS, max_actions=1000))]
-pub(crate) fn hp_lost_per_fight(
-    py: Python<'_>,
-    states: Vec<CombatState>,
+pub fn hp_lost_per_fight(
+    states: &[CombatState],
     iterations: u32,
     determinize: bool,
     determinizations: u32,
     max_actions: u32,
 ) -> Vec<i32> {
-    py.allow_threads(|| {
-        states
-            .par_iter()
-            .enumerate()
-            .map(|(i, state)| {
-                simulate_hp_lost(state, iterations, i as u64, determinize, determinizations, max_actions)
-            })
-            .collect()
-    })
+    states
+        .par_iter()
+        .enumerate()
+        .map(|(i, state)| simulate_hp_lost(state, iterations, i as u64, determinize, determinizations, max_actions))
+        .collect()
 }
 
 /// Like `hp_lost_per_fight`, but also returns each fight's turn count —
@@ -273,23 +264,16 @@ pub(crate) fn hp_lost_per_fight(
 /// `sts_sim.bench.run_deck`'s `policy="mcts"` path uses: it runs all `seeds`
 /// fights in one rayon-parallel, GIL-released call instead of spawning a
 /// worker process per fight.
-#[pyfunction]
-#[pyo3(signature = (states, iterations=100, determinize=true, determinizations=DEFAULT_DETERMINIZATIONS, max_actions=1000))]
-pub(crate) fn fight_outcomes_per_fight(
-    py: Python<'_>,
-    states: Vec<CombatState>,
+pub fn fight_outcomes_per_fight(
+    states: &[CombatState],
     iterations: u32,
     determinize: bool,
     determinizations: u32,
     max_actions: u32,
 ) -> Vec<(i32, u32)> {
-    py.allow_threads(|| {
-        states
-            .par_iter()
-            .enumerate()
-            .map(|(i, state)| {
-                simulate_fight_outcome(state, iterations, i as u64, determinize, determinizations, max_actions)
-            })
-            .collect()
-    })
+    states
+        .par_iter()
+        .enumerate()
+        .map(|(i, state)| simulate_fight_outcome(state, iterations, i as u64, determinize, determinizations, max_actions))
+        .collect()
 }

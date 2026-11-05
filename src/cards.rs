@@ -3,7 +3,7 @@ use crate::engine::{EffectOp, HandFilter, ScaleSource, Status};
 use std::collections::HashSet;
 
 #[derive(Clone, PartialEq, Debug)]
-pub(crate) enum CardType {
+pub enum CardType {
     Attack,
     Skill,
     Power,
@@ -14,7 +14,7 @@ pub(crate) enum CardType {
 }
 
 impl CardType {
-    pub(crate) fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             CardType::Attack => "Attack",
             CardType::Skill => "Skill",
@@ -27,7 +27,7 @@ impl CardType {
 /// Rarity tier of a card, matching STS2's `CardRarity` enum (whose `Basic`
 /// is `Starter` here). Reward draws do not read it yet.
 #[derive(Clone, PartialEq)]
-pub(crate) enum CardRarity {
+pub enum CardRarity {
     Starter,
     Common,
     Uncommon,
@@ -36,7 +36,7 @@ pub(crate) enum CardRarity {
 }
 
 impl CardRarity {
-    pub(crate) fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             CardRarity::Starter => "Starter",
             CardRarity::Common => "Common",
@@ -51,7 +51,7 @@ impl CardRarity {
 /// IReadOnlySet<CardKeyword>`. Kept as a set (rather than separate bools) so
 /// upgrades can add/remove individual keywords without new `CardData` fields.
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub(crate) enum CardKeyword {
+pub enum CardKeyword {
     // Whether this card goes to the exhaust pile (rather than discard) after
     // being played. Power/Status cards always exhaust regardless of this
     // keyword (handled separately in `apply`); this covers Attacks/Skills
@@ -78,7 +78,7 @@ pub(crate) enum CardKeyword {
 }
 
 impl CardKeyword {
-    pub(crate) fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             CardKeyword::Exhaust => "Exhaust",
             CardKeyword::Ethereal => "Ethereal",
@@ -97,14 +97,14 @@ impl CardKeyword {
 // `targeted` tells the generic `PlayCard:` handler whether to enter
 // `SelectTarget` before running `effects` — e.g. `Strike` needs a target to
 // deal damage to, while `Defend` resolves immediately against the player.
-pub(crate) struct CardData {
-    pub(crate) cost: i32,
-    pub(crate) targeted: bool,
-    pub(crate) card_type: CardType,
-    pub(crate) effects: Vec<EffectOp>,
-    pub(crate) keywords: HashSet<CardKeyword>,
-    pub(crate) rarity: CardRarity,
-    pub(crate) description: &'static str,
+pub struct CardData {
+    pub cost: i32,
+    pub targeted: bool,
+    pub card_type: CardType,
+    pub effects: Vec<EffectOp>,
+    pub keywords: HashSet<CardKeyword>,
+    pub rarity: CardRarity,
+    pub description: &'static str,
 }
 
 /// How a card's `CardData` changes at `upgrade_level >= 1`, mirroring STS2's
@@ -115,35 +115,35 @@ pub(crate) struct CardData {
 /// choose which card to Exhaust instead of picking randomly); for those,
 /// `effects_override` replaces `effects` wholesale instead of nudging values.
 #[derive(Clone, Default)]
-pub(crate) struct UpgradeDelta {
+pub struct UpgradeDelta {
     /// Added to every `EffectOp::DealDamage(n)`/`DealDamageToAllEnemies(n)`
     /// in `effects`.
-    pub(crate) damage_delta: i32,
+    pub damage_delta: i32,
     /// Added to every `EffectOp::GainBlock(n)` in `effects`.
-    pub(crate) block_delta: i32,
+    pub block_delta: i32,
     /// Added to every `EffectOp::GainEnergy(n)` in `effects` (e.g.
     /// Bloodletting+: 2 -> 3 energy).
-    pub(crate) energy_delta: i32,
+    pub energy_delta: i32,
     /// Added to every `EffectOp::DrawCards(n)` in `effects` (e.g.
     /// BurningPact+: 2 -> 3 cards).
-    pub(crate) draw_delta: i32,
+    pub draw_delta: i32,
     /// Added to `base`/`per_unit` of every `EffectOp::DealDamageScaled` in
     /// `effects` (e.g. AshenStrike+/Bully+'s `per_unit`, Conflagration+'s
     /// `base` and `per_unit`).
-    pub(crate) scaled_base_delta: i32,
-    pub(crate) scaled_per_unit_delta: i32,
+    pub scaled_base_delta: i32,
+    pub scaled_per_unit_delta: i32,
     /// Extra `ApplyStatusToTarget` ops appended after the base effects (e.g.
     /// Bash+'s third Vulnerable stack).
-    pub(crate) extra_status_applications: Vec<Status>,
+    pub extra_status_applications: Vec<Status>,
     /// Added to `CardData.cost` (e.g. Barricade+: -1).
-    pub(crate) cost_delta: i32,
-    pub(crate) keywords_added: HashSet<CardKeyword>,
-    pub(crate) keywords_removed: HashSet<CardKeyword>,
+    pub cost_delta: i32,
+    pub keywords_added: HashSet<CardKeyword>,
+    pub keywords_removed: HashSet<CardKeyword>,
     /// When set, replaces `CardData.effects` entirely instead of applying
     /// `damage_delta`/`block_delta`/`extra_status_applications`.
-    pub(crate) effects_override: Option<Vec<EffectOp>>,
+    pub effects_override: Option<Vec<EffectOp>>,
     /// When set, replaces `CardData.description` on upgrade.
-    pub(crate) description: Option<&'static str>,
+    pub description: Option<&'static str>,
 }
 
 impl UpgradeDelta {
@@ -618,7 +618,7 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
 /// Resolves `name`'s base `CardData` and, at `upgrade_level >= 1`, applies its
 /// `UpgradeDelta` (if any — cards without a declared delta are unaffected by
 /// upgrade level).
-pub(crate) fn card_data(id: CardId, upgrade_level: u8) -> CardData {
+pub fn card_data(id: CardId, upgrade_level: u8) -> CardData {
     let data = card_data_base(id);
     if upgrade_level >= 1 {
         if let Some(delta) = upgrade_delta(id) {
@@ -630,7 +630,7 @@ pub(crate) fn card_data(id: CardId, upgrade_level: u8) -> CardData {
 
 /// Whether an in-combat upgrade can pick this card. Status cards never can
 /// (the game's Status and Curse cards have no upgrade level).
-pub(crate) fn can_upgrade(id: CardId, upgrade_level: u8) -> bool {
+pub fn can_upgrade(id: CardId, upgrade_level: u8) -> bool {
     upgrade_level == 0 && card_data_base(id).card_type != CardType::Status
 }
 
@@ -2367,7 +2367,7 @@ fn card_data_base(id: CardId) -> CardData {
 
 /// The card-reward pool: every `in_card_pool` row, sorted case-insensitively
 /// by display name. `draw_reward_cards` is seeded over this order.
-pub(crate) fn card_pool() -> Vec<CardId> {
+pub fn card_pool() -> Vec<CardId> {
     let mut pool: Vec<CardId> = CardId::all().iter().copied().filter(|id| id.in_card_pool()).collect();
     pool.sort_by_key(|id| id.as_str().to_lowercase());
     pool
