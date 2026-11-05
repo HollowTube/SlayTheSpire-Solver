@@ -146,6 +146,9 @@ def _stable_piles(
     return piles
 
 
+_MAX_HAND_SIZE = 10
+
+
 class CombatWedgedError(RuntimeError):
     """The game's CombatManager is permanently stuck and needs a full relaunch.
 
@@ -272,16 +275,39 @@ class CombatFixture:
     def set_discard_pile(self, *cards: CardName | str) -> None:
         """Replace the discard pile with the given cards.
 
-        Drains the existing discard into hand (via `draw_discard 99` if
-        available, otherwise one-by-one removal), then adds the desired cards
-        via `card X discard`.
+        `remove_card` supports only hand and deck, so a non-empty discard is
+        drained through the hand: `draw` takes the whole draw pile and then the
+        reshuffled discard, the drawn cards are removed from hand, and the draw
+        pile is restored with `card X draw` (its order and upgrades are not
+        preserved). Raises RuntimeError, before sending anything, if hand plus
+        both piles would exceed the 10-card hand. Call this before
+        `set_draw_pile`: its `draw 99` would pull the discard into hand.
+        Empty the hand first (`set_hand()`): `remove_card` removes by id, so
+        a hand card sharing an id with a drained card can be removed instead.
         """
         piles = _stable_piles()
+        draw_before = list(piles.draw_pile.cards)
         discard_before = list(piles.discard_pile.cards)
-        for c in discard_before:
-            cid = _to_console_id(c.name)
-            _console(f"remove_card {cid} discard")
-        time.sleep(0.2)
+        if discard_before:
+            n = len(draw_before) + len(discard_before)
+            hand_before = len(piles.hand.cards)
+            if hand_before + n > _MAX_HAND_SIZE:
+                raise RuntimeError(
+                    f"cannot drain discard: hand {hand_before} + {n} cards in "
+                    f"draw/discard exceeds the {_MAX_HAND_SIZE}-card hand"
+                )
+            _console(f"draw {n}")
+            time.sleep(0.5)
+            hand_after = len(_stable_piles().hand.cards)
+            if hand_after != hand_before + n:
+                raise RuntimeError(
+                    f"discard drain drew {hand_after - hand_before} of {n} cards"
+                )
+            for c in draw_before + discard_before:
+                _console(f"remove_card {_to_console_id(c.name)} hand")
+            time.sleep(0.2)
+            for c in draw_before:
+                _console(f"card {_to_console_id(c.name)} draw")
         for card in cards:
             console_id = CARD_STS2_ID.get(card, card)
             _console(f"card {console_id} discard")

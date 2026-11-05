@@ -1,4 +1,4 @@
-"""The registry-derived Python surface matches what the TOML catalogues produced.
+"""The Python surface generated from the Rust registry matches the recorded snapshot.
 
 ``fixtures/registry_snapshot.json`` was recorded from the generated modules
 before the registry moved into ``crates/sts-ids``. The only intended

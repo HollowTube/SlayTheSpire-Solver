@@ -16,12 +16,6 @@ IRONCLAD_STARTING_DECK = cast(
     "list[str]", [CardName.STRIKE] * 5 + [CardName.DEFEND] * 4 + [CardName.BASH]
 )
 
-# Per the Slay the Spire wiki, Burning Blood heals 6 HP at the *end* of
-# combat — it has no effect during a fight, so there's nothing for the combat
-# sim to model. It's recorded here only so the scenario faithfully matches
-# the wiki-documented starting loadout that HOL-10's AC names explicitly.
-STARTING_RELICS = ["Burning Blood"]
-
 PLAYER_STARTING_HP = 80
 
 # Canonical starting HP keyed by MonsterName value. Used by the server's

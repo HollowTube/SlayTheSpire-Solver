@@ -32,9 +32,6 @@ class _Node:
         self.visits = 0
         self.total_value = 0.0
 
-    def is_leaf(self):
-        return not self.children and not self.untried_actions
-
     def ucb1(self):
         exploitation = self.total_value / self.visits
         exploration = EXPLORATION_CONSTANT * math.sqrt(

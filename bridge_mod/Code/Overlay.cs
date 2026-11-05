@@ -128,22 +128,6 @@ public static class Overlay
         }
     }
 
-    // Raw STS2 ids of monsters/cards in the current fight that NameMap
-    // doesn't recognize (see StateBuilder.FindUnsupported). Non-empty means
-    // this fight's numbers are unreliable - an unmapped monster falls back
-    // to a generic placeholder, and unmapped cards are silently dropped from
-    // the translated piles.
-    private static System.Collections.Generic.List<string> _unknownMonsters = new();
-    private static System.Collections.Generic.List<string> _unknownCards = new();
-
-    /// Records this analyze push's unsupported monster/card ids (see
-    /// StateBuilder.FindUnsupported), shown as warning rows in Render.
-    public static void SetWarnings(System.Collections.Generic.List<string> unknownMonsters, System.Collections.Generic.List<string> unknownCards)
-    {
-        _unknownMonsters = unknownMonsters;
-        _unknownCards = unknownCards;
-    }
-
     /// Records this fight's "deck vs. monster, before any cards are drawn"
     /// baseline (the `mean_hp_lost` from a "deck_baseline" response). Safe to
     /// call from a background thread; re-renders immediately with the
@@ -249,15 +233,6 @@ public static class Overlay
         // `expected_hp_lost` (further HP loss from the current position).
         var predictedEndHp = Math.Max(currentHp - stateHpLost, 0.0);
         AddLabel($"sts_sim  predicted end: ~{predictedEndHp:F1}/{maxHp:F0} HP", ExplorerHeaderColor);
-
-        // Warn when this fight's numbers can't be trusted: an unmapped
-        // monster falls back to a generic placeholder (wrong move pattern),
-        // and unmapped cards are silently dropped from the translated hand/
-        // draw/discard/exhaust/deck piles.
-        if (_unknownMonsters.Count > 0)
-            AddLabel($"unknown enemy: {string.Join(", ", _unknownMonsters)}", ExplorerWarningColor);
-        if (_unknownCards.Count > 0)
-            AddLabel($"unknown card: {string.Join(", ", _unknownCards)}", ExplorerWarningColor);
 
         // Next two lines: how this fight's actual-loss-so-far +
         // projected-remaining-loss compares to the baseline expectation
