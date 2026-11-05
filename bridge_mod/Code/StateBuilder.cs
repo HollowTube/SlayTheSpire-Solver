@@ -68,17 +68,6 @@ public static class StateBuilder
         return root.ToJsonString();
     }
 
-    /// Returns the raw STS2 ids of any unsupported entities in the current fight.
-    /// Currently always returns empty lists — unknown cards and monsters are
-    /// handled gracefully by the Rust sim (silently dropped or generic placeholder).
-    public static (List<string> unknownMonsters, List<string> unknownCards) FindUnsupported(CombatState combatState, Player player)
-    {
-        var unknownMonsters = new List<string>();
-        var unknownCards = new List<string>();
-
-        return (unknownMonsters, unknownCards);
-    }
-
     private static JsonObject BuildState(CombatState combatState, Player player)
     {
         var pcs = player.PlayerCombatState;

@@ -120,9 +120,6 @@ public static class HookPatches
             _fightStartHp = player.Creature.CurrentHp;
         var actualHpLostSoFar = _fightStartHp - player.Creature.CurrentHp;
 
-        var (unknownMonsters, unknownCards) = StateBuilder.FindUnsupported(combatState, player);
-        Overlay.SetWarnings(unknownMonsters, unknownCards);
-
         Overlay.SetCalculating(true);
         _ = Task.Run(async () =>
         {
