@@ -46,6 +46,18 @@ fn combat_state_populates_run_enemies_hand_and_piles() {
     assert_eq!(run.character.as_deref(), Some("Ironclad"));
     assert_eq!(run.seed, "SOLVER01");
     assert_eq!(run.relics, ["BurningBlood"]);
+    let deck: Vec<(Entity<CardId>, bool)> = run
+        .deck
+        .iter()
+        .map(|c| (c.id.clone(), c.upgraded))
+        .collect();
+    assert_eq!(
+        deck,
+        [
+            (Entity::Known(CardId::StrikeIronclad), false),
+            (Entity::Known(CardId::DefendIronclad), false)
+        ]
+    );
 
     let combat = state.combat.expect("combat view in combat");
     assert_eq!((combat.round, combat.is_player_turn), (2, true));

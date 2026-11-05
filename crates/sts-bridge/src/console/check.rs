@@ -13,7 +13,7 @@ use crate::state::{
 };
 
 /// The most cards the hand holds.
-const MAX_HAND: usize = 10;
+pub(crate) const MAX_HAND: usize = 10;
 
 /// `Ok` when the game would take the command in `state`; otherwise why not.
 pub(crate) fn precheck(command: &ConsoleCommand, state: &GameState) -> Result<(), String> {
@@ -36,6 +36,18 @@ pub(crate) fn precheck(command: &ConsoleCommand, state: &GameState) -> Result<()
     }
     match command {
         C::Fight(_) | C::RelicAdd(_) => return Ok(()),
+        C::RemoveCardFromDeck { card } => {
+            let in_deck = state
+                .run
+                .iter()
+                .flat_map(|run| &run.deck)
+                .any(|c| c.id == known(*card));
+            return if in_deck {
+                Ok(())
+            } else {
+                Err(format!("{} is not in the deck", card.sts2_id()))
+            };
+        }
         C::RelicRemove(r) => {
             let owned = state
                 .run
@@ -246,7 +258,7 @@ fn after_damage(hp: i32, block: i32, amount: i32) -> (i32, i32) {
 
 /// Whether the power is the one the console calls `id`: any class name the
 /// registry knows for it, or the raw class name for one it does not.
-fn is_power(power: &Entity<StatusId>, id: &str) -> bool {
+pub(crate) fn is_power(power: &Entity<StatusId>, id: &str) -> bool {
     match power {
         Entity::Known(status) => status.bridge_names().iter().any(|n| slugify(n) == id),
         Entity::Unknown(name) => slugify(name) == id,
@@ -336,6 +348,24 @@ pub(crate) fn postcondition(
                 was.saturating_sub(1)
             };
             require(&format!("run.relics[{r}] count"), expected, now)
+        }
+        C::RemoveCardFromDeck { card } => {
+            let count = |s: &GameState| -> Result<(usize, usize), Unmet> {
+                let run = s
+                    .run
+                    .as_ref()
+                    .ok_or_else(|| unmet("run", "present", "none"))?;
+                let copies = run.deck.iter().filter(|c| c.id == known(*card)).count();
+                Ok((copies, run.deck.len()))
+            };
+            let (copies, size) = count(before)?;
+            let (now_copies, now_size) = count(after)?;
+            require(
+                &format!("run.deck[{}] count", card.sts2_id()),
+                copies.saturating_sub(1),
+                now_copies,
+            )?;
+            require("run.deck size", size.saturating_sub(1), now_size)
         }
         C::Probe(_) => {
             if before == after {
@@ -524,6 +554,7 @@ fn in_combat(command: &ConsoleCommand, before: &GameState, after: &GameState) ->
         | C::Win
         | C::RelicAdd(_)
         | C::RelicRemove(_)
+        | C::RemoveCardFromDeck { .. }
         | C::Probe(_)
         | C::ToggleInstant => Ok(()),
     }

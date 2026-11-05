@@ -109,6 +109,8 @@ pub struct RunInfo {
     pub seed: String,
     /// The player's relics by class name, e.g. `BurningBlood`.
     pub relics: Vec<String>,
+    /// The master deck, which every combat's piles are drawn from.
+    pub deck: Vec<CardRef>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]

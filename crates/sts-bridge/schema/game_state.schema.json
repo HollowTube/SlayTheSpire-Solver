@@ -378,6 +378,13 @@
             "null"
           ]
         },
+        "deck": {
+          "description": "The master deck, which every combat's piles are drawn from.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CardRef"
+          }
+        },
         "floor": {
           "type": "integer",
           "format": "uint32",
@@ -414,7 +421,8 @@
         "gold",
         "ascension",
         "seed",
-        "relics"
+        "relics",
+        "deck"
       ]
     },
     "Screen": {

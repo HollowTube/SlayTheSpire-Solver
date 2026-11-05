@@ -90,14 +90,21 @@ room. `get_run_state` already says `in_progress: true` during it, so
 `state()` reads as a main menu with a run. Call `wait_run_ready` first.
 
 ```rust
-use sts_bridge::Game;
+use sts_bridge::{Game, RunSpec};
 
 let mut game = Game::from_env();          // MCPTest bridge + Steam launcher
 game.start()?;                            // launches through Steam if needed
-game.ensure_main_menu()?;                 // from any screen; verified
-game.backend_mut().request("start_run", Some(&serde_json::json!({"seed": "S"})))?;
-game.wait_run_ready()?;                   // only now may a console `fight` go out
+let run = game.start_run(&RunSpec::new("Ironclad", "S"))?;
+// main menu (verified), `start_run`, then waited until ready and checked to
+// be that run: only now may a console `fight` go out
 ```
+
+`Game::start_run(&RunSpec)` goes through `ensure_main_menu` (abandoning a
+run in progress), sends `Command::StartRun` only on the verified main menu,
+waits with `wait_run_ready`, and checks `run.seed`, `run.character` and
+`run.ascension` (`PostconditionFailed` if the run is another one). It
+returns `StartedRun { state, accepted_after, ready_after }`. `Session::act`
+refuses `StartRun`: the run loads for longer than a settle wait.
 
 | Item | Module | What it is |
 |---|---|---|
@@ -162,12 +169,12 @@ game.set_instant(true)?;                                        // a set state, 
 
 | Item | What it is |
 |---|---|
-| `ConsoleCommand` | `#[non_exhaustive]`, typed for what fixtures need: `Fight`, `Damage`, `DamageAllEnemies`, `HealPlayer`, `Block`, `Energy`, `Power`, `AddCard`, `RemoveCardFromHand`, `RelicAdd`, `RelicRemove`, `Draw`, `Upgrade`, `Win`. `line()` renders the exact console string. `Probe(String)` sends a raw line (its first word must be in the catalog) and passes only if the state changed: for checking a no-effect path. `ToggleInstant` exists but `console` refuses it. |
+| `ConsoleCommand` | `#[non_exhaustive]`, typed for what fixtures need: `Fight`, `Damage`, `DamageAllEnemies`, `HealPlayer`, `Block`, `Energy`, `Power`, `AddCard`, `RemoveCardFromHand`, `RemoveCardFromDeck` (the master deck, in or out of combat; checked against `RunInfo.deck`), `RelicAdd`, `RelicRemove`, `Draw`, `Upgrade`, `Win`. `line()` renders the exact console string. `Probe(String)` sends a raw line (its first word must be in the catalog) and passes only if the state changed: for checking a no-effect path. `ToggleInstant` exists but `console` refuses it. |
 | `Target` | `Player` or `Enemy(i)`. The console indexes creatures as the player first, then enemies (`damage`, `block`, `power`: `1 + i`); `heal` is player-only here and `kill` is not typed. |
 | `Encounter`, `PowerName`, `Relic` | Id newtypes, checked against the catalog (`UnknownId`); `NIBBITS_WEAK` is a const. A card is a `CardId` and is checked against the catalog's card ids too. |
 | `Session::console` / `console_with(cmd, &ConsoleWait)` | `act` for the console, under a longer timeout (`CONSOLE_TIMEOUT`, 45 s) because a state read is five bridge calls at 0.7 to 1 s each while the game is unfocused. The session's own policy is restored on every path. A room-changing command first waits for a stable in-run screen (`wait_run_ready`; its probe policy is the dwell). |
 | `Session::set_instant(on)` / `set_instant_with` | Reads `Health.fast_mode`, sends nothing if it already matches, otherwise sends one toggle and waits for the mode to read back. `ActionRefused` if the bridge does not report `fast_mode`. |
-| `RunInfo.relics`, `Health.fast_mode` | Class names of the player's relics (read from `get_player_state`, one more call per `state()`); instant mode when the bridge reports it. |
+| `RunInfo.relics`, `RunInfo.deck`, `Health.fast_mode` | Class names of the player's relics and the master deck (both read from `get_player_state`, one more call per `state()`); instant mode when the bridge reports it. |
 
 Preconditions are checked on the settled state and refuse without sending (no
 run, not the player's turn, card not in hand, hand full, dead or missing
@@ -182,6 +189,63 @@ an exact hp, clear block, reduce energy, remove a power or use a negative
 amount, remove from the draw, discard or exhaust piles, pick an upgraded copy,
 add an already upgraded card, set the round, or set an enemy's intent.
 `remove_card X discard` is rejected by the game while the bridge says success.
+
+## Verified combat fixtures
+
+A test declares the combat it needs as data; `Fixtures::ensure` returns a
+state proven equal to it, from any starting state.
+
+```rust
+use sts_bridge::{CardId, CardSpec, EnemySpec, Fixture, Fixtures, Game, Hp, NIBBITS_WEAK};
+
+let mut fixtures = Fixtures::new(Game::from_env());
+let fixture = Fixture::new(NIBBITS_WEAK)          // Ironclad, seed HOL108FIX, ascension 0
+    .enemy(EnemySpec::new(20))                    // one spec per enemy the encounter spawns
+    .player_hp(Hp::Exact(60))
+    .hand([CardSpec::from(CardId::Bash), CardSpec::upgraded(CardId::StrikeIronclad)])
+    .draw([CardId::DefendIronclad]);              // top first
+let verified = fixtures.ensure(&fixture)?;        // VerifiedState { state, path, timings, instant }
+```
+
+Every field has a deterministic default (player at max hp with the turn's
+energy, no block or powers, the starting relic, every pile empty), so a field
+a test leaves out is not left to chance. Piles are exact and ordered; relics
+are an exact multiset; an enemy's powers are `AsSpawned` unless declared.
+
+- **Per session** (and after every reset): `Game::start`; the fixture's
+  seeded run, or a full reset into it; `set_instant(true)`, recorded as
+  `InstantMode::Unverified` when the bridge does not report `fast_mode`
+  (never toggled blind); and the master deck emptied with
+  `RemoveCardFromDeck`, so every fight opens with empty piles and no
+  opening-draw race. If the deck cannot be emptied, `plan` clears each fight's
+  piles instead. The fixture's run is therefore deliberately not a normal
+  run.
+- **Per `ensure`**: a static check that sends nothing; relics normalised
+  before the fight (so combat-start effects apply); `fight`; the steps `plan`
+  gives (player hp, enemy hp, powers, block, energy, then piles), each sent
+  through `Session::console` and verified; then `Fixture::diff` on the last
+  settled state. On a mismatch or a failed step: one full seeded reset
+  (`Game::start_run`) and a second attempt. Teardown is the next setup.
+
+Errors (`FixtureError`, `#[non_exhaustive]`): `Unreachable { fields, needs }`
+(nothing sent), `Mismatch { fields: Vec<FieldDiff>, after_reset }` naming each
+field (`player.energy`, `enemies[0].hp`, `enemies[0].powers[VULNERABLE_POWER]`,
+`piles.draw`, `run.relics`, …), each `FieldDiff` marked `needs_setter` when no
+console command can reach it, and `Bridge { source, after_reset }`.
+
+What the console reaches from a fresh fight on a blank deck: player hp up to
+`max_hp`; block (from 0); enemy hp at or below its spawn; energy at or above
+the start; powers added on top of the spawn's; hand, draw (appended at the
+bottom, so declared order holds), discard and exhaust exactly; relics. The
+rest (enemy hp above the spawn, energy below the start, lowering a power,
+upgraded cards outside the hand, round, intent, enemy `max_hp`) waits for
+`Backend::setters()`: a `#[non_exhaustive]` `Setters` of capability flags,
+all off by default. A flag set there makes `plan` treat its field as
+reachable; the step that sets it comes with the backend that sets the flag.
+Intent and enemy `max_hp` are not fixture fields and vary between fights.
+
+`fixture.project(&state)` is the declared fields' values, for checking that
+the same fixture yields the same state every time.
 
 ### The command catalog
 
@@ -227,6 +291,12 @@ cargo test -p sts-bridge --test live_lifecycle -- --ignored --test-threads=1
 # prints each command's result and duration as it happens.
 cargo test -p sts-bridge --test live_console -- --ignored --test-threads=1 --nocapture
 
+# Live fixture tests: opt-in, serial, slow (about 10-15 min on a focused game;
+# far longer unfocused). They time five state reads first and, on a slow
+# bridge, print SLOW BRIDGE and report the timing criteria instead of
+# asserting them. Each ends on the main menu.
+cargo test -p sts-bridge --test live_fixture -- --ignored --test-threads=1 --nocapture
+
 # Regenerate the published schema after changing GameState.
 UPDATE_SCHEMA=1 cargo test -p sts-bridge --test offline
 
@@ -239,6 +309,11 @@ seeded `start_run`, then the console `fight NIBBITS_WEAK`) and set up hand,
 energy and enemy block through raw console commands. Let the run's first
 screen settle before `fight`: sent on the opening `EVENT` a few seconds after
 `start_run` (without a settle check), it crashed the game with a SIGSEGV.
+
+`tests/fixture_offline.rs` runs fixtures against `FakeGame`
+(`tests/common/fake_game.rs`), an in-memory `Backend` with the console's
+effects and limits, a loading phase after `start_run`, seeded spawn hp and an
+opening draw; it panics on any command sent while a run loads.
 
 `tests/settle.rs` scripts state sequences by editing the synthesized
 `combat` fixture (`tests/common/mod.rs`, `WireState`). `tests/lifecycle.rs`

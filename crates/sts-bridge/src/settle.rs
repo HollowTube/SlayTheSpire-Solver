@@ -10,7 +10,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::backend::{Backend, BridgeError};
-use crate::command::{Ack, Command, MenuNav};
+use crate::command::{Ack, Command, MenuNav, RunSpec};
 use crate::state::{Actions, AvailableAction, CardRef, CombatView, GameState, Piles, Screen};
 
 /// How long and how often to poll, and how many identical consecutive reads
@@ -281,6 +281,12 @@ impl<B: Backend> Session<B> {
         extra: impl Fn(&GameState, &GameState) -> Result<(), Unmet>,
     ) -> Result<GameState, BridgeError> {
         let command = normalize(command);
+        if let Command::StartRun(_) = command {
+            return Err(BridgeError::ActionRefused {
+                action: command.to_string(),
+                reason: START_RUN_REFUSED.to_string(),
+            });
+        }
         // A menu step is refused at once rather than after a settle wait
         // that a loading run would make time out.
         if matches!(command, Command::Navigate(_) | Command::Console(_)) {
@@ -370,16 +376,17 @@ impl View {
     }
 }
 
-/// A command that can change rooms (`Choose`, `Navigate`, `Console`) is refused while
-/// [`crate::classify`] says a run is loading: `state()` cannot see all of it
-/// (a run with no room yet reads as a settled `MAP`).
+/// A command that can change rooms (`Choose`, `Navigate`, `Console`,
+/// `StartRun`) is refused while [`crate::classify`] says a run is loading:
+/// `state()` cannot see all of it (a run with no room yet reads as a settled
+/// `MAP`).
 pub(crate) fn refuse_while_loading<B: Backend + ?Sized>(
     backend: &mut B,
     command: &Command,
 ) -> Result<(), BridgeError> {
     if !matches!(
         command,
-        Command::Choose(_) | Command::Navigate(_) | Command::Console(_)
+        Command::Choose(_) | Command::Navigate(_) | Command::Console(_) | Command::StartRun(_)
     ) {
         return Ok(());
     }
@@ -470,6 +477,31 @@ fn precheck(command: &Command, before: &View) -> Result<(), String> {
         }
         Command::Navigate(_) => Ok(()),
         Command::Console(c) => crate::console::check::precheck(c, state),
+        Command::StartRun(_) => Err(START_RUN_REFUSED.to_string()),
+    }
+}
+
+const START_RUN_REFUSED: &str = "a new run loads for tens of seconds: use Game::start_run";
+
+/// `state` is in the run `spec` describes.
+pub(crate) fn run_is(spec: &RunSpec, state: &GameState) -> Result<(), Unmet> {
+    let Some(run) = &state.run else {
+        return Err(Unmet::new(format!("a run ({spec})"), "no run"));
+    };
+    let character = run.character.as_deref().unwrap_or("");
+    if run.seed == spec.seed
+        && run.ascension == spec.ascension
+        && character.eq_ignore_ascii_case(&spec.character)
+    {
+        Ok(())
+    } else {
+        Err(Unmet::new(
+            format!("a run ({spec})"),
+            format!(
+                "a run ({character} seed {} ascension {})",
+                run.seed, run.ascension
+            ),
+        ))
     }
 }
 
@@ -590,5 +622,6 @@ fn postcondition(command: &Command, before: &View, after: &View) -> Result<(), U
             }
         }
         Command::Console(c) => crate::console::check::postcondition(c, b, a),
+        Command::StartRun(spec) => run_is(spec, a),
     }
 }

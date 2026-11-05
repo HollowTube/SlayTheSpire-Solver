@@ -1,6 +1,11 @@
 //! Shared test helpers. Not every test binary uses every helper.
 #![allow(dead_code)]
 
+mod fake_game;
+
+#[allow(unused_imports)]
+pub use fake_game::*;
+
 use std::cell::{Cell, RefCell, RefMut};
 use std::collections::VecDeque;
 use std::path::PathBuf;
@@ -589,4 +594,102 @@ pub fn live_backend() -> McpTestBackend<TcpTransport> {
              Start STS2 with the MCPTest mod (set STS2_BRIDGE_HOST if the game is on another host)."
         ),
     }
+}
+
+// ---- Dirt: what a test leaves behind for the next fixture ----
+
+/// A way to leave the game dirty, from a verified fixture.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Dirt {
+    /// The combat played on: a turn ended.
+    PlayedOn,
+    /// Cards added to the hand, draw and discard piles.
+    Cards,
+    /// Powers added to the player and the enemy.
+    Powers,
+    /// A relic added.
+    Relic,
+    /// The player at 1 hp.
+    NearDeath,
+    /// The combat won: the reward screen.
+    Reward,
+    /// A card added to the master deck.
+    DeckCard,
+    /// The main menu, no run.
+    MainMenu,
+    /// The game-over screen.
+    GameOver,
+}
+
+/// Every dirt kind that stays in the run.
+pub const IN_RUN_DIRT: [Dirt; 7] = [
+    Dirt::PlayedOn,
+    Dirt::Cards,
+    Dirt::Powers,
+    Dirt::Relic,
+    Dirt::NearDeath,
+    Dirt::Reward,
+    Dirt::DeckCard,
+];
+
+/// Leaves the game `dirt`y, through verified commands only. Starts from a
+/// combat on the player's turn.
+pub fn dirty<B: Backend, L: Launcher>(
+    fx: &mut sts_bridge::Fixtures<B, L>,
+    dirt: Dirt,
+) -> Result<(), BridgeError> {
+    use sts_bridge::{
+        CardId, CombatPile, Command, ConsoleCommand as C, MenuNav, PowerName, Relic, Target,
+    };
+    if dirt == Dirt::MainMenu {
+        return fx.game_mut().ensure_main_menu().map(|_| ());
+    }
+    let wait = fx.wait().clone();
+    let mut s = fx.session();
+    let commands: Vec<C> = match dirt {
+        Dirt::PlayedOn => return s.act(&Command::EndTurn).map(|_| ()),
+        Dirt::GameOver => return s.act(&Command::Navigate(MenuNav::AbandonRun)).map(|_| ()),
+        Dirt::Cards => vec![
+            C::AddCard {
+                card: CardId::Bash,
+                pile: CombatPile::Hand,
+            },
+            C::AddCard {
+                card: CardId::StrikeIronclad,
+                pile: CombatPile::Draw,
+            },
+            C::AddCard {
+                card: CardId::DefendIronclad,
+                pile: CombatPile::Discard,
+            },
+        ],
+        Dirt::Powers => vec![
+            C::Power {
+                power: PowerName::new("STRENGTH_POWER").unwrap(),
+                amount: 2,
+                target: Target::Player,
+            },
+            C::Power {
+                power: PowerName::new("VULNERABLE_POWER").unwrap(),
+                amount: 2,
+                target: Target::Enemy(0),
+            },
+        ],
+        Dirt::Relic => vec![C::RelicAdd(Relic::new("ANCHOR").unwrap())],
+        Dirt::NearDeath => {
+            let state = s.wait_settled()?;
+            let hp = state.combat.as_ref().map_or(1, |c| c.player.hp);
+            vec![C::Damage {
+                target: Target::Player,
+                amount: (hp - 1).max(0) as u32,
+            }]
+        }
+        Dirt::Reward => vec![C::Win],
+        Dirt::DeckCard => vec![C::Probe("card BASH deck".into())],
+        Dirt::MainMenu => unreachable!("handled above"),
+    };
+    for c in commands {
+        s.console_with(&c, &wait)?;
+    }
+    Ok(())
 }

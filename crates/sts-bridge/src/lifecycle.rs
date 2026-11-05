@@ -4,9 +4,10 @@
 use std::time::{Duration, Instant};
 
 use crate::backend::{Backend, BridgeError, WedgeReason};
+use crate::command::{Command, RunSpec};
 use crate::menu::{self, classify, Phase, Probe};
-use crate::settle::{poll_until, Observation, SettlePolicy};
-use crate::state::Screen;
+use crate::settle::{poll_until, refuse_while_loading, run_is, Observation, SettlePolicy};
+use crate::state::{GameState, Screen};
 
 /// Deadlines for lifecycle and navigation waits. Sized for a slow machine:
 /// a fresh run took 31 to 75 s from `start_run` to its first room, and the
@@ -243,6 +244,18 @@ pub enum GameStatus {
         pid: Option<u32>,
         last_screen: Option<Screen>,
     },
+}
+
+/// A run [`Game::start_run`] started, loaded and verified.
+#[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
+pub struct StartedRun {
+    /// One read once the run held a stable in-run screen.
+    pub state: GameState,
+    /// From the call to the bridge accepting `start_run`.
+    pub accepted_after: Duration,
+    /// From the call to the run being ready for a room change.
+    pub ready_after: Duration,
 }
 
 /// A [`Game::recover`] that relaunched the game.
@@ -627,6 +640,35 @@ impl<B: Backend, L: Launcher> Game<B, L> {
             |b, t| menu::ensure_main_menu(b, t),
             |_, recovered| Ok(recovered.probe),
         )
+    }
+
+    /// Starts the seeded run `spec` and returns once it is ready for a room
+    /// change, verified to be that run (seed, character, ascension).
+    ///
+    /// Brings the game to a verified main menu first ([`Game::ensure_main_menu`],
+    /// which abandons a run in progress), and sends `start_run` only there.
+    /// It then waits, sending nothing, for the run to load
+    /// ([`Game::wait_run_ready`]). A run that loads as another run is
+    /// [`BridgeError::PostconditionFailed`].
+    pub fn start_run(&mut self, spec: &RunSpec) -> Result<StartedRun, BridgeError> {
+        let started = Instant::now();
+        self.ensure_main_menu()?;
+        let command = Command::StartRun(spec.clone());
+        refuse_while_loading(&mut self.backend, &command).map_err(|e| self.lost(e))?;
+        self.backend.send(&command).map_err(|e| self.lost(e))?;
+        let accepted_after = started.elapsed();
+        self.wait_run_ready()?;
+        let state = self.backend.state().map_err(|e| self.lost(e))?;
+        run_is(spec, &state).map_err(|unmet| BridgeError::PostconditionFailed {
+            action: command.to_string(),
+            expected: unmet.expected,
+            observed: unmet.observed,
+        })?;
+        Ok(StartedRun {
+            state,
+            accepted_after,
+            ready_after: started.elapsed(),
+        })
     }
 
     /// [`menu::wait_run_ready`], recovering once from a wedge or a crash. A

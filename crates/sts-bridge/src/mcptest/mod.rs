@@ -209,6 +209,14 @@ impl<T: Transport> Backend for McpTestBackend<T> {
             Command::Navigate(MenuNav::Back) => return self.navigate(command, "back"),
             Command::Navigate(MenuNav::LeaveGameOver) => return self.leave_game_over(command),
             Command::Console(c) => ("console", Some(json!({ "command": c.line() }))),
+            Command::StartRun(spec) => (
+                "start_run",
+                Some(json!({
+                    "character": spec.character,
+                    "seed": spec.seed,
+                    "ascension": spec.ascension,
+                })),
+            ),
         };
         self.send_raw(command, method, params)
     }
@@ -265,8 +273,8 @@ impl<T: Transport> Backend for McpTestBackend<T> {
             let wire = parse::<WireRun>(RUN, &run_value)?;
             const PLAYER: &str = "get_player_state";
             let player = self.call(PLAYER, None)?;
-            let relics = parse::<WirePlayerState>(PLAYER, &player)?.relics(PLAYER)?;
-            Some(wire.into_run_info(RUN, relics)?)
+            let owned = parse::<WirePlayerState>(PLAYER, &player)?.owned(PLAYER)?;
+            Some(wire.into_run_info(RUN, owned)?)
         } else {
             None
         };
