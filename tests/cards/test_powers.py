@@ -381,6 +381,104 @@ def test_one_two_punch_does_not_persist_to_next_turn_if_unused():
     assert "OneTwoPunch" not in after_turn.player_statuses
 
 
+def _strike(state):
+    """Play a Strike at the only monster; return (new state, damage dealt)."""
+    hp = state.monsters[0].hp
+    after = apply(apply(state, PlayCardAction("Strike")), SelectTargetAction(0))
+    return after, hp - after.monsters[0].hp
+
+
+def test_upgraded_one_two_punch_replays_the_next_two_attacks():
+    state = CombatState(
+        player_hp=80,
+        player_energy=5,
+        monsters=[Monster(hp=100, attack=0)],
+        seed=42,
+        hand=["OneTwoPunch+", "Strike", "Strike", "Strike"],
+    )
+
+    state = apply(state, PlayCardAction("OneTwoPunch+"))
+    state, first = _strike(state)
+    state, second = _strike(state)
+    state, third = _strike(state)
+
+    assert (first, second, third) == (12, 12, 6)
+
+
+def test_upgraded_one_two_punch_replays_untargeted_attacks_too():
+    state = CombatState(
+        player_hp=80,
+        player_energy=5,
+        monsters=[Monster(hp=100, attack=0)],
+        seed=42,
+        hand=["OneTwoPunch+", "Thunderclap", "Thunderclap", "Thunderclap"],
+    )
+
+    state = apply(state, PlayCardAction("OneTwoPunch+"))
+    damage = []
+    for _ in range(3):
+        hp = state.monsters[0].hp
+        state = apply(state, PlayCardAction("Thunderclap"))
+        damage.append(hp - state.monsters[0].hp)
+
+    # Thunderclap's Vulnerable lands on the first play, so only the second and
+    # third plays are directly comparable.
+    assert damage[0] > damage[2]
+    assert damage[1] == 2 * damage[2]
+
+
+def test_skills_played_in_between_do_not_consume_one_two_punch():
+    state = CombatState(
+        player_hp=80,
+        player_energy=5,
+        monsters=[Monster(hp=100, attack=0)],
+        seed=42,
+        hand=["OneTwoPunch", "Defend", "Strike"],
+    )
+
+    state = apply(state, PlayCardAction("OneTwoPunch"))
+    state = apply(state, PlayCardAction("Defend"))
+    _, damage = _strike(state)
+
+    assert damage == 12
+
+
+def test_one_two_punch_count_does_not_survive_the_turn_even_when_stacked():
+    state = CombatState(
+        player_hp=80,
+        player_energy=5,
+        monsters=[Monster(hp=100, attack=0)],
+        seed=42,
+        hand=["OneTwoPunch", "OneTwoPunch+", "Strike"],
+        draw_pile=["Defend"] * 10,
+    )
+
+    state = apply(state, PlayCardAction("OneTwoPunch"))
+    state = apply(state, PlayCardAction("OneTwoPunch+"))
+    state, damage = _strike(state)
+    assert damage == 12
+    state = apply(state, EndTurnAction())
+
+    assert "OneTwoPunch" not in state.player_statuses
+
+
+def test_one_two_punch_amount_round_trips_from_a_snapshot():
+    state = CombatState(
+        player_hp=80,
+        player_energy=5,
+        monsters=[Monster(hp=100, attack=0)],
+        seed=42,
+        hand=["Strike", "Strike", "Strike"],
+        player_statuses=[("OneTwoPunch", 2)],
+    )
+
+    state, first = _strike(state)
+    state, second = _strike(state)
+    state, third = _strike(state)
+
+    assert (first, second, third) == (12, 12, 6)
+
+
 # ── Pyre ──────────────────────────────────────────────────────────────────────
 
 
