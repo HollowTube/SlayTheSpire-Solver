@@ -1,4 +1,4 @@
-use crate::cards::{can_upgrade, card_data, CardType};
+use crate::cards::{can_upgrade, card_data, on_exhaust_effects, CardType};
 use crate::ids::{CardId, MonsterId};
 use crate::state::{draw_cards, CardInstance, CombatState, Fighter, Monster, PendingDecision};
 use rand::seq::SliceRandom;
@@ -116,9 +116,6 @@ pub enum Status {
     FreeAttack,
     // Pyre: at the start of each turn, gain 1 Energy.
     Pyre,
-    // DrumOfBattle: at the start of each turn, Exhaust the top card of the
-    // draw pile.
-    BattleDrum,
     // Constrict: at the end of the player's turn, the holder takes `n`
     // unblockable damage (bypasses block, unaffected by damage modifiers).
     // Stacks add when reapplied (counter-style, like Strength); does NOT
@@ -205,7 +202,6 @@ impl Status {
             Status::StrengthThisTurn(_) => "StrengthThisTurn",
             Status::FreeAttack => "FreeAttack",
             Status::Pyre => "Pyre",
-            Status::BattleDrum => "BattleDrum",
             Status::Constrict(_) => "Constrict",
             Status::Artifact(_) => "Artifact",
             Status::Frail(_) => "Frail",
@@ -261,7 +257,6 @@ impl Status {
             | Status::OneTwoPunch
             | Status::FreeAttack
             | Status::Pyre
-            | Status::BattleDrum
             | Status::Minion { .. }
             | Status::Stun
             | Status::Infested { .. }
@@ -302,7 +297,6 @@ impl Status {
             "StrengthThisTurn" => vec![Status::StrengthThisTurn(amount)],
             "FreeAttack" => vec![Status::FreeAttack; amount.max(0) as usize],
             "Pyre" => vec![Status::Pyre; amount.max(0) as usize],
-            "BattleDrum" => vec![Status::BattleDrum; amount.max(0) as usize],
             "Constrict" | "CONSTRICT" => vec![Status::Constrict(amount)],
             "Artifact" | "ARTIFACT" => vec![Status::Artifact(amount)],
             "Frail" | "FRAIL" => vec![Status::Frail(amount)],
@@ -453,7 +447,6 @@ impl Status {
                 vec![EffectOp::DealDamageToLastAttacker(4)]
             }
             (Status::Pyre, GameEvent::TurnStart) => vec![EffectOp::GainEnergy(1)],
-            (Status::BattleDrum, GameEvent::TurnStart) => vec![EffectOp::ExhaustTopOfDrawPile],
             // Plating: grant block at end of player turn equal to current stack.
             (Status::Plating(n), GameEvent::PlayerTurnEnd) => {
                 vec![EffectOp::GainBlock(*n)]
@@ -715,9 +708,6 @@ pub enum EffectOp {
         per_unit: i32,
         source: ScaleSource,
     },
-    // Exhaust the top card of the player's draw pile (e.g. DrumOfBattle's
-    // turn-start trigger).
-    ExhaustTopOfDrawPile,
     // Add a copy of the named card to the player's discard pile (e.g. Anger).
     AddCardToDiscard(CardId),
     // Add an upgraded copy of the named card to the player's discard pile
@@ -1164,12 +1154,6 @@ pub fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor, t
                     state.hand.push(CardInstance::new(*card_id));
                 }
             }
-            EffectOp::ExhaustTopOfDrawPile => {
-                if let Some(card) = state.draw_pile.pop() {
-                    state.exhaust_pile.push(card);
-                    fire_event(state, GameEvent::CardExhausted);
-                }
-            }
             EffectOp::ExhaustRandomFromHand(filter) => {
                 let candidates: Vec<usize> = state
                     .hand
@@ -1181,8 +1165,7 @@ pub fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor, t
                 if !candidates.is_empty() {
                     let pick = candidates[state.rng.gen_range(0..candidates.len())];
                     let card = state.hand.remove(pick);
-                    state.exhaust_pile.push(card);
-                    fire_event(state, GameEvent::CardExhausted);
+                    exhaust_card(state, card);
                 }
             }
             EffectOp::ExhaustAllFromHand {
@@ -1193,10 +1176,9 @@ pub fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor, t
                     state.hand.drain(..).partition(|card| filter.matches(card.id));
                 let count = matching.len() as i32;
                 state.hand = remaining;
-                state.exhaust_pile.extend(matching);
                 state.fighter_mut(actor).block += gain_block_per_card * count;
-                for _ in 0..count {
-                    fire_event(state, GameEvent::CardExhausted);
+                for card in matching {
+                    exhaust_card(state, card);
                 }
             }
             EffectOp::PutRandomDiscardOnTopOfDraw => {
@@ -1378,13 +1360,21 @@ pub fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor, t
     }
 }
 
+/// Moves `card` to the exhaust pile, fires `CardExhausted`, then runs the
+/// card's own on-exhaust effects as the player.
+pub fn exhaust_card(state: &mut CombatState, card: CardInstance) {
+    let on_exhaust = on_exhaust_effects(card.id, card.upgrade_level);
+    state.exhaust_pile.push(card);
+    fire_event(state, GameEvent::CardExhausted);
+    run_effect_ops(state, &on_exhaust, Actor::Player, &[], false);
+}
+
 /// Brand's resolution: exhaust the hand card at `pos` (if any), then gain
 /// `strength` Strength.
 pub fn resolve_exhaust_from_hand(state: &mut CombatState, pos: Option<usize>, strength: i32) {
     if let Some(pos) = pos {
         let card = state.hand.remove(pos);
-        state.exhaust_pile.push(card);
-        fire_event(state, GameEvent::CardExhausted);
+        exhaust_card(state, card);
     }
     let gain = [EffectOp::ApplyStatusToSelf(Status::Strength(strength))];
     run_effect_ops(state, &gain, Actor::Player, &[], false);
@@ -1457,8 +1447,7 @@ fn run_play_top_of_deck(state: &mut CombatState, count: usize, exhaust: bool) {
             }
         }
         if exhaust {
-            state.exhaust_pile.push(card.clone());
-            fire_event(state, GameEvent::CardExhausted);
+            exhaust_card(state, card.clone());
         } else {
             state.discard_pile.push(card.clone());
         }

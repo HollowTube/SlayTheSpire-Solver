@@ -3,6 +3,7 @@ covering block, draw, hand manipulation, healing, and self-damage utilities."""
 
 from sts_sim import (
     CombatState,
+    EndTurnAction,
     Monster,
     PlayCardAction,
     SelectTargetAction,
@@ -198,6 +199,80 @@ def test_second_wind_exhausts_non_attacks_and_gains_5_block_each(make_state):
     assert "Rage" in resolved.exhaust_pile
     assert "Strike" in resolved.hand
     assert "SecondWind" in resolved.discard_pile
+
+
+# ── DrumOfBattle ──────────────────────────────────────────────────────────────
+
+
+def test_drum_of_battle_draws_2_and_goes_to_discard_when_played(make_state):
+    state = make_state(
+        hand=["DrumOfBattle", "Strike"], draw_pile=["Defend", "Defend", "Defend"]
+    )
+
+    resolved = apply(state, PlayCardAction("DrumOfBattle"))
+
+    assert len(resolved.hand) == 3
+    assert "DrumOfBattle" in resolved.discard_pile
+    assert "DrumOfBattle" not in resolved.exhaust_pile
+    assert "BattleDrum" not in resolved.player_statuses
+    assert resolved.player_energy == state.player_energy - 1
+
+
+def test_drum_of_battle_gains_2_energy_when_true_grit_exhausts_it(make_state):
+    state = make_state(hand=["TrueGrit", "DrumOfBattle"])
+
+    resolved = apply(state, PlayCardAction("TrueGrit"))
+
+    assert "DrumOfBattle" in resolved.exhaust_pile
+    assert resolved.player_energy == state.player_energy - 1 + 2
+
+
+def test_upgraded_drum_of_battle_gains_3_energy_when_exhausted(make_state):
+    state = make_state(hand=["TrueGrit", "DrumOfBattle+"])
+
+    resolved = apply(state, PlayCardAction("TrueGrit"))
+
+    assert resolved.player_energy == state.player_energy - 1 + 3
+
+
+def test_drum_of_battle_gains_energy_when_burning_pact_exhausts_it(make_state):
+    state = make_state(
+        hand=["BurningPact", "DrumOfBattle"], draw_pile=["Strike", "Strike"]
+    )
+
+    resolved = apply(state, PlayCardAction("BurningPact"))
+
+    assert resolved.player_energy == state.player_energy - 1 + 2
+
+
+def test_drum_of_battle_gains_energy_when_second_wind_exhausts_it(make_state):
+    state = make_state(hand=["SecondWind", "DrumOfBattle"])
+
+    resolved = apply(state, PlayCardAction("SecondWind"))
+
+    assert resolved.player_energy == state.player_energy - 1 + 2
+
+
+def test_drum_of_battle_gains_energy_when_corruption_exhausts_it(make_state):
+    state = make_state(
+        hand=["Corruption", "DrumOfBattle"], draw_pile=["Strike", "Strike"]
+    )
+
+    after_corruption = apply(state, PlayCardAction("Corruption"))
+    resolved = apply(after_corruption, PlayCardAction("DrumOfBattle"))
+
+    assert "DrumOfBattle" in resolved.exhaust_pile
+    # Corruption makes the Skill free, then exhausting it pays out 2.
+    assert resolved.player_energy == after_corruption.player_energy + 2
+
+
+def test_drum_of_battle_gives_no_energy_when_merely_discarded_or_drawn(make_state):
+    state = make_state(hand=["DrumOfBattle"])
+
+    ended = apply(state, EndTurnAction())
+
+    assert "DrumOfBattle" not in ended.exhaust_pile
+    assert ended.player_energy == 3  # a fresh turn's energy, no bonus
 
 
 # ── Dominate ──────────────────────────────────────────────────────────────────

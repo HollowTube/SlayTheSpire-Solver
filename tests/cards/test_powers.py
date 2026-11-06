@@ -408,29 +408,6 @@ def test_pyre_grants_energy_at_start_of_each_turn():
     assert after_end_turn.player_energy == 4  # base 3 + Pyre 1
 
 
-# ── DrumOfBattle ──────────────────────────────────────────────────────────────
-
-
-def test_drum_of_battle_draws_2_on_play():
-    state = _pyre_state(
-        ["DrumOfBattle", "Strike", "Strike", "Strike", "Defend"],
-        draw_pile=["Defend", "Defend"],
-    )
-    assert len(state.hand) == 5
-    after = apply(state, PlayCardAction("DrumOfBattle"))
-    assert len(after.hand) == 6  # played (1 gone) + draw 2 = net +1
-
-
-def test_drum_of_battle_exhausts_top_of_draw_at_turn_start():
-    state = _pyre_state(
-        ["DrumOfBattle", "Strike", "Strike", "Strike", "Strike"],
-        draw_pile=["Defend", "Defend"],
-    )
-    after = apply(state, PlayCardAction("DrumOfBattle"))
-    assert len(after.draw_pile) == 0
-    assert "BattleDrum" in after.player_statuses
-
-
 # ── StoneArmor (Plating) ──────────────────────────────────────────────────────
 
 
