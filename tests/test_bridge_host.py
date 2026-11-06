@@ -86,7 +86,7 @@ def _install(tmp_path, app):
 def test_claude_hook_exports_the_host_only_on_wsl(tmp_path):
     _install(tmp_path, "claude-code")
     settings = json.loads((tmp_path / ".claude" / "settings.json").read_text())
-    command = settings["SessionStart"][0]["hooks"][0]["command"]
+    command = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
     export = command.index("export STS2_BRIDGE_HOST")
     guard = command.index("microsoft")
     assert command.startswith("if ") and guard < export
@@ -101,7 +101,7 @@ def _run_hook_probe(tmp_path, env_extra):
 
     _install(tmp_path, "claude-code")
     settings = json.loads((tmp_path / ".claude" / "settings.json").read_text())
-    command = settings["SessionStart"][0]["hooks"][0]["command"]
+    command = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
     head = command.rsplit("; ", 1)[0]
     probe = head + '; echo "HOST=${STS2_BRIDGE_HOST-unset}"'
     env = {
@@ -119,6 +119,114 @@ def test_claude_hook_keeps_an_existing_host_on_wsl(tmp_path):
         tmp_path, {"WSL_DISTRO_NAME": "Ubuntu", "STS2_BRIDGE_HOST": "10.9.9.9"}
     )
     assert out == "HOST=10.9.9.9"
+
+
+def _settings_path(tmp_path):
+    return tmp_path / ".claude" / "settings.json"
+
+
+def _write_settings(tmp_path, settings):
+    path = _settings_path(tmp_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(settings))
+
+
+def _read_settings(tmp_path):
+    return json.loads(_settings_path(tmp_path).read_text())
+
+
+def _invoke(tmp_path, *extra):
+    return CliRunner().invoke(
+        main,
+        ["setup-hook", "--project-dir", str(tmp_path), "--app", "claude-code", *extra],
+    )
+
+
+STS2_BLOCK = {"matcher": "", "hooks": [{"type": "command", "command": "sts2"}]}
+OTHER_BLOCK = {"matcher": "", "hooks": [{"type": "command", "command": "echo hi"}]}
+
+
+def test_claude_hook_installs_under_hooks_only(tmp_path):
+    _install(tmp_path, "claude-code")
+    settings = _read_settings(tmp_path)
+    assert "SessionStart" not in settings
+    assert len(settings["hooks"]["SessionStart"]) == 1
+
+
+def test_claude_hook_reinstall_is_a_noop(tmp_path):
+    _install(tmp_path, "claude-code")
+    before = _read_settings(tmp_path)
+    result = _invoke(tmp_path)
+    assert "already installed" in result.output
+    assert _read_settings(tmp_path) == before
+
+
+def test_claude_hook_remove_cleans_up_and_keeps_unrelated_settings(tmp_path):
+    _write_settings(
+        tmp_path,
+        {
+            "permissions": {"allow": ["Bash"]},
+            "hooks": {"PreToolUse": [OTHER_BLOCK]},
+        },
+    )
+    _install(tmp_path, "claude-code")
+    result = _invoke(tmp_path, "--remove")
+    assert result.exit_code == 0, result.output
+    assert _read_settings(tmp_path) == {
+        "permissions": {"allow": ["Bash"]},
+        "hooks": {"PreToolUse": [OTHER_BLOCK]},
+    }
+
+
+def test_claude_hook_remove_drops_empty_hooks_scaffolding(tmp_path):
+    _install(tmp_path, "claude-code")
+    _invoke(tmp_path, "--remove")
+    assert _read_settings(tmp_path) == {}
+
+
+def test_claude_hook_remove_keeps_other_session_start_blocks(tmp_path):
+    _write_settings(tmp_path, {"hooks": {"SessionStart": [OTHER_BLOCK]}})
+    _install(tmp_path, "claude-code")
+    _invoke(tmp_path, "--remove")
+    assert _read_settings(tmp_path) == {"hooks": {"SessionStart": [OTHER_BLOCK]}}
+
+
+def test_claude_hook_install_migrates_the_legacy_top_level_entry(tmp_path):
+    _write_settings(tmp_path, {"SessionStart": [STS2_BLOCK, OTHER_BLOCK]})
+    result = _invoke(tmp_path)
+    assert "migrated legacy entry" in result.output
+    settings = _read_settings(tmp_path)
+    assert settings["SessionStart"] == [OTHER_BLOCK]
+    command = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
+    assert "STS2_BRIDGE_HOST" in command
+
+
+def test_claude_hook_migration_removes_an_emptied_legacy_key(tmp_path):
+    _write_settings(tmp_path, {"SessionStart": [STS2_BLOCK]})
+    _invoke(tmp_path)
+    assert "SessionStart" not in _read_settings(tmp_path)
+
+
+def test_claude_hook_remove_also_cleans_the_legacy_entry(tmp_path):
+    _write_settings(tmp_path, {"SessionStart": [STS2_BLOCK, OTHER_BLOCK]})
+    _invoke(tmp_path, "--remove")
+    assert _read_settings(tmp_path) == {"SessionStart": [OTHER_BLOCK]}
+
+
+def test_claude_hook_ignores_blocks_with_non_string_commands(tmp_path):
+    odd = {"hooks": [{"command": None}, "x"]}
+    _write_settings(tmp_path, {"hooks": {"SessionStart": [odd, {"hooks": None}]}})
+    result = _invoke(tmp_path)
+    assert result.exit_code == 0, result.output
+    assert len(_read_settings(tmp_path)["hooks"]["SessionStart"]) == 3
+
+
+@pytest.mark.parametrize("bad", [{"hooks": []}, {"hooks": {"SessionStart": {}}}])
+def test_claude_hook_leaves_a_malformed_hooks_value_untouched(tmp_path, bad):
+    _write_settings(tmp_path, bad)
+    result = _invoke(tmp_path)
+    assert result.exception is None
+    assert _read_settings(tmp_path) == bad
 
 
 def test_opencode_plugin_exports_the_host_only_on_wsl(tmp_path):

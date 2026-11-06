@@ -151,9 +151,9 @@ sts2 setup-hook --app opencode       # OpenCode only
 sts2 setup-hook --remove             # remove all
 ```
 
-On WSL both hooks set the bridge host from `/etc/resolv.conf`; on native Linux they set nothing and `sts2` uses `127.0.0.1`. Hooks installed by an older version keep the old command: run `sts2 setup-hook --remove`, then install again. They fail silently when the bridge is unreachable so sessions open normally even if the game isn't running.
+On WSL both hooks set the bridge host from `/etc/resolv.conf`; on native Linux they set nothing and `sts2` uses `127.0.0.1`. Re-running `sts2 setup-hook` upgrades a hook installed by an older version (including the Claude Code hook that used to sit outside the `hooks` key); `--remove` also cleans that old entry. They fail silently when the bridge is unreachable so sessions open normally even if the game isn't running.
 
-**Claude Code** — writes a `SessionStart` hook to `.claude/settings.json` that runs `sts2` and injects output as ambient context.
+**Claude Code** — writes a `SessionStart` hook under `hooks` in `.claude/settings.json` that runs `sts2` and injects output as ambient context.
 
 **OpenCode** — writes `.opencode/plugins/sts2.ts` with two hooks:
 - `shell.env`: sets `STS2_BRIDGE_HOST` on WSL only

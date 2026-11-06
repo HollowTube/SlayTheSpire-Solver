@@ -1354,61 +1354,65 @@ def _setup_claude_code(project_root: str, bin_path: str, remove: bool) -> None:
     except (FileNotFoundError, json.JSONDecodeError):
         settings = {}
 
-    session_hooks: list[dict] = settings.setdefault("SessionStart", [])
-    existing = [
-        i
-        for i, b in enumerate(session_hooks)
-        for h in b.get("hooks", [])
-        if bin_path in h.get("command", "") or "sts2" in h.get("command", "")
-    ]
+    def is_sts2(block: object) -> bool:
+        entries = block.get("hooks") if isinstance(block, dict) else None
+        if not isinstance(entries, list):
+            return False
+        commands = [h.get("command") for h in entries if isinstance(h, dict)]
+        return any(
+            isinstance(c, str) and (bin_path in c or "sts2" in c) for c in commands
+        )
+
+    def report(status: str, **extra: str) -> None:
+        click.echo(_block("hook", {"app": "claude-code", "status": status, **extra}))
+
+    hooks = settings.get("hooks", {})
+    if not isinstance(hooks, dict) or not isinstance(
+        hooks.get("SessionStart", []), list
+    ):
+        report("settings.hooks has an unexpected shape; left untouched")
+        return
+    session_hooks: list[dict] = hooks.get("SessionStart", [])
+
+    # Older versions wrote the hook to a top-level SessionStart key, which Claude
+    # Code never reads. Drop sts2's blocks there and leave everything else alone.
+    legacy = settings.get("SessionStart")
+    migrated = isinstance(legacy, list) and any(is_sts2(b) for b in legacy)
+    if migrated:
+        legacy[:] = [b for b in legacy if not is_sts2(b)]
+        if not legacy:
+            del settings["SessionStart"]
+
+    existing = [i for i, b in enumerate(session_hooks) if is_sts2(b)]
+    extra = {"migrated": "migrated legacy entry"} if migrated else {}
+
+    def save() -> None:
+        with open(settings_path, "w") as f:
+            json.dump(settings, f, indent=2)
 
     if remove:
-        if not existing:
-            click.echo(
-                _block(
-                    "hook", {"app": "claude-code", "status": "not installed (no-op)"}
-                )
-            )
+        if not existing and not migrated:
+            report("not installed (no-op)")
             return
         for i in sorted(existing, reverse=True):
             session_hooks.pop(i)
-        with open(settings_path, "w") as f:
-            json.dump(settings, f, indent=2)
-        click.echo(
-            _block(
-                "hook",
-                {"app": "claude-code", "status": "removed", "settings": settings_path},
-            )
-        )
+        if not session_hooks:
+            hooks.pop("SessionStart", None)
+        if not hooks:
+            settings.pop("hooks", None)
+        save()
+        report("removed", settings=settings_path, **extra)
         return
 
     if existing:
-        click.echo(
-            _block(
-                "hook",
-                {
-                    "app": "claude-code",
-                    "status": "already installed (no-op)",
-                    "settings": settings_path,
-                },
-            )
-        )
+        if migrated:
+            save()
+        report("already installed (no-op)", settings=settings_path, **extra)
         return
 
-    session_hooks.append(hook_block)
-    with open(settings_path, "w") as f:
-        json.dump(settings, f, indent=2)
-    click.echo(
-        _block(
-            "hook",
-            {
-                "app": "claude-code",
-                "status": "installed",
-                "trigger": "SessionStart",
-                "settings": settings_path,
-            },
-        )
-    )
+    settings.setdefault("hooks", {}).setdefault("SessionStart", []).append(hook_block)
+    save()
+    report("installed", trigger="SessionStart", settings=settings_path, **extra)
 
 
 def _setup_opencode(project_root: str, bin_path: str, remove: bool) -> None:

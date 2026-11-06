@@ -371,8 +371,11 @@ export STS2_BRIDGE_HOST=172.26.176.1   # Windows IP as seen from WSL — check /
 sts2 state
 ```
 
-`sts2 setup-hook` exports `STS2_BRIDGE_HOST` on WSL only. A hook installed by an older
-version keeps its old command: run `sts2 setup-hook --remove`, then install it again.
+`sts2 setup-hook` exports `STS2_BRIDGE_HOST` on WSL only. For Claude Code the hook
+lives under `hooks.SessionStart` in `.claude/settings.json`. An install made by an older
+version wrote a top-level `SessionStart` key that Claude Code never read: re-running
+`sts2 setup-hook` drops sts2's block there (other blocks are left alone) and installs the
+hook under `hooks`, and `--remove` cleans both places.
 
 ### Live integration tests
 
