@@ -3,6 +3,8 @@
 
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use crate::console::ConsoleCommand;
 use crate::state::AvailableAction;
 
@@ -29,7 +31,7 @@ pub enum Command {
 }
 
 /// A seeded run.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct RunSpec {
     /// The character's class name, e.g. `Ironclad`.
     pub character: String,

@@ -63,6 +63,19 @@ macro_rules! id_newtype {
             }
         }
 
+        impl serde::Serialize for $name {
+            fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+                s.serialize_str(self.0)
+            }
+        }
+
+        impl<'de> serde::Deserialize<'de> for $name {
+            fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+                let id = String::deserialize(d)?;
+                Self::new(&id).map_err(serde::de::Error::custom)
+            }
+        }
+
         impl fmt::Display for $name {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.write_str(self.0)

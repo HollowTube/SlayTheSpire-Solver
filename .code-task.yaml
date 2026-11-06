@@ -40,7 +40,7 @@ build:
   setup: [scripts/dev-setup.sh]
   verify: [scripts/verify.sh]
   format:
-    - .venv/bin/ruff format python/ tests/ integtests/
+    - .venv/bin/ruff format python/ tests/
 
 docs: [AGENTS.md, docs/agents/]   # read before planning/implementing (CLAUDE.md is a symlink to AGENTS.md)
 

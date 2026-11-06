@@ -6,5 +6,5 @@ if [ -f ".venv/bin/activate" ]; then
 fi
 
 python scripts/gen_ids.py --check
-ruff check python/ tests/ integtests/
-ruff format --check python/ tests/ integtests/
+ruff check python/ tests/
+ruff format --check python/ tests/

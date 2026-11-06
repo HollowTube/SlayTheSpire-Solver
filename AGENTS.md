@@ -20,7 +20,7 @@ Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agent
 
 Prefer the `sts2` CLI over `mcp__sts2-modding__*` tools for reading and controlling a live game. The CLI is the stable interface; the MCP tools are lower-level and more verbose. Use `sts2 combat`, `sts2 actions`, `sts2 act <n>` for the common play loop. Fall back to MCP tools only when the CLI doesn't expose what you need.
 
-Running `integtests/` (`pytest integtests/ -m live -v`) against a real game requires settle-polling screen transitions rather than fixed sleeps — a console command issued mid-transition can permanently wedge the game's `CombatManager` until a full relaunch. See the README's "Live integration tests" section and `integtests/conftest.py`'s `_wait_settled`/`_stable_piles` helpers before adding new fixture code that issues console commands after a screen change.
+Live card parity is the Rust suite in `crates/sts-parity` (`cargo test -p sts-parity --test live_cards -- --live`, see the README's "Live integration tests"). It goes through `Fixtures::ensure` and the settled `Session::act` only: a console command issued mid-transition can wedge or crash the game, so never script one by hand around a screen change.
 
 ---
 
@@ -126,11 +126,11 @@ mypy python/ tests/ --ignore-missing-imports
 python scripts/gen_ids.py --check   # fails if stale
 python scripts/gen_ids.py           # regenerate in place
 
-# Cargo check (Rust only, no Python build) — covers sts-sim, crates/sts-ids, crates/sts-bridge and crates/sts-py
+# Cargo check (Rust only, no Python build) — covers sts-sim, crates/sts-ids, crates/sts-bridge, crates/sts-parity and crates/sts-py
 cargo check
 
 # Sim, registry and bridge crate tests (offline; live bridge ones are opt-in — see crates/sts-bridge/README.md)
-cargo test -p sts-ids -p sts-bridge -p sts-sim
+cargo test -p sts-ids -p sts-bridge -p sts-sim -p sts-parity
 
 # Restart analysis server (pull latest, rebuild Rust if src/ or crates/sts-py changed, kill old, start fresh)
 ./scripts/start-server.sh
@@ -167,6 +167,7 @@ tests/          ← pytest (require the .so to be built)
 | `rust_api.rs` | `SimAction`, `CombatParts`/`Counters` with `CombatState::from_parts`/`parts`, and the read accessors. |
 | `error.rs` | `SimError`; its `Display` is the message Python raises as `ValueError`. |
 | `lib.rs` | `apply`, `legal_actions`, `optimal_value_rec`, the terminal/reward functions. |
+| `crates/sts-parity/` | Live sim-vs-game card parity: `map` (game state to sim input, `ParityState`), `step` (`sim_step`, `diff`), `cases` (the case table), `expected` (known divergences), `runner`; the suite is `tests/live_cards.rs`. |
 | `crates/sts-py/` | The PyO3 wrapper classes, `apply` (the `TypeError`/`ValueError` mapping), the card/status dict export, and `action.rs` (`EndTurnAction`, `PlayCardAction`, ...). |
 | `run.rs` | Run-level state (`RunState`) and functions (`run_apply`, `run_is_terminal`, etc.) for multi-fight runs. |
 | `act.rs` | Overgrowth encounter/elite pool draws (`draw_overgrowth_monster_sequence`, `draw_overgrowth_elite`). |

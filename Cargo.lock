@@ -837,6 +837,17 @@ name = "sts-ids"
 version = "0.1.0"
 
 [[package]]
+name = "sts-parity"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sts-bridge",
+ "sts-ids",
+ "sts-sim",
+]
+
+[[package]]
 name = "sts-py"
 version = "0.1.0"
 dependencies = [

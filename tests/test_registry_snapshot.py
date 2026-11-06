@@ -9,6 +9,7 @@ whenever a stub card gains its first effect.
 """
 
 import json
+import re
 from enum import Enum
 from pathlib import Path
 
@@ -30,6 +31,45 @@ _ADDED_BRIDGE_CARDS = {
     f"Burn{suffix}": "Burn"
     for suffix in ("Ironclad", "Silent", "Defect", "Watcher", "Huntress")
 }
+# The parity suite reads the game's `*Power` class names, so the statuses the
+# Ironclad cards produce gained those names and the missing rows.
+_STATUS_POWER_NAMES = {
+    "Dexterity",
+    "Poison",
+    "Thorns",
+    "Ritual",
+    "Regen",
+    "DemonForm",
+    "Juggernaut",
+}
+
+
+def _screaming(name: str) -> str:
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).upper()
+
+
+# The game has no such power class.
+_NOT_GAME_CLASSES = {"InflamePower"}
+_ADDED_STATUSES = [
+    [_screaming(name), name, [name, f"{name}Power"]]
+    for name in (
+        "Rage",
+        "CrimsonMantle",
+        "Inferno",
+        "Aggression",
+        "DarkEmbrace",
+        "FlameBarrier",
+        "Colossus",
+        "Corruption",
+        "Cruelty",
+        "OneTwoPunch",
+        "FreeAttack",
+        "Pyre",
+        "Vicious",
+        "Juggling",
+        "Unmovable",
+    )
+] + [["STRENGTH_THIS_TURN", "StrengthThisTurn", ["SetupStrikePower"]]]
 # Unconfirmed bridge names with no registry row; monster() still maps them by
 # its CamelCase fallback.
 _REMOVED_MONSTER_MAP_KEYS = {"AcidSlime_L", "AcidSlime_M", "AcidSlime_S"}
@@ -54,7 +94,17 @@ def test_monster_name_members_and_order():
 
 def test_status_name_members_and_bridge_classes():
     actual = [[m.name, m.value, list(m.bridge_classes)] for m in names.StatusName]
-    assert actual == _SNAPSHOT["StatusName"]
+    expected = [
+        [
+            n,
+            v,
+            [*c, f"{v}Power"]
+            if v in _STATUS_POWER_NAMES
+            else [x for x in c if x not in _NOT_GAME_CLASSES],
+        ]
+        for n, v, c in _SNAPSHOT["StatusName"]
+    ]
+    assert actual == expected + _ADDED_STATUSES
 
 
 def test_encounter_members():

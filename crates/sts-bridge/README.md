@@ -329,3 +329,7 @@ has no test target.
 until HOL-102 fixes multi-hit intent `total_damage` in the bridge.
 
 The schema for agents is `schema/game_state.schema.json`.
+
+## Parity suite
+
+`crates/sts-parity` builds on `Fixtures::ensure` and `Session::act` to compare the sim against the game card by card; see the repository README, "Live integration tests".
