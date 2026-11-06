@@ -13,8 +13,8 @@ rayon = "1"
 sts-ids = { path = "crates/sts-ids" }
 
 [workspace]
-members = [".", "crates/sts-bridge", "crates/sts-ids", "crates/sts-py"]
+members = [".", "crates/sts-bridge", "crates/sts-ids", "crates/sts-parity", "crates/sts-py"]
 # `cargo check` at the root covers every crate. `cargo test -p sts-ids
-# -p sts-bridge -p sts-sim` runs the library tests; sts-py (the pyo3
+# -p sts-bridge -p sts-sim -p sts-parity` runs the library tests; sts-py (the pyo3
 # extension) has no test target, so a bare `cargo test` never links libpython.
-default-members = [".", "crates/sts-bridge", "crates/sts-ids", "crates/sts-py"]
+default-members = [".", "crates/sts-bridge", "crates/sts-ids", "crates/sts-parity", "crates/sts-py"]

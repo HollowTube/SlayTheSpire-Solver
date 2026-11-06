@@ -118,8 +118,8 @@ python scripts/gen_ids.py --check
 cargo check
 
 # Python lint and formatting
-ruff check python/ tests/ integtests/
-ruff format --check python/ tests/ integtests/    # use `ruff format` (no --check) to auto-fix
+ruff check python/ tests/
+ruff format --check python/ tests/    # use `ruff format` (no --check) to auto-fix
 
 # Python type-checking
 mypy python/ tests/ --ignore-missing-imports
@@ -379,13 +379,23 @@ hook under `hooks`, and `--remove` cleans both places.
 
 ### Live integration tests
 
-`integtests/` (`pytest integtests/ -m live -v`) drives a real running game via the same
-MCPTest bridge as `sts2`. `CombatFixture.setup_fight()` (`integtests/conftest.py`) handles
-resetting combat and starting the next fight; it settle-polls screen transitions rather than
-using fixed sleeps, because a console command issued mid-transition can throw a
-`NullReferenceException` in `NCombatUi.Enable()` and permanently wedge the game's
-`CombatManager` (stuck on `MENU_NCombatRoom`, no in-session recovery — a full relaunch is
-required). `setup_fight()` raises `CombatWedgedError` with that guidance if it happens.
+`crates/sts-parity` plays each Ironclad card, base and upgraded, in the real game and in the
+sim from the same verified fixture (`Fixtures::ensure`), and diffs the two resulting states
+field by field. The suite is opt-in, so a plain `cargo test` needs no game:
+
+```bash
+cargo test -p sts-parity --test live_cards -- --live                      # every case, ~30 min focused
+cargo test -p sts-parity --test live_cards -- --live --card Bash --card Strike+
+cargo test -p sts-parity --test live_cards -- --list                      # the cases, no game
+```
+
+Each case ends `PASS`, `FAIL` (with `field: sim X, game Y` diffs), `EXPECTED` (a divergence
+listed in `crates/sts-parity/src/expected.rs` with its issue), `STALE` (a listed divergence
+that no longer happens: remove it) or `BLOCKED` (needs HOL-103). The game must be focused: the
+runner times five state reads and stops with `SLOW BRIDGE` above 300 ms unless `--allow-slow`.
+Never send console commands by hand around a run, and never script one by hand (a
+console command during a screen transition can wedge or crash the game); the harness only goes
+through `Fixtures::ensure` and the settled `Session::act`, which wait out transitions.
 
 #### Native Linux setup
 

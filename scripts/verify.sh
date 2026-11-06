@@ -22,10 +22,10 @@ step() {
 
 step .venv/bin/python scripts/gen_ids.py --check
 step cargo check
-step .venv/bin/ruff check python/ tests/ integtests/
-step .venv/bin/ruff format --check python/ tests/ integtests/
+step .venv/bin/ruff check python/ tests/
+step .venv/bin/ruff format --check python/ tests/
 step .venv/bin/mypy python/ tests/ --ignore-missing-imports
 step .venv/bin/pytest tests/ -q
-step cargo test -p sts-ids -p sts-bridge -p sts-sim
-# The sim library must stay free of Python (and so linkable by `cargo test`).
-step bash -c 'tree=$(cargo tree -p sts-sim -e normal,build,dev --prefix none) && ! grep -q "^pyo3" <<<"$tree"'
+step cargo test -p sts-ids -p sts-bridge -p sts-sim -p sts-parity
+# The sim library and the parity harness must stay free of Python (and so linkable by `cargo test`).
+step bash -c 'tree=$(cargo tree -p sts-sim -p sts-parity -e normal,build,dev --prefix none) && ! grep -q "^pyo3" <<<"$tree"'

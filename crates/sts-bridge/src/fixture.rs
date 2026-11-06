@@ -11,6 +11,8 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::time::{Duration, Instant};
 
+use serde::{Deserialize, Serialize};
+
 use crate::backend::{Backend, BridgeError, Setters};
 use crate::command::RunSpec;
 use crate::console::check::{is_power, MAX_HAND};
@@ -29,14 +31,14 @@ pub const DEFAULT_SEED: &str = "HOL108FIX";
 pub const NEEDS_SETTERS: &str = "exact setters (HOL-103)";
 
 /// The player's hp.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Hp {
     Max,
     Exact(i32),
 }
 
 /// The player's energy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Energy {
     /// What the turn starts with (`max_energy`).
     Start,
@@ -44,7 +46,7 @@ pub enum Energy {
 }
 
 /// An enemy's powers.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EnemyPowers {
     /// Whatever the enemy spawns with; not checked.
     AsSpawned,
@@ -52,9 +54,26 @@ pub enum EnemyPowers {
     Exact(Vec<(PowerName, i32)>),
 }
 
+/// `CardId` as its canonical bridge name.
+mod card_id {
+    use serde::{Deserialize, Deserializer, Serializer};
+    use sts_ids::{BridgeId, CardId};
+
+    pub fn serialize<S: Serializer>(id: &CardId, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(id.bridge_name())
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<CardId, D::Error> {
+        let name = String::deserialize(d)?;
+        CardId::from_bridge(&name)
+            .ok_or_else(|| serde::de::Error::custom(format!("unknown card `{name}`")))
+    }
+}
+
 /// A card in a pile.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CardSpec {
+    #[serde(with = "card_id")]
     pub id: CardId,
     pub upgraded: bool,
 }
@@ -74,7 +93,7 @@ impl From<CardId> for CardSpec {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlayerSpec {
     pub hp: Hp,
     pub block: i32,
@@ -94,7 +113,7 @@ impl Default for PlayerSpec {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EnemySpec {
     pub hp: i32,
     pub block: i32,
@@ -124,7 +143,7 @@ impl EnemySpec {
 
 /// A combat a test needs, declared field by field. Piles are exact and
 /// ordered (`draw` is top first); relics are an exact multiset.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Fixture {
     pub run: RunSpec,
     pub encounter: Encounter,
