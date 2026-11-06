@@ -2,7 +2,7 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use sts_ids::{CardId, MonsterId, StatusId};
-use sts_sim::cards::card_data;
+use sts_sim::cards::{card_data, on_exhaust_effects};
 use sts_sim::engine::{EffectOp, Status};
 use sts_sim::mcts::DEFAULT_DETERMINIZATIONS;
 use sts_sim::run::{self, RunState};
@@ -636,7 +636,6 @@ fn effect_dict<'py>(py: Python<'py>, effect: &EffectOp) -> PyResult<Bound<'py, P
         EffectOp::PutRandomDiscardOnTopOfDraw => "PutRandomDiscardOnTopOfDraw",
         EffectOp::DoubleVulnerableOnTarget => "DoubleVulnerableOnTarget",
         EffectOp::GainStrengthEqualToTargetVulnerable => "GainStrengthEqualToTargetVulnerable",
-        EffectOp::ExhaustTopOfDrawPile => "ExhaustTopOfDrawPile",
     };
     d.set_item("op", op)?;
     Ok(d)
@@ -655,6 +654,10 @@ fn card_spec<'py>(py: Python<'py>, name: &str) -> PyResult<Bound<'py, PyDict>> {
         .iter()
         .map(|e| effect_dict(py, e))
         .collect::<PyResult<Vec<_>>>()?;
+    let on_exhaust = on_exhaust_effects(card.id, card.upgrade_level)
+        .iter()
+        .map(|e| effect_dict(py, e))
+        .collect::<PyResult<Vec<_>>>()?;
     let d = PyDict::new(py);
     d.set_item("name", card.as_str())?;
     d.set_item("sts2_id", card.id.sts2_id())?;
@@ -665,6 +668,7 @@ fn card_spec<'py>(py: Python<'py>, name: &str) -> PyResult<Bound<'py, PyDict>> {
     d.set_item("keywords", keywords)?;
     d.set_item("description", data.description)?;
     d.set_item("effects", effects)?;
+    d.set_item("on_exhaust", on_exhaust)?;
     Ok(d)
 }
 

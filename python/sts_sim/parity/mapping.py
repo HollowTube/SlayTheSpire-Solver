@@ -263,9 +263,6 @@ FORMULAS: dict[str, Formula] = {
 # (game class, field) -> follow-up issue. A listed pair must still fail.
 KNOWN_FAILURES: dict[tuple[str, str], str] = {
     ("OneTwoPunch", "upgraded.var.Attacks"): "HOL-116",
-    ("DrumOfBattle", "type"): "HOL-117",
-    ("DrumOfBattle", "var.Energy"): "HOL-117",
-    ("DrumOfBattle", "upgraded.var.Energy"): "HOL-117",
 }
 
 _TARGETED = {
@@ -296,6 +293,11 @@ def normalise_text(text: str) -> str:
     text = text.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
     lines = [re.sub(r"[ \t]+", " ", line).strip() for line in text.split("\n")]
     return "\n".join(lines).strip()
+
+
+def _all_effects(spec: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """Play effects plus the ones that run when the card is Exhausted."""
+    return [*spec["effects"], *spec.get("on_exhaust", ())]
 
 
 def _rarity(game: str) -> str:
@@ -374,8 +376,8 @@ def compare(
             if probe.read is None:
                 continue
             base, upgraded = (
-                probe.read(spec["effects"]),
-                probe.read(spec_upgraded["effects"]),
+                probe.read(_all_effects(spec)),
+                probe.read(_all_effects(spec_upgraded)),
             )
             if base is BINARY or upgraded is BINARY:
                 continue
@@ -410,6 +412,6 @@ def unmapped_vars(entry: Mapping[str, Any], spec: Mapping[str, Any]) -> list[str
         if "formula_sha256" in var:
             continue
         probe = probe_for(entry["class"], name, var)
-        if probe.read is None or probe.read(spec["effects"]) is BINARY:
+        if probe.read is None or probe.read(_all_effects(spec)) is BINARY:
             out.append(name)
     return out

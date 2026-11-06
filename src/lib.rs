@@ -20,7 +20,7 @@ pub use rust_api::{
 
 use crate::ids::{CardId, MonsterId};
 use cards::{can_upgrade, card_data, CardData, CardKeyword, CardType};
-use engine::{fire_event, resolve_exhaust_from_hand, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
+use engine::{exhaust_card, fire_event, resolve_exhaust_from_hand, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
 use monsters::{is_one_time_move, monster_move, opening_intent, select_next_intent};
 use rand::{Rng, RngCore};
 use state::{draw_cards, CardInstance, Fighter, Monster, PendingDecision, HAND_SIZE};
@@ -486,16 +486,13 @@ pub fn apply(state: &CombatState, action: &SimAction) -> Result<CombatState, Sim
                 let corruption_exhausts_skill =
                     matches!(data.card_type, CardType::Skill) && next.player.statuses.contains(&Status::Corruption);
                 let data_exhausts = data.keywords.contains(&CardKeyword::Exhaust);
-                if matches!(data.card_type, CardType::Power | CardType::Status) || data_exhausts || corruption_exhausts_skill {
-                    next.exhaust_pile.push(played);
+                if data_exhausts || corruption_exhausts_skill {
+                    exhaust_card(&mut next, played);
+                } else if matches!(data.card_type, CardType::Power | CardType::Status) {
                     // Power/Status cards leave play permanently but aren't
-                    // "Exhausted" in the keyword sense (e.g. playing
-                    // DarkEmbrace itself doesn't trigger DarkEmbrace) — only
-                    // cards with the Exhaust keyword (or Corruption's
-                    // Skill-exhaust) fire CardExhausted.
-                    if data_exhausts || corruption_exhausts_skill {
-                        fire_event(&mut next, GameEvent::CardExhausted);
-                    }
+                    // "Exhausted" (playing DarkEmbrace itself doesn't trigger
+                    // DarkEmbrace).
+                    next.exhaust_pile.push(played);
                 } else {
                     next.discard_pile.push(played);
                 }

@@ -483,7 +483,7 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
             description: Some("Deal 8 damage.\nAdd a copy of this card into your Discard Pile."),
             ..Default::default()
         }),
-        // DrumOfBattle+: 2 → 3 energy when Exhausted (not modelled).
+        // DrumOfBattle+: 2 → 3 energy when Exhausted (see `on_exhaust_effects`).
         CardId::DrumOfBattle => Some(UpgradeDelta { description: Some("Draw 2 cards.\nWhen this card is Exhausted, gain [E][E][E]."), ..Default::default() }),
         // Stomp+: 12 AoE damage → 15 AoE damage.
         CardId::Stomp => Some(UpgradeDelta { damage_delta: 3, description: Some("Deal 15 damage to ALL enemies.\nCosts 1 less [E] for each Attack played this turn."), ..Default::default() }),
@@ -612,6 +612,14 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
         CardId::ThrummingHatchet => Some(UpgradeDelta { description: Some("Deal 14 damage.\nAt the start of your next turn, return this to your Hand."), ..Default::default() }),
         CardId::UltimateStrike => Some(UpgradeDelta { description: Some("Deal 20 damage."), ..Default::default() }),
         _ => None,
+    }
+}
+
+/// Effects a card runs as the player when it is Exhausted.
+pub fn on_exhaust_effects(id: CardId, upgrade_level: u8) -> Vec<EffectOp> {
+    match id {
+        CardId::DrumOfBattle => vec![EffectOp::GainEnergy(if upgrade_level >= 1 { 3 } else { 2 })],
+        _ => Vec::new(),
     }
 }
 
@@ -1498,16 +1506,12 @@ fn card_data_base(id: CardId) -> CardData {
             rarity: CardRarity::Common,
             description: "Deal 6 damage.\nAdd a copy of this card into your Discard Pile.",
         },
-        // Per the wiki, DrumOfBattle (Power) costs 1. On play, draw 2 cards.
-        // At the start of each turn, Exhaust the top card of the draw pile.
+        // DrumOfBattle is a Skill: draw 2; the energy comes from `on_exhaust_effects`.
         CardId::DrumOfBattle => CardData {
             cost: 1,
             targeted: false,
-            card_type: CardType::Power,
-            effects: vec![
-                EffectOp::DrawCards(2),
-                EffectOp::ApplyStatusToSelf(Status::BattleDrum),
-            ],
+            card_type: CardType::Skill,
+            effects: vec![EffectOp::DrawCards(2)],
             keywords: HashSet::new(),
             rarity: CardRarity::Uncommon,
             description: "Draw 2 cards.\nWhen this card is Exhausted, gain [E][E].",
@@ -2397,8 +2401,8 @@ pub fn card_pool() -> Vec<CardId> {
 //   turn.
 // Demonic Shield (Skill): Lose 1 HP. Give another player Block equal to your
 //   Block. Exhaust. [multiplayer-only — likely N/A for single-player sim]
-// Drum of Battle (Power): Draw 2 cards. At the start of your turn, Exhaust
-//   the top card of your Draw Pile.
+// Drum of Battle (Skill): Draw 2 cards. When this card is Exhausted, gain 2
+//   Energy.
 // Evil Eye (Skill): Gain 8 Block. Gain another 8 Block if you have Exhausted
 //   a card this turn.
 // Expect a Fight (Skill): Gain Energy for each Attack in your Hand. You
