@@ -8,13 +8,55 @@
 //! installed, and the game focused. Without `--live` it prints "not run" and
 //! exits 0, so a plain `cargo test` needs no game. `--card Name` selects both
 //! variants of a card, `--card Name+` the upgraded one.
+//!
+//! With `STS2_RECORD_TRACES=1` each run case is also written to
+//! `tests/traces/<case>.json`, tagged with the game build read from
+//! `release_info.json` in `$STS2_GAME_DIR` (or next to `$STS2_PCK`). Recording
+//! runs the whole case that holds a selected card, so batches keep their names.
 #![cfg(unix)]
 
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Instant;
 
-use sts_bridge::{Fixtures, Game, McpTestBackend, SteamLauncher};
-use sts_parity::{calibrate, cases, classify, ParityCase, Runner, Verdict, EXPECTED};
+use sts_bridge::console::catalog::GAME_VERSION;
+use sts_bridge::{Backend, Fixtures, Game, McpTestBackend, SteamLauncher};
+use sts_parity::trace::{self, BackendBuild, GameBuild, Trace};
+use sts_parity::{
+    calibrate, cases, cases_holding, classify, ParityCase, ParityOutcome, Runner, Verdict, EXPECTED,
+};
+
+const TRACES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/traces");
+
+struct Recording {
+    game: GameBuild,
+    backend: BackendBuild,
+}
+
+fn recording_requested() -> bool {
+    std::env::var("STS2_RECORD_TRACES").is_ok_and(|v| v == "1")
+}
+
+/// Whether the case has its trace (a blocked case has none to write).
+fn record(rec: &Recording, outcome: &ParityOutcome) -> bool {
+    let name = &outcome.case.name;
+    match Trace::from_outcome(outcome, &rec.game, &rec.backend) {
+        Ok(t) => match trace::write(Path::new(TRACES), &t) {
+            Ok(p) => {
+                println!("    trace: {}", p.display());
+                true
+            }
+            Err(e) => {
+                println!("    TRACE FAILED {name}: {e}");
+                false
+            }
+        },
+        Err(why) => {
+            println!("    TRACE SKIPPED {name}: {why}");
+            outcome.case.blocked.is_some()
+        }
+    }
+}
 
 fn main() -> ExitCode {
     let mut live = false;
@@ -37,7 +79,12 @@ fn main() -> ExitCode {
             _ => {}
         }
     }
-    let cases = cases(&filter);
+    let recording = recording_requested();
+    let cases = if recording {
+        cases_holding(&filter)
+    } else {
+        cases(&filter)
+    };
     if list {
         for c in &cases {
             let tag = c.blocked.as_ref().map_or("", |_| " [blocked]");
@@ -53,11 +100,33 @@ fn main() -> ExitCode {
         eprintln!("no case matches {filter:?}");
         return ExitCode::from(2);
     }
-    run(&cases, allow_slow)
+    run(&cases, allow_slow, recording)
 }
 
-fn run(cases: &[ParityCase], allow_slow: bool) -> ExitCode {
+/// The game build, checked before the game starts.
+fn game_build() -> Result<GameBuild, String> {
+    let var = |k: &str| std::env::var_os(k).map(PathBuf::from);
+    trace::game_build(
+        var("STS2_GAME_DIR").as_deref(),
+        var("STS2_PCK").as_deref(),
+        GAME_VERSION,
+    )
+    .map_err(|e| e.to_string())
+}
+
+fn run(cases: &[ParityCase], allow_slow: bool, recording: bool) -> ExitCode {
     let started = Instant::now();
+    let game = if recording {
+        match game_build() {
+            Ok(g) => Some(g),
+            Err(e) => {
+                eprintln!("cannot record traces: {e}");
+                return ExitCode::from(2);
+            }
+        }
+    } else {
+        None
+    };
     let mut fx = Fixtures::new(Game::new(
         McpTestBackend::from_env(),
         SteamLauncher::from_env(),
@@ -80,6 +149,23 @@ fn run(cases: &[ParityCase], allow_slow: bool) -> ExitCode {
             return ExitCode::from(2);
         }
     }
+    let recording = match game {
+        Some(game) => match fx.game_mut().backend_mut().health() {
+            Ok(h) => Some(Recording {
+                game,
+                backend: BackendBuild {
+                    name: h.backend,
+                    version: h.version,
+                },
+            }),
+            Err(e) => {
+                eprintln!("cannot record traces: the backend health check failed: {e}");
+                let _ = fx.game_mut().ensure_main_menu();
+                return ExitCode::from(2);
+            }
+        },
+        None => None,
+    };
     let mut counts = std::collections::BTreeMap::<&'static str, usize>::new();
     let mut bad = Vec::new();
     let mut stopped = false;
@@ -105,6 +191,11 @@ fn run(cases: &[ParityCase], allow_slow: bool) -> ExitCode {
                     Verdict::Expected(issues) => println!("    {}", issues.join(", ")),
                     Verdict::Blocked(why) => println!("    {why}"),
                     Verdict::Pass => {}
+                }
+                if let Some(rec) = &recording {
+                    if !record(rec, &outcome) && !bad.contains(&case.name) {
+                        bad.push(case.name.clone());
+                    }
                 }
                 *counts.entry(verdict.label()).or_default() += 1;
             }

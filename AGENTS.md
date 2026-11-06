@@ -20,7 +20,7 @@ Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agent
 
 Prefer the `sts2` CLI over `mcp__sts2-modding__*` tools for reading and controlling a live game. The CLI is the stable interface; the MCP tools are lower-level and more verbose. Use `sts2 combat`, `sts2 actions`, `sts2 act <n>` for the common play loop. Fall back to MCP tools only when the CLI doesn't expose what you need.
 
-Live card parity is the Rust suite in `crates/sts-parity` (`cargo test -p sts-parity --test live_cards -- --live`, see the README's "Live integration tests"). It goes through `Fixtures::ensure` and the settled `Session::act` only: a console command issued mid-transition can wedge or crash the game, so never script one by hand around a screen change.
+Live card parity is the Rust suite in `crates/sts-parity` (`cargo test -p sts-parity --test live_cards -- --live`, see the README's "Live integration tests"). It goes through `Fixtures::ensure` and the settled `Session::act` only: a console command issued mid-transition can wedge or crash the game, so never script one by hand around a screen change. `cargo test -p sts-parity` replays the committed `tests/traces/` without the game; after a patch or a harness change re-record them (README "Traces").
 
 ---
 

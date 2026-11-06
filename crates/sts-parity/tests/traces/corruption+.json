@@ -1,0 +1,375 @@
+{
+  "format_version": 1,
+  "game": {
+    "version": "0.107.1",
+    "commit": "59260271"
+  },
+  "backend": {
+    "name": "MCPTest",
+    "version": "2.0.0"
+  },
+  "harness_version": 1,
+  "case": {
+    "name": "corruption+",
+    "cards": [
+      "Corruption+"
+    ],
+    "fixture": {
+      "run": {
+        "character": "Ironclad",
+        "seed": "HOL108FIX",
+        "ascension": 0
+      },
+      "encounter": "NIBBITS_WEAK",
+      "relics": [
+        "BURNING_BLOOD"
+      ],
+      "player": {
+        "hp": "Max",
+        "block": 0,
+        "energy": "Start",
+        "powers": []
+      },
+      "enemies": [
+        {
+          "hp": 40,
+          "block": 400,
+          "powers": "AsSpawned"
+        }
+      ],
+      "hand": [
+        {
+          "id": "DefendIronclad",
+          "upgraded": false
+        },
+        {
+          "id": "Corruption",
+          "upgraded": true
+        }
+      ],
+      "draw": [],
+      "discard": [],
+      "exhaust": []
+    },
+    "steps": [
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Corruption",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "Corruption+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "DefendIronclad",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Corruption+"
+      }
+    ],
+    "masks": [],
+    "blocked": null
+  },
+  "initial": {
+    "screen": "COMBAT_PLAYER_TURN",
+    "run": {
+      "act": 1,
+      "floor": 32,
+      "hp": 80,
+      "max_hp": 80,
+      "gold": 99,
+      "character": "Ironclad",
+      "ascension": 0,
+      "seed": "HOL108FIX",
+      "relics": [
+        "BurningBlood"
+      ],
+      "deck": []
+    },
+    "combat": {
+      "round": 1,
+      "is_player_turn": true,
+      "player": {
+        "hp": 80,
+        "max_hp": 80,
+        "block": 0,
+        "energy": 3,
+        "max_energy": 3,
+        "powers": []
+      },
+      "enemies": [
+        {
+          "index": 0,
+          "entity_id": "Nibbit_0",
+          "name": "Nibbit",
+          "hp": 40,
+          "max_hp": 44,
+          "block": 400,
+          "is_alive": true,
+          "powers": [],
+          "intent": {
+            "move_id": "BUTT_MOVE",
+            "parts": [
+              {
+                "kind": "Attack",
+                "damage": 12,
+                "hits": 2,
+                "total_damage": 12
+              }
+            ]
+          }
+        }
+      ],
+      "piles": {
+        "hand": [
+          {
+            "index": 0,
+            "id": "DefendIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Skill",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "Self",
+            "valid_targets": null
+          },
+          {
+            "index": 1,
+            "id": "Corruption",
+            "upgraded": true,
+            "cost": 3,
+            "kind": "Power",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "Self",
+            "valid_targets": null
+          }
+        ],
+        "draw": [],
+        "discard": [],
+        "exhaust": []
+      }
+    }
+  },
+  "steps": [
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Corruption",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "Corruption+"
+      },
+      "carry": {
+        "cards_played_this_turn": 0,
+        "attacks_played_this_turn": 0,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 32,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 1,
+            "max_energy": 3,
+            "powers": [
+              {
+                "id": "Corruption",
+                "amount": 1,
+                "kind": "Buff"
+              }
+            ]
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 44,
+              "block": 400,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "DefendIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "DefendIronclad",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Corruption+"
+      },
+      "carry": {
+        "cards_played_this_turn": 1,
+        "attacks_played_this_turn": 0,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 32,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 5,
+            "energy": 1,
+            "max_energy": 3,
+            "powers": [
+              {
+                "id": "Corruption",
+                "amount": 1,
+                "kind": "Buff"
+              }
+            ]
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 44,
+              "block": 400,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [],
+            "draw": [],
+            "discard": [],
+            "exhaust": [
+              {
+                "id": "DefendIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Skill"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

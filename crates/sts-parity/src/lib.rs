@@ -9,13 +9,18 @@ pub mod expected;
 pub mod map;
 pub mod runner;
 pub mod step;
+pub mod trace;
 
 pub use case::{
     classify, record_step, Blocked, CaseError, Needs, ParityCase, ParityOutcome, StepOutcome,
     Verdict,
 };
-pub use cases::cases;
+pub use cases::{cases, cases_holding};
 pub use expected::{Expected, EXPECTED};
 pub use map::{Carry, ParityState, SimFailure};
 pub use runner::{calibrate, Runner, Stop};
 pub use step::{diff, guarded, sim_step, Mask, ParityDiff, ParityStep, SimStep, StepAction};
+pub use trace::{
+    audit, game_build, load_dir, replay, replay_failures, Audit, BackendBuild, GameBuild, Trace,
+    TraceError, TraceFile, TraceStep, HARNESS_VERSION, MAX_STATE_BYTES,
+};

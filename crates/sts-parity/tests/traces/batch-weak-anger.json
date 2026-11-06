@@ -1,0 +1,1986 @@
+{
+  "format_version": 1,
+  "game": {
+    "version": "0.107.1",
+    "commit": "59260271"
+  },
+  "backend": {
+    "name": "MCPTest",
+    "version": "2.0.0"
+  },
+  "harness_version": 1,
+  "case": {
+    "name": "batch-weak-anger",
+    "cards": [
+      "Anger",
+      "Anger+",
+      "AshenStrike",
+      "AshenStrike+",
+      "Bash",
+      "Bash+",
+      "Bloodletting",
+      "Bloodletting+"
+    ],
+    "fixture": {
+      "run": {
+        "character": "Ironclad",
+        "seed": "HOL108FIX",
+        "ascension": 0
+      },
+      "encounter": "NIBBITS_WEAK",
+      "relics": [
+        "BURNING_BLOOD"
+      ],
+      "player": {
+        "hp": "Max",
+        "block": 0,
+        "energy": {
+          "Exact": 6
+        },
+        "powers": []
+      },
+      "enemies": [
+        {
+          "hp": 40,
+          "block": 400,
+          "powers": "AsSpawned"
+        }
+      ],
+      "hand": [
+        {
+          "id": "Anger",
+          "upgraded": false
+        },
+        {
+          "id": "Anger",
+          "upgraded": true
+        },
+        {
+          "id": "AshenStrike",
+          "upgraded": false
+        },
+        {
+          "id": "AshenStrike",
+          "upgraded": true
+        },
+        {
+          "id": "Bash",
+          "upgraded": false
+        },
+        {
+          "id": "Bash",
+          "upgraded": true
+        },
+        {
+          "id": "Bloodletting",
+          "upgraded": false
+        },
+        {
+          "id": "Bloodletting",
+          "upgraded": true
+        }
+      ],
+      "draw": [],
+      "discard": [],
+      "exhaust": [
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        },
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        },
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        },
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        }
+      ]
+    },
+    "steps": [
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Anger",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Anger"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Anger",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Anger+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "AshenStrike",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "AshenStrike"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "AshenStrike",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "AshenStrike+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bash",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Bash"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bash",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Bash+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bloodletting",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Bloodletting"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bloodletting",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "Bloodletting+"
+      }
+    ],
+    "masks": [],
+    "blocked": null
+  },
+  "initial": {
+    "screen": "COMBAT_PLAYER_TURN",
+    "run": {
+      "act": 1,
+      "floor": 2,
+      "hp": 80,
+      "max_hp": 80,
+      "gold": 99,
+      "character": "Ironclad",
+      "ascension": 0,
+      "seed": "HOL108FIX",
+      "relics": [
+        "BurningBlood"
+      ],
+      "deck": []
+    },
+    "combat": {
+      "round": 1,
+      "is_player_turn": true,
+      "player": {
+        "hp": 80,
+        "max_hp": 80,
+        "block": 0,
+        "energy": 6,
+        "max_energy": 3,
+        "powers": []
+      },
+      "enemies": [
+        {
+          "index": 0,
+          "entity_id": "Nibbit_0",
+          "name": "Nibbit",
+          "hp": 40,
+          "max_hp": 45,
+          "block": 400,
+          "is_alive": true,
+          "powers": [],
+          "intent": {
+            "move_id": "BUTT_MOVE",
+            "parts": [
+              {
+                "kind": "Attack",
+                "damage": 12,
+                "hits": 2,
+                "total_damage": 12
+              }
+            ]
+          }
+        }
+      ],
+      "piles": {
+        "hand": [
+          {
+            "index": 0,
+            "id": "Anger",
+            "upgraded": false,
+            "cost": 0,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 1,
+            "id": "Anger",
+            "upgraded": true,
+            "cost": 0,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 2,
+            "id": "AshenStrike",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 3,
+            "id": "AshenStrike",
+            "upgraded": true,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 4,
+            "id": "Bash",
+            "upgraded": false,
+            "cost": 2,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 5,
+            "id": "Bash",
+            "upgraded": true,
+            "cost": 2,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 6,
+            "id": "Bloodletting",
+            "upgraded": false,
+            "cost": 0,
+            "kind": "Skill",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "Self",
+            "valid_targets": null
+          },
+          {
+            "index": 7,
+            "id": "Bloodletting",
+            "upgraded": true,
+            "cost": 0,
+            "kind": "Skill",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "Self",
+            "valid_targets": null
+          }
+        ],
+        "draw": [],
+        "discard": [],
+        "exhaust": [
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          },
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          },
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          },
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Anger",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Anger"
+      },
+      "carry": {
+        "cards_played_this_turn": 0,
+        "attacks_played_this_turn": 0,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 2,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 6,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 394,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "AshenStrike",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "AshenStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 3,
+                "id": "Bash",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 4,
+                "id": "Bash",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 5,
+                "id": "Bloodletting",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 6,
+                "id": "Bloodletting",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Anger",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Anger+"
+      },
+      "carry": {
+        "cards_played_this_turn": 1,
+        "attacks_played_this_turn": 1,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 2,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 6,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 386,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "AshenStrike",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "AshenStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "Bash",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 3,
+                "id": "Bash",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 4,
+                "id": "Bloodletting",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 5,
+                "id": "Bloodletting",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "AshenStrike",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "AshenStrike"
+      },
+      "carry": {
+        "cards_played_this_turn": 2,
+        "attacks_played_this_turn": 2,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 2,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 5,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 368,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "AshenStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "Bash",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "Bash",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 3,
+                "id": "Bloodletting",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 4,
+                "id": "Bloodletting",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "AshenStrike",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "AshenStrike",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "AshenStrike+"
+      },
+      "carry": {
+        "cards_played_this_turn": 3,
+        "attacks_played_this_turn": 3,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 2,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 4,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 346,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Bash",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "Bash",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "Bloodletting",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 3,
+                "id": "Bloodletting",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "AshenStrike",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "AshenStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bash",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Bash"
+      },
+      "carry": {
+        "cards_played_this_turn": 4,
+        "attacks_played_this_turn": 4,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 2,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 2,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 338,
+              "is_alive": true,
+              "powers": [
+                {
+                  "id": "Vulnerable",
+                  "amount": 2,
+                  "kind": "Debuff"
+                }
+              ],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Bash",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "Bloodletting",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 2,
+                "id": "Bloodletting",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "AshenStrike",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "AshenStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bash",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bash",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Bash+"
+      },
+      "carry": {
+        "cards_played_this_turn": 5,
+        "attacks_played_this_turn": 5,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 2,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 0,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 323,
+              "is_alive": true,
+              "powers": [
+                {
+                  "id": "Vulnerable",
+                  "amount": 5,
+                  "kind": "Debuff"
+                }
+              ],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Bloodletting",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "Bloodletting",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "AshenStrike",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "AshenStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bash",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bash",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bloodletting",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Bloodletting"
+      },
+      "carry": {
+        "cards_played_this_turn": 6,
+        "attacks_played_this_turn": 6,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 2,
+          "hp": 77,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 77,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 2,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 323,
+              "is_alive": true,
+              "powers": [
+                {
+                  "id": "Vulnerable",
+                  "amount": 5,
+                  "kind": "Debuff"
+                }
+              ],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Bloodletting",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "AshenStrike",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "AshenStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bash",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bash",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bloodletting",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Skill"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bloodletting",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "Bloodletting+"
+      },
+      "carry": {
+        "cards_played_this_turn": 7,
+        "attacks_played_this_turn": 6,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 2,
+          "hp": 74,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 74,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 5,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 323,
+              "is_alive": true,
+              "powers": [
+                {
+                  "id": "Vulnerable",
+                  "amount": 5,
+                  "kind": "Debuff"
+                }
+              ],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Anger",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "AshenStrike",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "AshenStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bash",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bash",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bloodletting",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Skill"
+              },
+              {
+                "id": "Bloodletting",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Skill"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,1208 @@
+{
+  "format_version": 1,
+  "game": {
+    "version": "0.107.1",
+    "commit": "59260271"
+  },
+  "backend": {
+    "name": "MCPTest",
+    "version": "2.0.0"
+  },
+  "harness_version": 1,
+  "case": {
+    "name": "batch-vuln-bully",
+    "cards": [
+      "Bully",
+      "Bully+",
+      "Dismantle",
+      "Dismantle+",
+      "PerfectedStrike",
+      "PerfectedStrike+"
+    ],
+    "fixture": {
+      "run": {
+        "character": "Ironclad",
+        "seed": "HOL108FIX",
+        "ascension": 0
+      },
+      "encounter": "NIBBITS_WEAK",
+      "relics": [
+        "BURNING_BLOOD"
+      ],
+      "player": {
+        "hp": "Max",
+        "block": 0,
+        "energy": {
+          "Exact": 6
+        },
+        "powers": []
+      },
+      "enemies": [
+        {
+          "hp": 40,
+          "block": 400,
+          "powers": {
+            "Exact": [
+              [
+                "VULNERABLE_POWER",
+                2
+              ]
+            ]
+          }
+        }
+      ],
+      "hand": [
+        {
+          "id": "Bully",
+          "upgraded": false
+        },
+        {
+          "id": "Bully",
+          "upgraded": true
+        },
+        {
+          "id": "Dismantle",
+          "upgraded": false
+        },
+        {
+          "id": "Dismantle",
+          "upgraded": true
+        },
+        {
+          "id": "PerfectedStrike",
+          "upgraded": false
+        },
+        {
+          "id": "PerfectedStrike",
+          "upgraded": true
+        }
+      ],
+      "draw": [],
+      "discard": [],
+      "exhaust": []
+    },
+    "steps": [
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bully",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Bully"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bully",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Bully+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Dismantle",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Dismantle"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Dismantle",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Dismantle+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "PerfectedStrike",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "PerfectedStrike"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "PerfectedStrike",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "PerfectedStrike+"
+      }
+    ],
+    "masks": [],
+    "blocked": null
+  },
+  "initial": {
+    "screen": "COMBAT_PLAYER_TURN",
+    "run": {
+      "act": 1,
+      "floor": 5,
+      "hp": 80,
+      "max_hp": 80,
+      "gold": 99,
+      "character": "Ironclad",
+      "ascension": 0,
+      "seed": "HOL108FIX",
+      "relics": [
+        "BurningBlood"
+      ],
+      "deck": []
+    },
+    "combat": {
+      "round": 1,
+      "is_player_turn": true,
+      "player": {
+        "hp": 80,
+        "max_hp": 80,
+        "block": 0,
+        "energy": 6,
+        "max_energy": 3,
+        "powers": []
+      },
+      "enemies": [
+        {
+          "index": 0,
+          "entity_id": "Nibbit_0",
+          "name": "Nibbit",
+          "hp": 40,
+          "max_hp": 44,
+          "block": 400,
+          "is_alive": true,
+          "powers": [
+            {
+              "id": "Vulnerable",
+              "amount": 2,
+              "kind": "Debuff"
+            }
+          ],
+          "intent": {
+            "move_id": "BUTT_MOVE",
+            "parts": [
+              {
+                "kind": "Attack",
+                "damage": 12,
+                "hits": 2,
+                "total_damage": 12
+              }
+            ]
+          }
+        }
+      ],
+      "piles": {
+        "hand": [
+          {
+            "index": 0,
+            "id": "Bully",
+            "upgraded": false,
+            "cost": 0,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 1,
+            "id": "Bully",
+            "upgraded": true,
+            "cost": 0,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 2,
+            "id": "Dismantle",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 3,
+            "id": "Dismantle",
+            "upgraded": true,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 4,
+            "id": "PerfectedStrike",
+            "upgraded": false,
+            "cost": 2,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 5,
+            "id": "PerfectedStrike",
+            "upgraded": true,
+            "cost": 2,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          }
+        ],
+        "draw": [],
+        "discard": [],
+        "exhaust": []
+      }
+    }
+  },
+  "steps": [
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bully",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Bully"
+      },
+      "carry": {
+        "cards_played_this_turn": 0,
+        "attacks_played_this_turn": 0,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 5,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 6,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 44,
+              "block": 388,
+              "is_alive": true,
+              "powers": [
+                {
+                  "id": "Vulnerable",
+                  "amount": 2,
+                  "kind": "Debuff"
+                }
+              ],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Bully",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "Dismantle",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "Dismantle",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 3,
+                "id": "PerfectedStrike",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 4,
+                "id": "PerfectedStrike",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Bully",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bully",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Bully+"
+      },
+      "carry": {
+        "cards_played_this_turn": 1,
+        "attacks_played_this_turn": 1,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 5,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 6,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 44,
+              "block": 373,
+              "is_alive": true,
+              "powers": [
+                {
+                  "id": "Vulnerable",
+                  "amount": 2,
+                  "kind": "Debuff"
+                }
+              ],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Dismantle",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "Dismantle",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "PerfectedStrike",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 3,
+                "id": "PerfectedStrike",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Bully",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bully",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Dismantle",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Dismantle"
+      },
+      "carry": {
+        "cards_played_this_turn": 2,
+        "attacks_played_this_turn": 2,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 5,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 5,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 44,
+              "block": 349,
+              "is_alive": true,
+              "powers": [
+                {
+                  "id": "Vulnerable",
+                  "amount": 2,
+                  "kind": "Debuff"
+                }
+              ],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Dismantle",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "PerfectedStrike",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "PerfectedStrike",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Bully",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bully",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Dismantle",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Dismantle",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Dismantle+"
+      },
+      "carry": {
+        "cards_played_this_turn": 3,
+        "attacks_played_this_turn": 3,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 5,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 4,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 44,
+              "block": 319,
+              "is_alive": true,
+              "powers": [
+                {
+                  "id": "Vulnerable",
+                  "amount": 2,
+                  "kind": "Debuff"
+                }
+              ],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "PerfectedStrike",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "PerfectedStrike",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Bully",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bully",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Dismantle",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Dismantle",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "PerfectedStrike",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "PerfectedStrike"
+      },
+      "carry": {
+        "cards_played_this_turn": 4,
+        "attacks_played_this_turn": 4,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 5,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 2,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 44,
+              "block": 304,
+              "is_alive": true,
+              "powers": [
+                {
+                  "id": "Vulnerable",
+                  "amount": 2,
+                  "kind": "Debuff"
+                }
+              ],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "PerfectedStrike",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Bully",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bully",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Dismantle",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Dismantle",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "PerfectedStrike",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "PerfectedStrike",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "PerfectedStrike+"
+      },
+      "carry": {
+        "cards_played_this_turn": 5,
+        "attacks_played_this_turn": 5,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 5,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 0,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 44,
+              "block": 286,
+              "is_alive": true,
+              "powers": [
+                {
+                  "id": "Vulnerable",
+                  "amount": 2,
+                  "kind": "Debuff"
+                }
+              ],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Bully",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bully",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "Dismantle",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Dismantle",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "PerfectedStrike",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Attack"
+              },
+              {
+                "id": "PerfectedStrike",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    }
+  ]
+}

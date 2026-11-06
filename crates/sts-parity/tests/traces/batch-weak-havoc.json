@@ -1,0 +1,1486 @@
+{
+  "format_version": 1,
+  "game": {
+    "version": "0.107.1",
+    "commit": "59260271"
+  },
+  "backend": {
+    "name": "MCPTest",
+    "version": "2.0.0"
+  },
+  "harness_version": 1,
+  "case": {
+    "name": "batch-weak-havoc",
+    "cards": [
+      "Havoc",
+      "Havoc+",
+      "Hemokinesis",
+      "Hemokinesis+",
+      "Impervious",
+      "Impervious+",
+      "Iron Wave"
+    ],
+    "fixture": {
+      "run": {
+        "character": "Ironclad",
+        "seed": "HOL108FIX",
+        "ascension": 0
+      },
+      "encounter": "NIBBITS_WEAK",
+      "relics": [
+        "BURNING_BLOOD"
+      ],
+      "player": {
+        "hp": "Max",
+        "block": 0,
+        "energy": {
+          "Exact": 8
+        },
+        "powers": []
+      },
+      "enemies": [
+        {
+          "hp": 40,
+          "block": 400,
+          "powers": "AsSpawned"
+        }
+      ],
+      "hand": [
+        {
+          "id": "Havoc",
+          "upgraded": false
+        },
+        {
+          "id": "Havoc",
+          "upgraded": true
+        },
+        {
+          "id": "Hemokinesis",
+          "upgraded": false
+        },
+        {
+          "id": "Hemokinesis",
+          "upgraded": true
+        },
+        {
+          "id": "Impervious",
+          "upgraded": false
+        },
+        {
+          "id": "Impervious",
+          "upgraded": true
+        },
+        {
+          "id": "IronWave",
+          "upgraded": false
+        }
+      ],
+      "draw": [
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        },
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        }
+      ],
+      "discard": [],
+      "exhaust": []
+    },
+    "steps": [
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Havoc",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Havoc"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Havoc",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "Havoc+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Hemokinesis",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Hemokinesis"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Hemokinesis",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Hemokinesis+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Impervious",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Impervious"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Impervious",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "Impervious+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "IronWave",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Iron Wave"
+      }
+    ],
+    "masks": [],
+    "blocked": null
+  },
+  "initial": {
+    "screen": "COMBAT_PLAYER_TURN",
+    "run": {
+      "act": 1,
+      "floor": 7,
+      "hp": 80,
+      "max_hp": 80,
+      "gold": 99,
+      "character": "Ironclad",
+      "ascension": 0,
+      "seed": "HOL108FIX",
+      "relics": [
+        "BurningBlood"
+      ],
+      "deck": []
+    },
+    "combat": {
+      "round": 1,
+      "is_player_turn": true,
+      "player": {
+        "hp": 80,
+        "max_hp": 80,
+        "block": 0,
+        "energy": 8,
+        "max_energy": 3,
+        "powers": []
+      },
+      "enemies": [
+        {
+          "index": 0,
+          "entity_id": "Nibbit_0",
+          "name": "Nibbit",
+          "hp": 40,
+          "max_hp": 46,
+          "block": 400,
+          "is_alive": true,
+          "powers": [],
+          "intent": {
+            "move_id": "BUTT_MOVE",
+            "parts": [
+              {
+                "kind": "Attack",
+                "damage": 12,
+                "hits": 2,
+                "total_damage": 12
+              }
+            ]
+          }
+        }
+      ],
+      "piles": {
+        "hand": [
+          {
+            "index": 0,
+            "id": "Havoc",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Skill",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "Self",
+            "valid_targets": null
+          },
+          {
+            "index": 1,
+            "id": "Havoc",
+            "upgraded": true,
+            "cost": 1,
+            "kind": "Skill",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "Self",
+            "valid_targets": null
+          },
+          {
+            "index": 2,
+            "id": "Hemokinesis",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 3,
+            "id": "Hemokinesis",
+            "upgraded": true,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 4,
+            "id": "Impervious",
+            "upgraded": false,
+            "cost": 2,
+            "kind": "Skill",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "Self",
+            "valid_targets": null
+          },
+          {
+            "index": 5,
+            "id": "Impervious",
+            "upgraded": true,
+            "cost": 2,
+            "kind": "Skill",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "Self",
+            "valid_targets": null
+          },
+          {
+            "index": 6,
+            "id": "IronWave",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          }
+        ],
+        "draw": [
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          },
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          }
+        ],
+        "discard": [],
+        "exhaust": []
+      }
+    }
+  },
+  "steps": [
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Havoc",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Havoc"
+      },
+      "carry": {
+        "cards_played_this_turn": 0,
+        "attacks_played_this_turn": 0,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 7,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 7,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 46,
+              "block": 394,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Havoc",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "Hemokinesis",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "Hemokinesis",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 3,
+                "id": "Impervious",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 4,
+                "id": "Impervious",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 5,
+                "id": "IronWave",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "discard": [
+              {
+                "id": "Havoc",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Skill"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Havoc",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "Havoc+"
+      },
+      "carry": {
+        "cards_played_this_turn": 1,
+        "attacks_played_this_turn": 1,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": true,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 7,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 7,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 46,
+              "block": 388,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Hemokinesis",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "Hemokinesis",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "Impervious",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 3,
+                "id": "Impervious",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 4,
+                "id": "IronWave",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Havoc",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "Havoc",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Skill"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Hemokinesis",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Hemokinesis"
+      },
+      "carry": {
+        "cards_played_this_turn": 2,
+        "attacks_played_this_turn": 2,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": true,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 7,
+          "hp": 78,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 78,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 6,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 46,
+              "block": 373,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Hemokinesis",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "Impervious",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 2,
+                "id": "Impervious",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 3,
+                "id": "IronWave",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Havoc",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "Havoc",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "Hemokinesis",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Hemokinesis",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Hemokinesis+"
+      },
+      "carry": {
+        "cards_played_this_turn": 3,
+        "attacks_played_this_turn": 3,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": true,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 7,
+          "hp": 76,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 76,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 5,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 46,
+              "block": 353,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Impervious",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "Impervious",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 2,
+                "id": "IronWave",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Havoc",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "Havoc",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "Hemokinesis",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Hemokinesis",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Impervious",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Impervious"
+      },
+      "carry": {
+        "cards_played_this_turn": 4,
+        "attacks_played_this_turn": 4,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": true,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 7,
+          "hp": 76,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 76,
+            "max_hp": 80,
+            "block": 30,
+            "energy": 3,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 46,
+              "block": 353,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Impervious",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "IronWave",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Havoc",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "Havoc",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "Hemokinesis",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Hemokinesis",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Impervious",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Impervious",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "Impervious+"
+      },
+      "carry": {
+        "cards_played_this_turn": 5,
+        "attacks_played_this_turn": 4,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": true,
+        "blocks_gained_this_turn": 1,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 7,
+          "hp": 76,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 76,
+            "max_hp": 80,
+            "block": 70,
+            "energy": 1,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 46,
+              "block": 353,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "IronWave",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Havoc",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "Havoc",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "Hemokinesis",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Hemokinesis",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Impervious",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "Impervious",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "IronWave",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Iron Wave"
+      },
+      "carry": {
+        "cards_played_this_turn": 6,
+        "attacks_played_this_turn": 4,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": true,
+        "blocks_gained_this_turn": 2,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 7,
+          "hp": 76,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 76,
+            "max_hp": 80,
+            "block": 75,
+            "energy": 0,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 46,
+              "block": 348,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Havoc",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "Havoc",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "Hemokinesis",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Hemokinesis",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "IronWave",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Impervious",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "Impervious",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -15,7 +15,7 @@ const fn e(card: &'static str, field: &'static str, issue: &'static str) -> Expe
 
 /// HOL-136: empty-effect stub cards. HOL-138: `LoseHp` is not counted as hp
 /// lost. HOL-139: Mangle. HOL-140: Crimson Mantle and the upgraded power
-/// amounts. HOL-141 to HOL-146: one sim gap each (see the issues).
+/// amounts. HOL-141 to HOL-146 and HOL-149: one sim gap each (see the issues).
 pub const EXPECTED: &[Expected] = &[
     e("Aggression", "hand", "HOL-141"),
     e("Aggression+", "hand", "HOL-141"),
@@ -28,6 +28,8 @@ pub const EXPECTED: &[Expected] = &[
     e("Cruelty+", "player.powers[Cruelty]", "HOL-140"),
     e("DemonForm+", "player.powers[DemonForm]", "HOL-140"),
     e("DemonForm+", "player.powers[Strength]", "HOL-140"),
+    e("DrumOfBattle", "player.energy", "HOL-149"),
+    e("DrumOfBattle+", "player.energy", "HOL-149"),
     e("Expect A Fight", "player.energy", "HOL-136"),
     e(
         "Expect A Fight",

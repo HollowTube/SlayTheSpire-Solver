@@ -9,9 +9,11 @@ use sts_bridge::{
 };
 use sts_ids::{BridgeId, CardId};
 use sts_parity::cases::cases;
+use sts_parity::trace::{self, GameBuild, LoadError, TraceFile, HARNESS_VERSION};
 use sts_parity::{
-    classify, diff, guarded, record_step, sim_step, Carry, CaseError, Expected, Needs, ParityCase,
-    ParityOutcome, ParityState, ParityStep, SimFailure, StepAction, StepOutcome, Verdict, EXPECTED,
+    audit, classify, diff, game_build, guarded, record_step, replay_failures, sim_step, Carry,
+    CaseError, Expected, Needs, ParityCase, ParityOutcome, ParityState, ParityStep, SimFailure,
+    StepAction, StepOutcome, Verdict, EXPECTED,
 };
 use sts_sim::cards::card_data;
 
@@ -396,7 +398,7 @@ fn outcome(case: &ParityCase, steps: Vec<(&str, Vec<(&str, &str, &str)>)>) -> Pa
             })
             .collect(),
         error: None,
-        game_version: None,
+        backend_version: None,
     }
 }
 
@@ -644,4 +646,343 @@ fn a_filter_selects_a_card_and_its_variants() {
     assert_eq!(one(&["Strike+"]), ["Strike+"]);
     let shakedown = one(&["Strike", "Thunderclap", "Inflame"]);
     assert_eq!(shakedown.len(), 6, "{shakedown:?}");
+}
+
+#[test]
+fn case_names_are_unique_and_file_safe() {
+    let all = cases(&[]);
+    let names: BTreeSet<&str> = all.iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(names.len(), all.len(), "duplicate case names");
+    for n in &names {
+        assert!(
+            !n.is_empty()
+                && n.chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || "+-".contains(c)),
+            "not file-safe: {n}"
+        );
+    }
+    for c in all.iter().filter(|c| c.name.starts_with("batch-")) {
+        let first = c.cards[0].to_ascii_lowercase().replace([' ', '/'], "-");
+        assert!(
+            c.name.ends_with(&format!("-{first}")),
+            "{} / {first}",
+            c.name
+        );
+    }
+}
+
+// Synthetic traces: built from `synth` and the sim itself, never from the game.
+
+const GAME: &str = "0.107.1";
+
+fn build(version: &str) -> GameBuild {
+    GameBuild {
+        version: version.into(),
+        commit: "59260271".into(),
+    }
+}
+
+fn synthetic_trace_of(case: &ParityCase, game: &str) -> trace::Trace {
+    let template = synth(&case.fixture);
+    let mut state = template.clone();
+    let mut carry = Carry::fresh(case.fixture.enemies.len());
+    let mut o = ParityOutcome {
+        case: case.clone(),
+        verified: Some(state.clone()),
+        steps: Vec::new(),
+        error: None,
+        backend_version: Some("2.0.0".into()),
+    };
+    for step in &case.steps {
+        let s = sim_step(&state, &carry, step).unwrap();
+        let after = to_game(&s.after, &template);
+        let (rec, next) = record_step(&state, &carry, step, &after, &case.masks).unwrap();
+        o.steps.push(rec);
+        state = after;
+        carry = next;
+    }
+    let backend = trace::BackendBuild {
+        name: "MCPTest".into(),
+        version: Some("2.0.0".into()),
+    };
+    trace::Trace::from_outcome(&o, &build(game), &backend).unwrap()
+}
+
+fn synthetic_trace(name: &str) -> trace::Trace {
+    synthetic_trace_of(&first_case(name), GAME)
+}
+
+fn file_of(t: &trace::Trace) -> TraceFile {
+    TraceFile {
+        file: t.file_name(),
+        trace: Ok(t.clone()),
+    }
+}
+
+fn scratch_dir(tag: &str) -> std::path::PathBuf {
+    let d = std::env::temp_dir().join(format!("sts-parity-{tag}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    d
+}
+
+#[test]
+fn a_trace_writes_byte_stable_json_without_derived_fields() {
+    let t = synthetic_trace("stomp");
+    let dir = scratch_dir("write");
+    let path = trace::write(&dir, &t).unwrap();
+    assert_eq!(path.file_name().unwrap(), "stomp.json");
+    let first = std::fs::read_to_string(&path).unwrap();
+    trace::write(&dir, &synthetic_trace("stomp")).unwrap();
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), first);
+    assert!(first.ends_with("}\n"));
+    for derived in ["sim_after", "\"diff\"", "latency", "date", "\"before\""] {
+        assert!(!first.contains(derived), "{derived} is not recorded");
+    }
+    let keys: Vec<usize> = [
+        "format_version",
+        "game",
+        "backend",
+        "harness_version",
+        "case",
+        "initial",
+        "steps",
+    ]
+    .iter()
+    .map(|k| first.find(&format!("\n  \"{k}\"")).unwrap())
+    .collect();
+    assert!(keys.windows(2).all(|w| w[0] < w[1]), "field order");
+    let loaded = trace::load_dir(&dir).unwrap();
+    assert_eq!(loaded.len(), 1);
+    assert_eq!(loaded[0].trace.as_ref().unwrap(), &t);
+    assert!(std::fs::read_dir(&dir).unwrap().all(|e| !e
+        .unwrap()
+        .file_name()
+        .to_string_lossy()
+        .ends_with(".tmp")));
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn only_a_replayable_outcome_becomes_a_trace() {
+    let case = first_case("stomp");
+    let o = synthetic_trace("stomp");
+    let mut full = outcome(&case, vec![("Stomp", vec![])]);
+    let backend = o.backend.clone();
+    assert!(trace::Trace::from_outcome(&full, &build(GAME), &backend).is_ok());
+    let mut errored = full.clone();
+    errored.error = Some(CaseError {
+        kind: "NotSettled".into(),
+        message: "x".into(),
+    });
+    assert!(trace::Trace::from_outcome(&errored, &build(GAME), &backend).is_err());
+    let mut empty = full.clone();
+    empty.steps.clear();
+    assert!(trace::Trace::from_outcome(&empty, &build(GAME), &backend).is_err());
+    full.case.blocked = Some(sts_parity::Blocked {
+        by: "HOL-103".into(),
+        reason: "x".into(),
+        needs: Needs::Setters,
+    });
+    assert!(trace::Trace::from_outcome(&full, &build(GAME), &backend).is_err());
+}
+
+#[test]
+fn replaying_a_clean_trace_passes_and_a_changed_game_field_names_everything() {
+    let t = synthetic_trace("stomp");
+    assert_eq!(replay_failures(&t, &[]), Vec::<String>::new());
+    let mut bad = t.clone();
+    bad.steps[0].game_after.combat.as_mut().unwrap().enemies[0].hp += 1;
+    let lines = replay_failures(&bad, &[]);
+    assert!(lines.len() >= 2, "{lines:?}");
+    assert!(
+        lines[0].starts_with(
+            "stomp [game 0.107.1, MCPTest 2.0.0, harness 1] Stomp: enemies[0].hp: sim "
+        ),
+        "{}",
+        lines[0]
+    );
+    assert!(lines[0].contains(", game "));
+    assert!(lines.last().unwrap().contains("--live --card \"Stomp\""));
+}
+
+#[test]
+fn a_sim_error_on_a_replayed_step_fails_the_replay() {
+    let mut t = synthetic_trace("stomp");
+    t.steps[0].game_after = t.initial.clone();
+    t.initial.combat.as_mut().unwrap().player.energy = 0;
+    let lines = replay_failures(&t, &[]);
+    assert!(
+        lines
+            .iter()
+            .any(|l| l.contains("Stomp:") && !l.contains("enemies")),
+        "{lines:?}"
+    );
+}
+
+#[test]
+fn replay_shares_the_expected_list_and_its_stale_rule() {
+    let t = synthetic_trace("stomp");
+    let stale = [Expected {
+        card: "Stomp",
+        field: "enemies[0].hp",
+        issue: "HOL-1",
+    }];
+    let lines = replay_failures(&t, &stale);
+    assert!(lines[0].contains("matches now"), "{lines:?}");
+    let mut diverging = t;
+    diverging.steps[0]
+        .game_after
+        .combat
+        .as_mut()
+        .unwrap()
+        .enemies[0]
+        .hp += 1;
+    assert_eq!(replay_failures(&diverging, &stale), Vec::<String>::new());
+}
+
+fn declared() -> Vec<ParityCase> {
+    cases(&[])
+}
+
+fn full_set() -> Vec<TraceFile> {
+    declared()
+        .iter()
+        .filter(|c| c.blocked.is_none())
+        .map(|c| file_of(&synthetic_trace_of(c, GAME)))
+        .collect()
+}
+
+#[test]
+fn the_audit_passes_a_complete_current_set_and_exempts_blocked_cases() {
+    let a = audit(&full_set(), &declared(), HARNESS_VERSION, GAME);
+    assert_eq!(a.failures, Vec::<String>::new());
+    assert_eq!(a.exempt_blocked, 7);
+    assert!(a.other_version.is_empty());
+}
+
+fn failures_of(files: &[TraceFile]) -> Vec<String> {
+    audit(files, &declared(), HARNESS_VERSION, GAME).failures
+}
+
+#[test]
+fn the_audit_fails_each_kind_of_staleness_with_its_own_message() {
+    let one = |files: Vec<TraceFile>, needle: &str| {
+        let f = failures_of(&files);
+        assert_eq!(f.len(), 1, "{needle}: {f:?}");
+        assert!(f[0].contains(needle), "{needle}: {f:?}");
+    };
+    // missing
+    let mut set = full_set();
+    let gone = set.remove(0);
+    one(
+        set.clone(),
+        &format!("missing trace for {}", gone.trace.unwrap().case.name),
+    );
+    // unparseable and unknown format
+    let mut s = full_set();
+    s[0].trace = Err(LoadError::Parse("steps[0].carry: oops".into()));
+    one(s, "does not parse: steps[0].carry: oops");
+    let mut s = full_set();
+    s[0].trace = Err(LoadError::Format(9));
+    one(s, "unknown format_version 9");
+    // harness bump
+    let mut s = full_set();
+    s[0].trace.as_mut().unwrap().harness_version += 1;
+    one(s, "bump: re-record all traces");
+    // orphan
+    let mut s = full_set();
+    let mut t = synthetic_trace("stomp");
+    t.case.name = "no-such-case".into();
+    s.push(file_of(&t));
+    one(s, "orphan");
+    // drift
+    let mut s = full_set();
+    s[0].trace
+        .as_mut()
+        .unwrap()
+        .case
+        .masks
+        .push(sts_parity::Mask {
+            field: "hand".into(),
+            reason: "x".into(),
+        });
+    one(s, "stale: the declared case");
+    // file name
+    let mut s = full_set();
+    s[0].file = "renamed.json".into();
+    one(s, "file name does not match");
+}
+
+#[test]
+fn a_blocked_flag_alone_is_not_drift_and_older_game_traces_are_reported_only() {
+    let mut s = full_set();
+    s[0].trace.as_mut().unwrap().case.blocked = Some(sts_parity::Blocked {
+        by: "HOL-103".into(),
+        reason: "x".into(),
+        needs: Needs::Setters,
+    });
+    s[1].trace.as_mut().unwrap().game.version = "0.100.0".into();
+    let a = audit(&s, &declared(), HARNESS_VERSION, GAME);
+    assert_eq!(a.failures, Vec::<String>::new());
+    assert_eq!(a.other_version.len(), 1);
+    assert!(a.report(GAME).contains("0.100.0"));
+}
+
+#[test]
+fn recording_refuses_without_a_matching_release_info() {
+    let dir = scratch_dir("release");
+    std::fs::create_dir_all(&dir).unwrap();
+    let neither = game_build(None, None, GAME).unwrap_err().to_string();
+    assert!(neither.contains("STS2_GAME_DIR") && neither.contains("STS2_PCK"));
+    let unreadable = game_build(Some(&dir), None, GAME).unwrap_err().to_string();
+    assert!(unreadable.contains("release_info.json"), "{unreadable}");
+    std::fs::write(
+        dir.join("release_info.json"),
+        r#"{"commit": "59260271", "date": "2026-01-01", "version": "v0.107.1"}"#,
+    )
+    .unwrap();
+    let b = game_build(Some(&dir), None, GAME).unwrap();
+    assert_eq!((b.version.as_str(), b.commit.as_str()), (GAME, "59260271"));
+    let via_pck = game_build(None, Some(&dir.join("game.pck")), GAME).unwrap();
+    assert_eq!(via_pck, b);
+    let wrong = game_build(Some(&dir), None, "0.108.0")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        wrong.contains("0.107.1") && wrong.contains("0.108.0"),
+        "{wrong}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn recording_selects_whole_cases_from_the_full_list() {
+    let all = cases(&[]);
+    let picked = sts_parity::cases_holding(&["Strike".to_string()]);
+    assert!(!picked.is_empty());
+    for c in &picked {
+        assert!(all.contains(c), "{} is not a full-list case", c.name);
+    }
+    let strikes: Vec<&String> = picked.iter().flat_map(|c| &c.cards).collect();
+    assert!(strikes.iter().any(|c| c.as_str() == "Strike+"));
+    assert_eq!(sts_parity::cases_holding(&[]).len(), all.len());
+}
+
+#[test]
+fn the_audit_names_stray_files_in_the_trace_directory() {
+    let dir = scratch_dir("stray");
+    trace::write(&dir, &synthetic_trace("stomp")).unwrap();
+    std::fs::write(dir.join("stomp.json.bak"), "x").unwrap();
+    std::fs::write(dir.join(".hidden.tmp"), "x").unwrap();
+    let files = trace::load_dir(&dir).unwrap();
+    assert_eq!(files.len(), 2);
+    let a = audit(&files, &[], HARNESS_VERSION, GAME);
+    assert!(
+        a.failures
+            .iter()
+            .any(|f| f.starts_with("stomp.json.bak: does not parse: not a")),
+        "{:?}",
+        a.failures
+    );
+    let _ = std::fs::remove_dir_all(&dir);
 }

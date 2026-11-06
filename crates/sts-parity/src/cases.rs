@@ -469,6 +469,19 @@ fn blocked_cases(filter: &[String]) -> Vec<ParityCase> {
     out
 }
 
+/// The cases of the full list that hold a card selected by `filter`. Unlike
+/// [`cases`] it never regroups a batch, so a case keeps its name.
+pub fn cases_holding(filter: &[String]) -> Vec<ParityCase> {
+    cases(&[])
+        .into_iter()
+        .filter(|c| c.cards.iter().any(|t| selected(t, filter)))
+        .collect()
+}
+
+fn slug(tag: &str) -> String {
+    tag.to_ascii_lowercase().replace([' ', '/'], "-")
+}
+
 /// Every case, filtered by `filter` (empty means all).
 pub fn cases(filter: &[String]) -> Vec<ParityCase> {
     let mut batches: Vec<(Group, Vec<Unit>)> = Vec::new();
@@ -500,15 +513,12 @@ pub fn cases(filter: &[String]) -> Vec<ParityCase> {
         }
     }
     let mut out = Vec::new();
-    for (i, (g, us)) in batches.iter().enumerate() {
-        out.push(build(
-            format!("batch-{g:?}-{}", i + 1).to_ascii_lowercase(),
-            us,
-        ));
+    for (g, us) in &batches {
+        let name = format!("batch-{g:?}-{}", slug(&us[0].tag())).to_ascii_lowercase();
+        out.push(build(name, us));
     }
     for u in alone {
-        let name = u.tag().to_ascii_lowercase().replace([' ', '/'], "-");
-        out.push(build(name, &[u]));
+        out.push(build(slug(&u.tag()), &[u]));
     }
     out.extend(blocked_cases(filter));
     out
