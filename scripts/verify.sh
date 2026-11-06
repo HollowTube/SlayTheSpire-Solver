@@ -26,4 +26,6 @@ step .venv/bin/ruff check python/ tests/ integtests/
 step .venv/bin/ruff format --check python/ tests/ integtests/
 step .venv/bin/mypy python/ tests/ --ignore-missing-imports
 step .venv/bin/pytest tests/ -q
-step cargo test -p sts-ids -p sts-bridge
+step cargo test -p sts-ids -p sts-bridge -p sts-sim
+# The sim library must stay free of Python (and so linkable by `cargo test`).
+step bash -c 'tree=$(cargo tree -p sts-sim -e normal,build,dev --prefix none) && ! grep -q "^pyo3" <<<"$tree"'

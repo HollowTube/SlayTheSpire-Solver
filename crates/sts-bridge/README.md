@@ -321,8 +321,9 @@ scripts screens with `Scene` (ping, `get_screen` and `find_nodes` replies in
 the shapes recorded from the live game), a `FaultTransport` that wraps the
 replay and can refuse or time out, and a `FakeLauncher`.
 
-Run the tests with `-p sts-bridge`: a bare `cargo test` at the workspace root
-also tries to link the pyo3 `sts-sim` cdylib.
+Run the tests with `-p sts-bridge`. A workspace-root `cargo test` also works:
+the `sts-sim` library has no Python, and the pyo3 extension (`crates/sts-py`)
+has no test target.
 
 `combat_intent_totals_are_consistent` is an expected failure (`should_panic`)
 until HOL-102 fixes multi-hit intent `total_damage` in the bridge.

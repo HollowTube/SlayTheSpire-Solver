@@ -6,7 +6,7 @@ use rand_pcg::Pcg32;
 /// The move a monster telegraphs before it has acted at all — Slay the
 /// Spire's documented monster patterns each name a fixed opening move (e.g.
 /// Jaw Worm always opens with Chomp) before any RNG-driven selection kicks in.
-pub(crate) fn opening_intent(monster_id: MonsterId) -> Option<String> {
+pub fn opening_intent(monster_id: MonsterId) -> Option<String> {
     match monster_id {
         MonsterId::JawWorm => Some("Chomp".to_string()),
         MonsterId::GremlinNob => Some("Bellow".to_string()),
@@ -79,7 +79,7 @@ pub(crate) fn opening_intent(monster_id: MonsterId) -> Option<String> {
 /// A monster move's declarative effect pipeline — interpreted by the same
 /// generic `run_effect_ops` engine as cards (with `Actor::Monster`), so that
 /// adding an ordinary monster move means adding data here, not new logic.
-pub(crate) fn monster_move(monster_id: MonsterId, move_name: &str) -> Option<Vec<EffectOp>> {
+pub fn monster_move(monster_id: MonsterId, move_name: &str) -> Option<Vec<EffectOp>> {
     match (monster_id, move_name) {
         // Per the Slay the Spire wiki, Jaw Worm's move pool:
         (MonsterId::JawWorm, "Chomp") => Some(vec![EffectOp::DealDamage(11)]),
@@ -400,7 +400,7 @@ fn max_streak(monster_id: MonsterId, move_name: &str) -> u32 {
 /// Called from `Monster::new()` so callers can pass either form — the same
 /// pattern `CardId::from_sts2` establishes for card names.  Returns `None` for
 /// unknown ids (the caller should keep the original string as-is).
-pub(crate) fn move_from_sts2(monster_id: MonsterId, sts2_id: &str) -> Option<&'static str> {
+pub fn move_from_sts2(monster_id: MonsterId, sts2_id: &str) -> Option<&'static str> {
     match (monster_id, sts2_id) {
         (MonsterId::FuzzyWurmCrawler, "FIRST_ACID_GOOP") => Some("Acid Goop"),
         (MonsterId::FuzzyWurmCrawler, "ACID_GOOP") => Some("Acid Goop"),
@@ -435,7 +435,7 @@ pub(crate) fn move_from_sts2(monster_id: MonsterId, sts2_id: &str) -> Option<&'s
 /// "not twice in a row"). Once executed, the move is added to the monster's
 /// `moves_used` set and `select_next_intent` will never return it again.
 /// Currently only Mawler's Roar uses this.
-pub(crate) fn is_one_time_move(monster_id: MonsterId, move_name: &str) -> bool {
+pub fn is_one_time_move(monster_id: MonsterId, move_name: &str) -> bool {
     matches!(
         (monster_id, move_name),
         (MonsterId::Mawler, "Roar") | (MonsterId::CeremonialBeast, "Stun")
@@ -448,7 +448,7 @@ pub(crate) fn is_one_time_move(monster_id: MonsterId, move_name: &str) -> bool {
 /// of the time, but never repeats Bellow/Chomp and never Thrashes a 3rd
 /// consecutive time. `last_move`/`streak` describe the run of moves leading
 /// up to (and including) the one that just resolved.
-pub(crate) fn select_next_intent(
+pub fn select_next_intent(
     monster_id: MonsterId,
     last_move: &Option<String>,
     streak: u32,

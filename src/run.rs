@@ -11,8 +11,7 @@ use crate::ids::CardId;
 use crate::encounters;
 use crate::mcts::simulate_fight_outcome;
 use crate::state::{CardInstance, CombatState};
-use pyo3::exceptions::PyValueError;
-use pyo3::prelude::*;
+use crate::error::SimError;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use rand_pcg::Pcg32;
@@ -36,15 +35,14 @@ const REST_SITE_HEAL_FRACTION: f64 = 0.3;
 /// `encounters::encounter_def` at resolution time) rather than a raw
 /// (name, hp) pair.
 #[derive(Clone, PartialEq)]
-pub(crate) enum NodeKind {
+pub enum NodeKind {
     Combat { encounter_name: String },
     Elite { encounter_name: String },
     RestSite,
 }
 
-#[pyclass]
 #[derive(Clone)]
-pub(crate) struct RunState {
+pub struct RunState {
     pub(crate) seed: u64,
     pub(crate) path: Vec<NodeKind>,
     pub(crate) position: usize,
@@ -58,18 +56,18 @@ pub(crate) struct RunState {
     pub(crate) pending_reward: Vec<String>,
 }
 
-#[pymethods]
 impl RunState {
-    #[new]
-    #[pyo3(signature = (seed, deck, hp, path, max_hp=None, elite_indices=Vec::new(), rest_site_indices=Vec::new()))]
-    fn new(
+    /// `path` holds one encounter name per node; `rest_site_indices` and
+    /// `elite_indices` mark the nodes that are not plain combats. Panics on an
+    /// unknown card name in `deck`.
+    pub fn new(
         seed: u64,
         deck: Vec<String>,
         hp: i32,
         path: Vec<String>,
         max_hp: Option<i32>,
-        elite_indices: Vec<usize>,
-        rest_site_indices: Vec<usize>,
+        elite_indices: &[usize],
+        rest_site_indices: &[usize],
     ) -> Self {
         RunState {
             seed,
@@ -94,19 +92,16 @@ impl RunState {
         }
     }
 
-    #[getter]
-    fn hp(&self) -> i32 {
+    pub fn hp(&self) -> i32 {
         self.hp
     }
 
-    #[getter]
-    fn deck(&self) -> Vec<String> {
+    pub fn deck(&self) -> Vec<String> {
         self.deck.iter().map(CardInstance::as_str).collect()
     }
 }
 
-#[pyfunction]
-pub(crate) fn run_legal_actions(state: &RunState) -> Vec<String> {
+pub fn run_legal_actions(state: &RunState) -> Vec<String> {
     if !state.pending_reward.is_empty() {
         let mut actions: Vec<String> = state.pending_reward.iter().map(|name| format!("Take:{name}")).collect();
         actions.push("Skip".to_string());
@@ -129,8 +124,7 @@ pub(crate) fn run_legal_actions(state: &RunState) -> Vec<String> {
     }
 }
 
-#[pyfunction]
-pub(crate) fn run_is_terminal(state: &RunState) -> bool {
+pub fn run_is_terminal(state: &RunState) -> bool {
     state.pending_reward.is_empty() && (state.hp <= 0 || state.position >= state.path.len())
 }
 
@@ -163,14 +157,14 @@ fn draw_reward_cards(seed: u64) -> Vec<String> {
 /// populates `pending_reward` with a fresh card-reward offer; a loss does
 /// not (the run is terminal either way once `position` is exhausted or HP
 /// hits 0 — see `run_is_terminal`).
-fn resolve_combat(state: &RunState, iterations: u32) -> PyResult<RunState> {
+fn resolve_combat(state: &RunState, iterations: u32) -> Result<RunState, SimError> {
     let encounter_name = match state.path.get(state.position) {
         Some(NodeKind::Combat { encounter_name }) | Some(NodeKind::Elite { encounter_name }) => encounter_name,
-        _ => return Err(PyValueError::new_err("ResolveCombat at a terminal or non-combat node")),
+        _ => return Err(SimError::ResolveAtNonCombat),
     };
 
     let shape = encounters::encounter_def(encounter_name)
-        .ok_or_else(|| PyValueError::new_err(format!("unknown encounter: {encounter_name}")))?;
+        .ok_or_else(|| SimError::UnknownEncounter { name: encounter_name.clone() })?;
     let combat_seed = state.seed.wrapping_add(state.position as u64);
     let mut rng = Pcg32::seed_from_u64(combat_seed);
     let monsters = encounters::resolve_shape(&shape, &mut rng);
@@ -213,20 +207,20 @@ fn resolve_combat(state: &RunState, iterations: u32) -> PyResult<RunState> {
 /// unupgraded copy of `name` to the persistent deck; `Skip` changes
 /// nothing. Either way, clears `pending_reward` so the run moves on to
 /// whatever node `position` now points at.
-fn resolve_reward(state: &RunState, action: &str) -> PyResult<RunState> {
+fn resolve_reward(state: &RunState, action: &str) -> Result<RunState, SimError> {
     let mut next = state.clone();
     if action == "Skip" {
         next.pending_reward.clear();
         return Ok(next);
     }
     let Some(chosen) = action.strip_prefix("Take:") else {
-        return Err(PyValueError::new_err(format!("unknown run action: {action}")));
+        return Err(SimError::UnknownRunAction { action: action.to_string() });
     };
     if !state.pending_reward.iter().any(|name| name == chosen) {
-        return Err(PyValueError::new_err(format!("{chosen} is not on offer")));
+        return Err(SimError::NotOnOffer { card: chosen.to_string() });
     }
     let card_id = CardId::from_str(chosen)
-        .ok_or_else(|| PyValueError::new_err(format!("unknown card: {chosen}")))?;
+        .ok_or_else(|| SimError::UnknownCard { card: chosen.to_string() })?;
     next.deck.push(CardInstance::new(card_id));
     next.pending_reward.clear();
     Ok(next)
@@ -238,7 +232,7 @@ fn resolve_reward(state: &RunState, action: &str) -> PyResult<RunState> {
 /// persistent deck (refused if it's already upgraded — `run_legal_actions`
 /// never offers it, but `apply` validates directly rather than trusting the
 /// caller). Either way, advances `position` — no combat, no reward.
-fn resolve_rest_site(state: &RunState, action: &str) -> PyResult<RunState> {
+fn resolve_rest_site(state: &RunState, action: &str) -> Result<RunState, SimError> {
     let mut next = state.clone();
     if action == "Heal" {
         let healed = (state.max_hp as f64 * REST_SITE_HEAL_FRACTION).floor() as i32;
@@ -246,23 +240,23 @@ fn resolve_rest_site(state: &RunState, action: &str) -> PyResult<RunState> {
     } else if let Some(index_str) = action.strip_prefix("Upgrade:") {
         let index: usize = index_str
             .parse()
-            .map_err(|_| PyValueError::new_err(format!("invalid upgrade index: {action}")))?;
+            .map_err(|_| SimError::InvalidUpgradeIndex { action: action.to_string() })?;
         let card = next
             .deck
             .get_mut(index)
-            .ok_or_else(|| PyValueError::new_err(format!("no card at index {index}")))?;
+            .ok_or(SimError::NoCardAtIndex { index })?;
         if card.upgrade_level >= 1 {
-            return Err(PyValueError::new_err(format!("card at index {index} is already upgraded")));
+            return Err(SimError::AlreadyUpgraded { index });
         }
         card.upgrade_level += 1;
     } else {
-        return Err(PyValueError::new_err(format!("unknown run action: {action}")));
+        return Err(SimError::UnknownRunAction { action: action.to_string() });
     }
     next.position += 1;
     Ok(next)
 }
 
-fn resolve(state: &RunState, action: &str, iterations: u32) -> PyResult<RunState> {
+fn resolve(state: &RunState, action: &str, iterations: u32) -> Result<RunState, SimError> {
     if !state.pending_reward.is_empty() {
         return resolve_reward(state, action);
     }
@@ -272,16 +266,14 @@ fn resolve(state: &RunState, action: &str, iterations: u32) -> PyResult<RunState
             if action == "ResolveCombat" {
                 resolve_combat(state, iterations)
             } else {
-                Err(PyValueError::new_err(format!("unknown run action: {action}")))
+                Err(SimError::UnknownRunAction { action: action.to_string() })
             }
         }
-        None => Err(PyValueError::new_err(format!("{action} at a terminal run"))),
+        None => Err(SimError::RunAtTerminal { action: action.to_string() }),
     }
 }
 
-#[pyfunction]
-#[pyo3(signature = (state, action, iterations=200))]
-pub(crate) fn run_apply(state: &RunState, action: &str, iterations: u32) -> PyResult<RunState> {
+pub fn run_apply(state: &RunState, action: &str, iterations: u32) -> Result<RunState, SimError> {
     resolve(state, action, iterations)
 }
 
@@ -293,9 +285,7 @@ pub(crate) fn run_apply(state: &RunState, action: &str, iterations: u32) -> PyRe
 /// several — this is where that choice actually gets made, with no changes
 /// needed here as further node kinds gain their own real choices. Returns
 /// `(won, final_hp, nodes_completed)`.
-#[pyfunction]
-#[pyo3(signature = (state, iterations=200, seed=0))]
-pub(crate) fn simulate_run_outcome(state: &RunState, iterations: u32, seed: u64) -> PyResult<(bool, i32, u32)> {
+pub fn simulate_run_outcome(state: &RunState, iterations: u32, seed: u64) -> Result<(bool, i32, u32), SimError> {
     let mut rng = Pcg32::seed_from_u64(seed);
     let mut current = state.clone();
     loop {
@@ -313,16 +303,12 @@ pub(crate) fn simulate_run_outcome(state: &RunState, iterations: u32, seed: u64)
 /// the batch primitive behind a "what's my win rate over N seeded runs"
 /// aggregator. Each entry's own index is its run-policy seed, so the batch
 /// itself is reproducible independent of `runs`' construction order.
-#[pyfunction]
-pub(crate) fn simulate_run_outcomes(
-    py: Python<'_>,
-    runs: Vec<RunState>,
+pub fn simulate_run_outcomes(
+    runs: &[RunState],
     iterations: u32,
-) -> PyResult<Vec<(bool, i32, u32)>> {
-    py.allow_threads(|| {
-        runs.par_iter()
-            .enumerate()
-            .map(|(i, run)| simulate_run_outcome(run, iterations, i as u64))
-            .collect()
-    })
+) -> Result<Vec<(bool, i32, u32)>, SimError> {
+    runs.par_iter()
+        .enumerate()
+        .map(|(i, run)| simulate_run_outcome(run, iterations, i as u64))
+        .collect()
 }

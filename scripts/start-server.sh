@@ -39,8 +39,8 @@ rust_sources_newer_than_so() {
     local so
     so=$(rust_so)
     [[ -z "$so" ]] && return 0  # no .so → need build
-    # True if any src/*.rs or Cargo.toml is newer than the .so
-    find "$REPO/src" "$REPO/Cargo.toml" -newer "$so" -name "*.rs" -o -newer "$so" -name "Cargo.toml" \
+    # True if any engine or bindings source, or a Cargo.toml, is newer than the .so
+    find "$REPO/src" "$REPO/crates/sts-py" "$REPO/crates/sts-ids" "$REPO/Cargo.toml" -newer "$so" -name "*.rs" -o -newer "$so" -name "Cargo.toml" \
         2>/dev/null | grep -q .
 }
 

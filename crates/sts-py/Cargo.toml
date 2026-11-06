@@ -1,0 +1,17 @@
+[package]
+name = "sts-py"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "_sts_sim"
+crate-type = ["cdylib"]
+# An extension-module cdylib cannot link a test binary, and a workspace-wide
+# `cargo test` must never try.
+test = false
+doctest = false
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["extension-module"] }
+sts-sim = { path = "../.." }
+sts-ids = { path = "../sts-ids" }

@@ -127,8 +127,8 @@ mypy python/ tests/ --ignore-missing-imports
 # Test suite
 pytest tests/ -q
 
-# Rust crate tests (a bare `cargo test` doesn't link: the root crate is a pyo3 cdylib)
-cargo test -p sts-ids -p sts-bridge
+# Rust crate tests (the sim library has no Python; `crates/sts-py` is the pyo3 extension and has no test target)
+cargo test -p sts-ids -p sts-bridge -p sts-sim
 ```
 
 `ruff` and `mypy` are part of the `dev` extras — install them with:
@@ -290,7 +290,7 @@ and the overlay will appear.
 ./scripts/start-server.sh
 ```
 
-This pulls the latest `main`, rebuilds the Rust extension only if `src/` changed, kills the
+This pulls the latest `main`, rebuilds the Rust extension only if `src/` or `crates/sts-py/` changed, kills the
 old server, and starts a fresh one. Pass `--no-pull` to skip the git pull during active
 development. Logs go to `~/.local/share/sts-sim/server.log`.
 

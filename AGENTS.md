@@ -101,7 +101,7 @@ All commands assume the virtualenv is active (`source .venv/bin/activate`). Crea
 # Build Rust extension and install (required after any Rust change)
 uv pip install -e ".[dev]"
 
-# All CI checks in one go (gen_ids, cargo check, ruff, mypy, pytest, cargo test)
+# All CI checks in one go (gen_ids, cargo check, ruff, mypy, pytest, cargo test, the no-pyo3 guard)
 scripts/verify.sh
 
 # Faster rebuild after changing Rust code only
@@ -126,18 +126,18 @@ mypy python/ tests/ --ignore-missing-imports
 python scripts/gen_ids.py --check   # fails if stale
 python scripts/gen_ids.py           # regenerate in place
 
-# Cargo check (Rust only, no Python build) — covers sts-sim, crates/sts-ids and crates/sts-bridge
+# Cargo check (Rust only, no Python build) — covers sts-sim, crates/sts-ids, crates/sts-bridge and crates/sts-py
 cargo check
 
-# Registry and bridge crate tests (offline; live bridge ones are opt-in — see crates/sts-bridge/README.md)
-cargo test -p sts-ids -p sts-bridge
+# Sim, registry and bridge crate tests (offline; live bridge ones are opt-in — see crates/sts-bridge/README.md)
+cargo test -p sts-ids -p sts-bridge -p sts-sim
 
-# Restart analysis server (pull latest, rebuild Rust if src/ changed, kill old, start fresh)
+# Restart analysis server (pull latest, rebuild Rust if src/ or crates/sts-py changed, kill old, start fresh)
 ./scripts/start-server.sh
 ./scripts/start-server.sh --no-pull   # skip git pull during active development
 ```
 
-PyO3 0.23 supports Python ≤ 3.13, so the venv is 3.12 (CI's version); a bare `uv venv` can pick a newer system Python and the build fails. For a manual `cargo check`, set `PYO3_PYTHON` to the venv Python as an absolute path (`verify.sh` does): pyo3's build script runs from another directory, so a relative path fails. A root `cargo test` doesn't link (the root crate is a pyo3 `extension-module`), hence the `-p` crate names above.
+PyO3 0.23 supports Python ≤ 3.13, so the venv is 3.12 (CI's version); a bare `uv venv` can pick a newer system Python and the build fails. For a manual `cargo check`, set `PYO3_PYTHON` to the venv Python as an absolute path (`verify.sh` does): pyo3's build script runs from another directory, so a relative path fails. Only `crates/sts-py` depends on pyo3 (it has no test target), so `cargo test -p sts-sim` and a workspace `cargo test` never link libpython; `verify.sh` fails if pyo3 ever enters `cargo tree -p sts-sim`.
 
 The `.venv` must be active for `pytest`, `ruff`, `mypy`, `sts-sim`, and `sts2`. The Rust extension (`_sts_sim.*.so`) is required to import `sts_sim` — tests fail at collection without it.
 
@@ -145,10 +145,11 @@ The `.venv` must be active for `pytest`, `ruff`, `mypy`, `sts-sim`, and `sts2`. 
 
 ### Two-layer design: Rust engine + Python harness
 
-The engine is a Rust `cdylib` exposed to Python via PyO3. Python drives everything above the combat loop (scenarios, benchmarking, MCTS policy, CLI, bridge overlay).
+The engine is a plain Rust library (`sts-sim`, the repo root) with a public API in `src/rust_api.rs`. `crates/sts-py` is an optional PyO3 crate that wraps it as `sts_sim._sts_sim`. Python drives everything above the combat loop (scenarios, benchmarking, MCTS policy, CLI, bridge overlay).
 
 ```
-src/           ← Rust (compiled to python/sts_sim/_sts_sim.*.so)
+src/           ← Rust engine library (no Python)
+crates/sts-py/ ← PyO3 bindings (compiled to python/sts_sim/_sts_sim.*.so)
 python/sts_sim/ ← Python (pure)
 tests/          ← pytest (require the .so to be built)
 ```
@@ -162,9 +163,11 @@ tests/          ← pytest (require the .so to be built)
 | `engine.rs` | `Status` enum (the canonical source of truth for in-game statuses), `EffectOp` pipeline, `GameEvent` reactions, and `fire_event`. |
 | `cards.rs` | Card data table (`card_data(id, upgrade_level) → CardData`) and `card_pool()`, the reward pool derived from the registry. |
 | `monsters.rs` | Monster AI: `opening_intent`, `monster_move` (per-move effects), `select_next_intent`. Add a new monster by adding arms to all three functions. |
-| `mcts.rs` | Rayon-parallel MCTS: `fight_outcomes_per_fight`, `mcts_search`, etc. |
-| `action.rs` | PyO3 action types (`EndTurnAction`, `PlayCardAction`, `SelectTargetAction`). |
-| `lib.rs` | PyO3 module entry point. Houses `apply_action`, `legal_actions_typed`, `optimal_value_rec`, and the `#[pymodule]` registration block. |
+| `mcts.rs` | Rayon-parallel MCTS: `fight_outcomes_per_fight`, `search`, etc. |
+| `rust_api.rs` | `SimAction`, `CombatParts`/`Counters` with `CombatState::from_parts`/`parts`, and the read accessors. |
+| `error.rs` | `SimError`; its `Display` is the message Python raises as `ValueError`. |
+| `lib.rs` | `apply`, `legal_actions`, `optimal_value_rec`, the terminal/reward functions. |
+| `crates/sts-py/` | The PyO3 wrapper classes, `apply` (the `TypeError`/`ValueError` mapping), the card/status dict export, and `action.rs` (`EndTurnAction`, `PlayCardAction`, ...). |
 | `run.rs` | Run-level state (`RunState`) and functions (`run_apply`, `run_is_terminal`, etc.) for multi-fight runs. |
 | `act.rs` | Overgrowth encounter/elite pool draws (`draw_overgrowth_monster_sequence`, `draw_overgrowth_elite`). |
 | `encounters.rs` | Encounter pool tables. |
@@ -204,7 +207,7 @@ or spawn mid-combat.
 
 ### Action model
 
-Actions are strings at the Python boundary (`"EndTurn"`, `"PlayCard:Strike"`, `"SelectTarget:Monster:0"`) but `ActionKind` enum values inside Rust hot paths. `legal_actions()` returns typed PyO3 action objects; `apply()` accepts them. The MCTS and rollout paths stay in Rust, avoiding FFI per step.
+Actions are `SimAction` enum values in Rust; their string form (`"EndTurn"`, `"PlayCard:Strike"`, `"SelectTarget:Monster:0"`) is `Display`/`FromStr`. The Python `legal_actions()` returns typed PyO3 action objects and `apply()` accepts them, converting to `SimAction` in `crates/sts-py`. The MCTS and rollout paths stay in Rust, avoiding FFI per step.
 
 ### State is cloned on every action
 

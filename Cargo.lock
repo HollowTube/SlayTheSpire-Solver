@@ -837,10 +837,18 @@ name = "sts-ids"
 version = "0.1.0"
 
 [[package]]
-name = "sts-sim"
+name = "sts-py"
 version = "0.1.0"
 dependencies = [
  "pyo3",
+ "sts-ids",
+ "sts-sim",
+]
+
+[[package]]
+name = "sts-sim"
+version = "0.1.0"
+dependencies = [
  "rand",
  "rand_pcg",
  "rayon",

@@ -19,6 +19,7 @@ sts-sim-server = "sts_sim.server:main"
 sts2 = "sts_sim.bridge.cli:main"
 
 [tool.maturin]
+manifest-path = "crates/sts-py/Cargo.toml"
 python-source = "python"
 module-name = "sts_sim._sts_sim"
 features = ["pyo3/extension-module"]
