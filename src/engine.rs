@@ -96,10 +96,10 @@ pub enum Status {
     // Cruelty: damage dealt to a target with Vulnerable is amplified by
     // 1.75x instead of the usual 1.5x.
     Cruelty,
-    // One Two Punch: the next Attack card played this turn is played a
-    // second time. Consumed on use; if unused, decays at the start of the
-    // next turn (does not persist).
-    OneTwoPunch,
+    // One Two Punch: the next `n` Attack cards played this turn are played an
+    // extra time. Each replay uses one; whatever is left expires at the end
+    // of the player's turn.
+    OneTwoPunch(i32),
     // Slippery: the next time the holder would lose HP, that loss is capped
     // to 1 instead - consuming one stack. Carries its stack count; stacks
     // persist across turns until consumed by a hit (handled directly in
@@ -197,7 +197,7 @@ impl Status {
             Status::Colossus(_) => "Colossus",
             Status::Corruption => "Corruption",
             Status::Cruelty => "Cruelty",
-            Status::OneTwoPunch => "OneTwoPunch",
+            Status::OneTwoPunch(_) => "OneTwoPunch",
             Status::Slippery(_) => "Slippery",
             Status::StrengthThisTurn(_) => "StrengthThisTurn",
             Status::FreeAttack => "FreeAttack",
@@ -238,6 +238,7 @@ impl Status {
             | Status::Slow(n)
             | Status::Plow(n)
             | Status::Plating(n)
+            | Status::OneTwoPunch(n)
             | Status::Vicious(n)
             | Status::Juggling(n)
             | Status::Unmovable(n) => Some(*n),
@@ -254,7 +255,6 @@ impl Status {
             | Status::FlameBarrier
             | Status::Corruption
             | Status::Cruelty
-            | Status::OneTwoPunch
             | Status::FreeAttack
             | Status::Pyre
             | Status::Minion { .. }
@@ -290,7 +290,8 @@ impl Status {
             "Colossus" => vec![Status::Colossus(amount)],
             "Corruption" => vec![Status::Corruption; amount.max(0) as usize],
             "Cruelty" => vec![Status::Cruelty; amount.max(0) as usize],
-            "OneTwoPunch" => vec![Status::OneTwoPunch; amount.max(0) as usize],
+            "OneTwoPunch" if amount > 0 => vec![Status::OneTwoPunch(amount)],
+            "OneTwoPunch" => Vec::new(),
             "Slippery" | "SLIPPERY" => vec![Status::Slippery(amount)],
             "Strength" | "STRENGTH" => vec![Status::Strength(amount)],
             "Enrage" => vec![Status::Enrage(amount)],
@@ -390,7 +391,6 @@ impl Status {
             Status::Vulnerable
                 | Status::Weak
                 | Status::FlameBarrier
-                | Status::OneTwoPunch
                 | Status::Rage
                 | Status::Colossus(_)
                 | Status::StrengthThisTurn(_)
@@ -998,6 +998,21 @@ pub fn fire_event(state: &mut CombatState, event: GameEvent) {
             }
         }
     }
+}
+
+/// Spends one One Two Punch replay if the holder has any; true when the
+/// Attack just played should resolve an extra time.
+pub fn take_one_two_punch(statuses: &mut Vec<Status>) -> bool {
+    let Some(pos) = statuses.iter().position(|s| matches!(s, Status::OneTwoPunch(_))) else {
+        return false;
+    };
+    if let Status::OneTwoPunch(n) = &mut statuses[pos] {
+        *n -= 1;
+        if *n <= 0 {
+            statuses.remove(pos);
+        }
+    }
+    true
 }
 
 /// Removes one stack of each duration-based debuff from `statuses` — mirrors

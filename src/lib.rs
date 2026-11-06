@@ -20,7 +20,7 @@ pub use rust_api::{
 
 use crate::ids::{CardId, MonsterId};
 use cards::{can_upgrade, card_data, CardData, CardKeyword, CardType};
-use engine::{exhaust_card, fire_event, resolve_exhaust_from_hand, run_effect_ops, tick_debuffs, Actor, GameEvent, Status};
+use engine::{exhaust_card, fire_event, resolve_exhaust_from_hand, run_effect_ops, take_one_two_punch, tick_debuffs, Actor, GameEvent, Status};
 use monsters::{is_one_time_move, monster_move, opening_intent, select_next_intent};
 use rand::{Rng, RngCore};
 use state::{draw_cards, CardInstance, Fighter, Monster, PendingDecision, HAND_SIZE};
@@ -160,6 +160,8 @@ pub fn apply(state: &CombatState, action: &SimAction) -> Result<CombatState, Sim
             // monster resolves its next action), not at the start — so it
             // persists through the player's full card-play window.
             next.player.statuses.retain(|s| !matches!(s, Status::Tangled(_)));
+            // One Two Punch likewise expires with the player's turn, count and all.
+            next.player.statuses.retain(|s| !matches!(s, Status::OneTwoPunch(_)));
 
             // The remaining hand is discarded before the monsters' turn
             // resolves — mirrors Slay the Spire's end-of-turn cleanup.
@@ -433,10 +435,7 @@ pub fn apply(state: &CombatState, action: &SimAction) -> Result<CombatState, Sim
                     CardType::Attack => {
                         next.attacks_played_this_turn += 1;
                         fire_event(&mut next, GameEvent::AttackPlayed(card.id));
-                        // One Two Punch: the next Attack played this turn
-                        // resolves a second time, then the power is consumed.
-                        if let Some(pos) = next.player.statuses.iter().position(|s| *s == Status::OneTwoPunch) {
-                            next.player.statuses.remove(pos);
+                        if take_one_two_punch(&mut next.player.statuses) {
                             run_effect_ops(&mut next, &data.effects, Actor::Player, &[Actor::Monster(idx)], is_attack);
                             next.attacks_played_this_turn += 1;
                             fire_event(&mut next, GameEvent::AttackPlayed(card.id));
@@ -527,11 +526,7 @@ pub fn apply(state: &CombatState, action: &SimAction) -> Result<CombatState, Sim
                         CardType::Attack => {
                             next.attacks_played_this_turn += 1;
                             fire_event(&mut next, GameEvent::AttackPlayed(instance.id));
-                            // One Two Punch: the next Attack played this turn
-                            // resolves a second time, then the power is
-                            // consumed.
-                            if let Some(pos) = next.player.statuses.iter().position(|s| *s == Status::OneTwoPunch) {
-                                next.player.statuses.remove(pos);
+                            if take_one_two_punch(&mut next.player.statuses) {
                     run_effect_ops(&mut next, &data.effects, Actor::Player, &targets, is_attack);
                                 next.attacks_played_this_turn += 1;
                                 fire_event(&mut next, GameEvent::AttackPlayed(instance.id));

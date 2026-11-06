@@ -197,7 +197,7 @@ CARD_PROBES: dict[str, dict[str, Probe]] = {
         ),
     },
     "Mangle": {"StrengthLoss": negated(status_amount("Strength"))},
-    "OneTwoPunch": {"Attacks": count_status("OneTwoPunch", "ApplyStatusToSelf")},
+    "OneTwoPunch": {"Attacks": status_amount("OneTwoPunch")},
     "PactsEnd": {"Cards": _in_engine("the Exhaust Pile threshold is a play condition")},
     "Pyre": {"Energy": _in_engine("binary status; energy is in the reaction")},
     "Rampage": {
@@ -261,9 +261,7 @@ FORMULAS: dict[str, Formula] = {
 }
 
 # (game class, field) -> follow-up issue. A listed pair must still fail.
-KNOWN_FAILURES: dict[tuple[str, str], str] = {
-    ("OneTwoPunch", "upgraded.var.Attacks"): "HOL-116",
-}
+KNOWN_FAILURES: dict[tuple[str, str], str] = {}
 
 _TARGETED = {
     "AnyEnemy": True,

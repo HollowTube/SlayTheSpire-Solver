@@ -319,8 +319,12 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
             description: Some("Deal 20 damage.\nEnemy loses 15 Strength this turn."),
             ..Default::default()
         }),
-        // OneTwoPunch+: next 2 Attacks (not modelled: the status is binary).
-        CardId::OneTwoPunch => Some(UpgradeDelta { description: Some("This turn, your next 2 Attacks are played an extra time."), ..Default::default() }),
+        // OneTwoPunch+: the next 2 Attacks are replayed.
+        CardId::OneTwoPunch => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::ApplyStatusToSelf(Status::OneTwoPunch(2))]),
+            description: Some("This turn, your next 2 Attacks are played an extra time."),
+            ..Default::default()
+        }),
         // Pommel Strike+: 9 damage → 10 damage, draw 1 → draw 2.
         CardId::PommelStrike => Some(UpgradeDelta { damage_delta: 1, draw_delta: 1, description: Some("Deal 10 damage.\nDraw 2 cards."), ..Default::default() }),
         // Hemokinesis+: 15 damage → 20 damage.
@@ -898,7 +902,7 @@ fn card_data_base(id: CardId) -> CardData {
             cost: 1,
             targeted: false,
             card_type: CardType::Skill,
-            effects: vec![EffectOp::ApplyStatusToSelf(Status::OneTwoPunch)],
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::OneTwoPunch(1))],
             keywords: HashSet::new(),
             rarity: CardRarity::Rare,
             description: "This turn, your next Attack is played an extra time.",
