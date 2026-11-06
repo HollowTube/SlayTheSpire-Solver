@@ -71,7 +71,8 @@ pub struct ParityOutcome {
     pub verified: Option<GameState>,
     pub steps: Vec<StepOutcome>,
     pub error: Option<CaseError>,
-    pub game_version: Option<String>,
+    /// The backend mod's version from the ping, not the game's.
+    pub backend_version: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

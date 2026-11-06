@@ -87,7 +87,14 @@ python scripts/card_parity.py diff tests/fixtures/game/0.107.1/ironclad_cards.js
 
 # 3. Set GAME_VERSION in python/sts_sim/parity/fixture.py to <new>, then
 pytest tests/parity -q
+
+# 4. Re-record the live traces (see "Live integration tests", game focused)
+STS2_GAME_DIR="<Steam>/steamapps/common/Slay the Spire 2" STS2_RECORD_TRACES=1 \
+    cargo test -p sts-parity --test live_cards -- --live
 ```
+
+`git diff crates/sts-parity/tests/traces` then shows how the game's behaviour changed.
+Until step 4 is done, the trace report lists every trace still on the old game version.
 
 Then fix each mismatch. A wrong number or string is fixed in `src/cards.rs`.
 An engine-level gap goes on `KNOWN_FAILURES` in `python/sts_sim/parity/mapping.py`,
@@ -396,6 +403,32 @@ runner times five state reads and stops with `SLOW BRIDGE` above 300 ms unless `
 Never send console commands by hand around a run, and never script one by hand (a
 console command during a screen transition can wedge or crash the game); the harness only goes
 through `Fixtures::ensure` and the settled `Session::act`, which wait out transitions.
+
+#### Traces
+
+A live run with `STS2_RECORD_TRACES=1` also writes one `crates/sts-parity/tests/traces/<case>.json`
+per run case: the verified fixture state, then per step the action, the carry going in and the
+game's state after. Each trace is tagged with the game version and commit (from
+`release_info.json` in `$STS2_GAME_DIR`, or next to `$STS2_PCK`), the backend mod's name and version,
+and `HARNESS_VERSION`. Recording refuses before the game starts if neither variable is set,
+`release_info.json` cannot be read, or the game is not the version in `console::catalog::GAME_VERSION`.
+With recording on, `--card X` re-records every whole case that holds X (a batch is never regrouped).
+
+`cargo test -p sts-parity` (so `scripts/verify.sh` and CI) replays every trace against the sim with no
+game, through the same `sim_step`, masks and `EXPECTED` list the live run uses. A failure line names the
+case, versions, card, field, sim value and game value, and the live command to re-run it. An `EXPECTED`
+entry that no longer diverges fails the replay as `STALE`, so a sim fix PR must also delete its entry.
+`cargo test -p sts-parity --test trace_replay -- --nocapture` prints the audit report. The audit fails on
+a missing trace for an unblocked case, an orphan, a changed case, a bad file name, an unknown
+`format_version` or a `HARNESS_VERSION` mismatch, and only reports traces from an older game version.
+
+Re-record when:
+
+- the game is patched (patch-day list in "Card parity");
+- the harness changes what the game side records (fixture setup or projection, `Fixtures::ensure`,
+  settle or `act`, the `StepAction` to `Command` translation, the `Carry` shape): bump
+  `HARNESS_VERSION` in the same PR, then record every case;
+- a case or fixture changes: the audit names it; record it with `--card`.
 
 #### Native Linux setup
 

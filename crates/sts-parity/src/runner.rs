@@ -68,7 +68,7 @@ impl Runner {
             verified: None,
             steps: Vec::new(),
             error: None,
-            game_version: None,
+            backend_version: None,
         };
         if case.blocked.is_some() {
             return Ok(outcome);
@@ -88,7 +88,7 @@ impl Runner {
                 return Ok(outcome);
             }
         };
-        outcome.game_version = fx
+        outcome.backend_version = fx
             .game_mut()
             .backend_mut()
             .health()

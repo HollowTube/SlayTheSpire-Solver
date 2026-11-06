@@ -1,0 +1,380 @@
+{
+  "format_version": 1,
+  "game": {
+    "version": "0.107.1",
+    "commit": "59260271"
+  },
+  "backend": {
+    "name": "MCPTest",
+    "version": "2.0.0"
+  },
+  "harness_version": 1,
+  "case": {
+    "name": "spite+",
+    "cards": [
+      "Spite+"
+    ],
+    "fixture": {
+      "run": {
+        "character": "Ironclad",
+        "seed": "HOL108FIX",
+        "ascension": 0
+      },
+      "encounter": "NIBBITS_WEAK",
+      "relics": [
+        "BURNING_BLOOD"
+      ],
+      "player": {
+        "hp": "Max",
+        "block": 0,
+        "energy": "Start",
+        "powers": []
+      },
+      "enemies": [
+        {
+          "hp": 40,
+          "block": 400,
+          "powers": "AsSpawned"
+        }
+      ],
+      "hand": [
+        {
+          "id": "Bloodletting",
+          "upgraded": false
+        },
+        {
+          "id": "Spite",
+          "upgraded": true
+        }
+      ],
+      "draw": [],
+      "discard": [],
+      "exhaust": []
+    },
+    "steps": [
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bloodletting",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Spite+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Spite",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Spite+"
+      }
+    ],
+    "masks": [],
+    "blocked": null
+  },
+  "initial": {
+    "screen": "COMBAT_PLAYER_TURN",
+    "run": {
+      "act": 1,
+      "floor": 95,
+      "hp": 87,
+      "max_hp": 87,
+      "gold": 99,
+      "character": "Ironclad",
+      "ascension": 0,
+      "seed": "HOL108FIX",
+      "relics": [
+        "BurningBlood"
+      ],
+      "deck": []
+    },
+    "combat": {
+      "round": 1,
+      "is_player_turn": true,
+      "player": {
+        "hp": 87,
+        "max_hp": 87,
+        "block": 0,
+        "energy": 3,
+        "max_energy": 3,
+        "powers": []
+      },
+      "enemies": [
+        {
+          "index": 0,
+          "entity_id": "Nibbit_0",
+          "name": "Nibbit",
+          "hp": 40,
+          "max_hp": 46,
+          "block": 400,
+          "is_alive": true,
+          "powers": [],
+          "intent": {
+            "move_id": "BUTT_MOVE",
+            "parts": [
+              {
+                "kind": "Attack",
+                "damage": 12,
+                "hits": 2,
+                "total_damage": 12
+              }
+            ]
+          }
+        }
+      ],
+      "piles": {
+        "hand": [
+          {
+            "index": 0,
+            "id": "Bloodletting",
+            "upgraded": false,
+            "cost": 0,
+            "kind": "Skill",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "Self",
+            "valid_targets": null
+          },
+          {
+            "index": 1,
+            "id": "Spite",
+            "upgraded": true,
+            "cost": 0,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          }
+        ],
+        "draw": [],
+        "discard": [],
+        "exhaust": []
+      }
+    }
+  },
+  "steps": [
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bloodletting",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Spite+"
+      },
+      "carry": {
+        "cards_played_this_turn": 0,
+        "attacks_played_this_turn": 0,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 95,
+          "hp": 84,
+          "max_hp": 87,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 84,
+            "max_hp": 87,
+            "block": 0,
+            "energy": 5,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 46,
+              "block": 400,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Spite",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Bloodletting",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Skill"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Spite",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Spite+"
+      },
+      "carry": {
+        "cards_played_this_turn": 1,
+        "attacks_played_this_turn": 0,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 95,
+          "hp": 84,
+          "max_hp": 87,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 84,
+            "max_hp": 87,
+            "block": 0,
+            "energy": 5,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 46,
+              "block": 385,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Bloodletting",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Skill"
+              },
+              {
+                "id": "Spite",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    }
+  ]
+}

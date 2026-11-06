@@ -1,0 +1,1666 @@
+{
+  "format_version": 1,
+  "game": {
+    "version": "0.107.1",
+    "commit": "59260271"
+  },
+  "backend": {
+    "name": "MCPTest",
+    "version": "2.0.0"
+  },
+  "harness_version": 1,
+  "case": {
+    "name": "batch-weak-bloodwall",
+    "cards": [
+      "BloodWall",
+      "BloodWall+",
+      "Bludgeon",
+      "Bludgeon+",
+      "BodySlam",
+      "BodySlam+",
+      "Break",
+      "Break+"
+    ],
+    "fixture": {
+      "run": {
+        "character": "Ironclad",
+        "seed": "HOL108FIX",
+        "ascension": 0
+      },
+      "encounter": "NIBBITS_WEAK",
+      "relics": [
+        "BURNING_BLOOD"
+      ],
+      "player": {
+        "hp": "Max",
+        "block": 12,
+        "energy": {
+          "Exact": 13
+        },
+        "powers": []
+      },
+      "enemies": [
+        {
+          "hp": 40,
+          "block": 400,
+          "powers": "AsSpawned"
+        }
+      ],
+      "hand": [
+        {
+          "id": "BloodWall",
+          "upgraded": false
+        },
+        {
+          "id": "BloodWall",
+          "upgraded": true
+        },
+        {
+          "id": "Bludgeon",
+          "upgraded": false
+        },
+        {
+          "id": "Bludgeon",
+          "upgraded": true
+        },
+        {
+          "id": "BodySlam",
+          "upgraded": false
+        },
+        {
+          "id": "BodySlam",
+          "upgraded": true
+        },
+        {
+          "id": "Break",
+          "upgraded": false
+        },
+        {
+          "id": "Break",
+          "upgraded": true
+        }
+      ],
+      "draw": [],
+      "discard": [],
+      "exhaust": []
+    },
+    "steps": [
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "BloodWall",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "BloodWall"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "BloodWall",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "BloodWall+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bludgeon",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Bludgeon"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bludgeon",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Bludgeon+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "BodySlam",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "BodySlam"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "BodySlam",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "BodySlam+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Break",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Break"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Break",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Break+"
+      }
+    ],
+    "masks": [],
+    "blocked": null
+  },
+  "initial": {
+    "screen": "COMBAT_PLAYER_TURN",
+    "run": {
+      "act": 1,
+      "floor": 3,
+      "hp": 80,
+      "max_hp": 80,
+      "gold": 99,
+      "character": "Ironclad",
+      "ascension": 0,
+      "seed": "HOL108FIX",
+      "relics": [
+        "BurningBlood"
+      ],
+      "deck": []
+    },
+    "combat": {
+      "round": 1,
+      "is_player_turn": true,
+      "player": {
+        "hp": 80,
+        "max_hp": 80,
+        "block": 12,
+        "energy": 13,
+        "max_energy": 3,
+        "powers": []
+      },
+      "enemies": [
+        {
+          "index": 0,
+          "entity_id": "Nibbit_0",
+          "name": "Nibbit",
+          "hp": 40,
+          "max_hp": 45,
+          "block": 400,
+          "is_alive": true,
+          "powers": [],
+          "intent": {
+            "move_id": "BUTT_MOVE",
+            "parts": [
+              {
+                "kind": "Attack",
+                "damage": 12,
+                "hits": 2,
+                "total_damage": 12
+              }
+            ]
+          }
+        }
+      ],
+      "piles": {
+        "hand": [
+          {
+            "index": 0,
+            "id": "BloodWall",
+            "upgraded": false,
+            "cost": 2,
+            "kind": "Skill",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "Self",
+            "valid_targets": null
+          },
+          {
+            "index": 1,
+            "id": "BloodWall",
+            "upgraded": true,
+            "cost": 2,
+            "kind": "Skill",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "Self",
+            "valid_targets": null
+          },
+          {
+            "index": 2,
+            "id": "Bludgeon",
+            "upgraded": false,
+            "cost": 3,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 3,
+            "id": "Bludgeon",
+            "upgraded": true,
+            "cost": 3,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 4,
+            "id": "BodySlam",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 5,
+            "id": "BodySlam",
+            "upgraded": true,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 6,
+            "id": "Break",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 7,
+            "id": "Break",
+            "upgraded": true,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          }
+        ],
+        "draw": [],
+        "discard": [],
+        "exhaust": []
+      }
+    }
+  },
+  "steps": [
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "BloodWall",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "BloodWall"
+      },
+      "carry": {
+        "cards_played_this_turn": 0,
+        "attacks_played_this_turn": 0,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 3,
+          "hp": 78,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 78,
+            "max_hp": 80,
+            "block": 28,
+            "energy": 11,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 400,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "BloodWall",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "Bludgeon",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "Bludgeon",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 3,
+                "id": "BodySlam",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 4,
+                "id": "BodySlam",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 5,
+                "id": "Break",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 6,
+                "id": "Break",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "BloodWall",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "BloodWall",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "BloodWall+"
+      },
+      "carry": {
+        "cards_played_this_turn": 1,
+        "attacks_played_this_turn": 0,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 1,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 3,
+          "hp": 76,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 76,
+            "max_hp": 80,
+            "block": 48,
+            "energy": 9,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 400,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Bludgeon",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "Bludgeon",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "BodySlam",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 3,
+                "id": "BodySlam",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 4,
+                "id": "Break",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 5,
+                "id": "Break",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "BloodWall",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "BloodWall",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bludgeon",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Bludgeon"
+      },
+      "carry": {
+        "cards_played_this_turn": 2,
+        "attacks_played_this_turn": 0,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 2,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 3,
+          "hp": 76,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 76,
+            "max_hp": 80,
+            "block": 48,
+            "energy": 6,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 368,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Bludgeon",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "BodySlam",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "BodySlam",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 3,
+                "id": "Break",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 4,
+                "id": "Break",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "BloodWall",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "BloodWall",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "Bludgeon",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Bludgeon",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Bludgeon+"
+      },
+      "carry": {
+        "cards_played_this_turn": 3,
+        "attacks_played_this_turn": 1,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 2,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 3,
+          "hp": 76,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 76,
+            "max_hp": 80,
+            "block": 48,
+            "energy": 3,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 326,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "BodySlam",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "BodySlam",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "Break",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 3,
+                "id": "Break",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "BloodWall",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "BloodWall",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "Bludgeon",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bludgeon",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "BodySlam",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "BodySlam"
+      },
+      "carry": {
+        "cards_played_this_turn": 4,
+        "attacks_played_this_turn": 2,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 2,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 3,
+          "hp": 76,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 76,
+            "max_hp": 80,
+            "block": 48,
+            "energy": 2,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 278,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "BodySlam",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "Break",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "Break",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "BloodWall",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "BloodWall",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "Bludgeon",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bludgeon",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "BodySlam",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "BodySlam",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "BodySlam+"
+      },
+      "carry": {
+        "cards_played_this_turn": 5,
+        "attacks_played_this_turn": 3,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 2,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 3,
+          "hp": 76,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 76,
+            "max_hp": 80,
+            "block": 48,
+            "energy": 2,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 230,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Break",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "Break",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "BloodWall",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "BloodWall",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "Bludgeon",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bludgeon",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "BodySlam",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "BodySlam",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Break",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Break"
+      },
+      "carry": {
+        "cards_played_this_turn": 6,
+        "attacks_played_this_turn": 4,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 2,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 3,
+          "hp": 76,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 76,
+            "max_hp": 80,
+            "block": 48,
+            "energy": 1,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 210,
+              "is_alive": true,
+              "powers": [
+                {
+                  "id": "Vulnerable",
+                  "amount": 5,
+                  "kind": "Debuff"
+                }
+              ],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Break",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "BloodWall",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "BloodWall",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "Bludgeon",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bludgeon",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "BodySlam",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "BodySlam",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Break",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Break",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Break+"
+      },
+      "carry": {
+        "cards_played_this_turn": 7,
+        "attacks_played_this_turn": 5,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 2,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 3,
+          "hp": 76,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 76,
+            "max_hp": 80,
+            "block": 48,
+            "energy": 0,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 165,
+              "is_alive": true,
+              "powers": [
+                {
+                  "id": "Vulnerable",
+                  "amount": 12,
+                  "kind": "Debuff"
+                }
+              ],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [],
+            "draw": [],
+            "discard": [
+              {
+                "id": "BloodWall",
+                "upgraded": false,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "BloodWall",
+                "upgraded": true,
+                "cost": 2,
+                "kind": "Skill"
+              },
+              {
+                "id": "Bludgeon",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "Bludgeon",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "BodySlam",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "BodySlam",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Break",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Break",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    }
+  ]
+}

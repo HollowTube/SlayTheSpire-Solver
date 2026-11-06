@@ -1,0 +1,1388 @@
+{
+  "format_version": 1,
+  "game": {
+    "version": "0.107.1",
+    "commit": "59260271"
+  },
+  "backend": {
+    "name": "MCPTest",
+    "version": "2.0.0"
+  },
+  "harness_version": 1,
+  "case": {
+    "name": "batch-weak-pommel-strike+",
+    "cards": [
+      "Pommel Strike+",
+      "ShrugItOff+",
+      "Strike",
+      "Strike+",
+      "Sword Boomerang",
+      "Sword Boomerang+"
+    ],
+    "fixture": {
+      "run": {
+        "character": "Ironclad",
+        "seed": "HOL108FIX",
+        "ascension": 0
+      },
+      "encounter": "NIBBITS_WEAK",
+      "relics": [
+        "BURNING_BLOOD"
+      ],
+      "player": {
+        "hp": "Max",
+        "block": 0,
+        "energy": {
+          "Exact": 6
+        },
+        "powers": []
+      },
+      "enemies": [
+        {
+          "hp": 40,
+          "block": 400,
+          "powers": "AsSpawned"
+        }
+      ],
+      "hand": [
+        {
+          "id": "PommelStrike",
+          "upgraded": true
+        },
+        {
+          "id": "ShrugItOff",
+          "upgraded": true
+        },
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        },
+        {
+          "id": "StrikeIronclad",
+          "upgraded": true
+        },
+        {
+          "id": "SwordBoomerang",
+          "upgraded": false
+        },
+        {
+          "id": "SwordBoomerang",
+          "upgraded": true
+        }
+      ],
+      "draw": [
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        },
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        },
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        }
+      ],
+      "discard": [],
+      "exhaust": []
+    },
+    "steps": [
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "PommelStrike",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Pommel Strike+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "ShrugItOff",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "ShrugItOff+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "StrikeIronclad",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Strike"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "StrikeIronclad",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Strike+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "SwordBoomerang",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Sword Boomerang"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "SwordBoomerang",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Sword Boomerang+"
+      }
+    ],
+    "masks": [],
+    "blocked": null
+  },
+  "initial": {
+    "screen": "COMBAT_PLAYER_TURN",
+    "run": {
+      "act": 1,
+      "floor": 10,
+      "hp": 80,
+      "max_hp": 80,
+      "gold": 99,
+      "character": "Ironclad",
+      "ascension": 0,
+      "seed": "HOL108FIX",
+      "relics": [
+        "BurningBlood"
+      ],
+      "deck": []
+    },
+    "combat": {
+      "round": 1,
+      "is_player_turn": true,
+      "player": {
+        "hp": 80,
+        "max_hp": 80,
+        "block": 0,
+        "energy": 6,
+        "max_energy": 3,
+        "powers": []
+      },
+      "enemies": [
+        {
+          "index": 0,
+          "entity_id": "Nibbit_0",
+          "name": "Nibbit",
+          "hp": 40,
+          "max_hp": 43,
+          "block": 400,
+          "is_alive": true,
+          "powers": [],
+          "intent": {
+            "move_id": "BUTT_MOVE",
+            "parts": [
+              {
+                "kind": "Attack",
+                "damage": 12,
+                "hits": 2,
+                "total_damage": 12
+              }
+            ]
+          }
+        }
+      ],
+      "piles": {
+        "hand": [
+          {
+            "index": 0,
+            "id": "PommelStrike",
+            "upgraded": true,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 1,
+            "id": "ShrugItOff",
+            "upgraded": true,
+            "cost": 1,
+            "kind": "Skill",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "Self",
+            "valid_targets": null
+          },
+          {
+            "index": 2,
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 3,
+            "id": "StrikeIronclad",
+            "upgraded": true,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AnyEnemy",
+            "valid_targets": [
+              0
+            ]
+          },
+          {
+            "index": 4,
+            "id": "SwordBoomerang",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "RandomEnemy",
+            "valid_targets": null
+          },
+          {
+            "index": 5,
+            "id": "SwordBoomerang",
+            "upgraded": true,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "RandomEnemy",
+            "valid_targets": null
+          }
+        ],
+        "draw": [
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          },
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          },
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          }
+        ],
+        "discard": [],
+        "exhaust": []
+      }
+    }
+  },
+  "steps": [
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "PommelStrike",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Pommel Strike+"
+      },
+      "carry": {
+        "cards_played_this_turn": 0,
+        "attacks_played_this_turn": 0,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 10,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 5,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 390,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "ShrugItOff",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Skill",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "Self",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "StrikeIronclad",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 3,
+                "id": "SwordBoomerang",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "RandomEnemy",
+                "valid_targets": null
+              },
+              {
+                "index": 4,
+                "id": "SwordBoomerang",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "RandomEnemy",
+                "valid_targets": null
+              },
+              {
+                "index": 5,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 6,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "discard": [
+              {
+                "id": "PommelStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "ShrugItOff",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "ShrugItOff+"
+      },
+      "carry": {
+        "cards_played_this_turn": 1,
+        "attacks_played_this_turn": 1,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 10,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 11,
+            "energy": 4,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 390,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "StrikeIronclad",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "SwordBoomerang",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "RandomEnemy",
+                "valid_targets": null
+              },
+              {
+                "index": 3,
+                "id": "SwordBoomerang",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "RandomEnemy",
+                "valid_targets": null
+              },
+              {
+                "index": 4,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 5,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 6,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "PommelStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "ShrugItOff",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Skill"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "StrikeIronclad",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Strike"
+      },
+      "carry": {
+        "cards_played_this_turn": 2,
+        "attacks_played_this_turn": 1,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 1,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 10,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 11,
+            "energy": 3,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 384,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "StrikeIronclad",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 1,
+                "id": "SwordBoomerang",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "RandomEnemy",
+                "valid_targets": null
+              },
+              {
+                "index": 2,
+                "id": "SwordBoomerang",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "RandomEnemy",
+                "valid_targets": null
+              },
+              {
+                "index": 3,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 4,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 5,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "PommelStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "ShrugItOff",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "StrikeIronclad",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Strike+"
+      },
+      "carry": {
+        "cards_played_this_turn": 3,
+        "attacks_played_this_turn": 2,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 1,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 10,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 11,
+            "energy": 2,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 375,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "SwordBoomerang",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "RandomEnemy",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "SwordBoomerang",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "RandomEnemy",
+                "valid_targets": null
+              },
+              {
+                "index": 2,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 3,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 4,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "PommelStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "ShrugItOff",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "SwordBoomerang",
+              "upgraded": false
+            },
+            "target": 0
+          }
+        },
+        "card": "Sword Boomerang"
+      },
+      "carry": {
+        "cards_played_this_turn": 4,
+        "attacks_played_this_turn": 3,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 1,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 10,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 11,
+            "energy": 1,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 366,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "SwordBoomerang",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "RandomEnemy",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 2,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              },
+              {
+                "index": 3,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AnyEnemy",
+                "valid_targets": [
+                  0
+                ]
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "PommelStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "ShrugItOff",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "SwordBoomerang",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "SwordBoomerang",
+              "upgraded": true
+            },
+            "target": 0
+          }
+        },
+        "card": "Sword Boomerang+"
+      },
+      "carry": {
+        "cards_played_this_turn": 5,
+        "attacks_played_this_turn": 4,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 1,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 10,
+          "hp": 80,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 80,
+            "max_hp": 80,
+            "block": 11,
+            "energy": 0,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 354,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "BUTT_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 12,
+                    "hits": 2,
+                    "total_damage": 12
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": false,
+                "unplayable_reason": "EnergyCostTooHigh",
+                "target_type": "AnyEnemy",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": false,
+                "unplayable_reason": "EnergyCostTooHigh",
+                "target_type": "AnyEnemy",
+                "valid_targets": null
+              },
+              {
+                "index": 2,
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": false,
+                "unplayable_reason": "EnergyCostTooHigh",
+                "target_type": "AnyEnemy",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "PommelStrike",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "ShrugItOff",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Skill"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "SwordBoomerang",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "SwordBoomerang",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": []
+          }
+        }
+      }
+    }
+  ]
+}

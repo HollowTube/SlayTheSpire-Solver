@@ -1,0 +1,2234 @@
+{
+  "format_version": 1,
+  "game": {
+    "version": "0.107.1",
+    "commit": "59260271"
+  },
+  "backend": {
+    "name": "MCPTest",
+    "version": "2.0.0"
+  },
+  "harness_version": 1,
+  "case": {
+    "name": "batch-normal-breakthrough",
+    "cards": [
+      "Breakthrough",
+      "Breakthrough+",
+      "Conflagration",
+      "Conflagration+",
+      "HowlFromBeyond",
+      "HowlFromBeyond+",
+      "PactsEnd",
+      "PactsEnd+"
+    ],
+    "fixture": {
+      "run": {
+        "character": "Ironclad",
+        "seed": "HOL108FIX",
+        "ascension": 0
+      },
+      "encounter": "NIBBITS_NORMAL",
+      "relics": [
+        "BURNING_BLOOD"
+      ],
+      "player": {
+        "hp": "Max",
+        "block": 0,
+        "energy": {
+          "Exact": 10
+        },
+        "powers": []
+      },
+      "enemies": [
+        {
+          "hp": 40,
+          "block": 400,
+          "powers": "AsSpawned"
+        },
+        {
+          "hp": 40,
+          "block": 400,
+          "powers": "AsSpawned"
+        }
+      ],
+      "hand": [
+        {
+          "id": "Breakthrough",
+          "upgraded": false
+        },
+        {
+          "id": "Breakthrough",
+          "upgraded": true
+        },
+        {
+          "id": "Conflagration",
+          "upgraded": false
+        },
+        {
+          "id": "Conflagration",
+          "upgraded": true
+        },
+        {
+          "id": "HowlFromBeyond",
+          "upgraded": false
+        },
+        {
+          "id": "HowlFromBeyond",
+          "upgraded": true
+        },
+        {
+          "id": "PactsEnd",
+          "upgraded": false
+        },
+        {
+          "id": "PactsEnd",
+          "upgraded": true
+        }
+      ],
+      "draw": [],
+      "discard": [],
+      "exhaust": [
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        },
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        },
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        },
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        },
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        },
+        {
+          "id": "StrikeIronclad",
+          "upgraded": false
+        }
+      ]
+    },
+    "steps": [
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Breakthrough",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Breakthrough"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Breakthrough",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "Breakthrough+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Conflagration",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Conflagration"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Conflagration",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "Conflagration+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "HowlFromBeyond",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "HowlFromBeyond"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "HowlFromBeyond",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "HowlFromBeyond+"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "PactsEnd",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "PactsEnd"
+      },
+      {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "PactsEnd",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "PactsEnd+"
+      }
+    ],
+    "masks": [],
+    "blocked": null
+  },
+  "initial": {
+    "screen": "COMBAT_PLAYER_TURN",
+    "run": {
+      "act": 1,
+      "floor": 4,
+      "hp": 80,
+      "max_hp": 80,
+      "gold": 99,
+      "character": "Ironclad",
+      "ascension": 0,
+      "seed": "HOL108FIX",
+      "relics": [
+        "BurningBlood"
+      ],
+      "deck": []
+    },
+    "combat": {
+      "round": 1,
+      "is_player_turn": true,
+      "player": {
+        "hp": 80,
+        "max_hp": 80,
+        "block": 0,
+        "energy": 10,
+        "max_energy": 3,
+        "powers": []
+      },
+      "enemies": [
+        {
+          "index": 0,
+          "entity_id": "Nibbit_0",
+          "name": "Nibbit",
+          "hp": 40,
+          "max_hp": 43,
+          "block": 400,
+          "is_alive": true,
+          "powers": [],
+          "intent": {
+            "move_id": "SLICE_MOVE",
+            "parts": [
+              {
+                "kind": "Attack",
+                "damage": 6,
+                "hits": 2,
+                "total_damage": 6
+              },
+              {
+                "kind": "Defend",
+                "damage": null,
+                "hits": null,
+                "total_damage": null
+              }
+            ]
+          }
+        },
+        {
+          "index": 1,
+          "entity_id": "Nibbit_1",
+          "name": "Nibbit",
+          "hp": 40,
+          "max_hp": 45,
+          "block": 400,
+          "is_alive": true,
+          "powers": [],
+          "intent": {
+            "move_id": "HISS_MOVE",
+            "parts": [
+              {
+                "kind": "Buff",
+                "damage": null,
+                "hits": null,
+                "total_damage": null
+              }
+            ]
+          }
+        }
+      ],
+      "piles": {
+        "hand": [
+          {
+            "index": 0,
+            "id": "Breakthrough",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AllEnemies",
+            "valid_targets": null
+          },
+          {
+            "index": 1,
+            "id": "Breakthrough",
+            "upgraded": true,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AllEnemies",
+            "valid_targets": null
+          },
+          {
+            "index": 2,
+            "id": "Conflagration",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AllEnemies",
+            "valid_targets": null
+          },
+          {
+            "index": 3,
+            "id": "Conflagration",
+            "upgraded": true,
+            "cost": 1,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AllEnemies",
+            "valid_targets": null
+          },
+          {
+            "index": 4,
+            "id": "HowlFromBeyond",
+            "upgraded": false,
+            "cost": 3,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AllEnemies",
+            "valid_targets": null
+          },
+          {
+            "index": 5,
+            "id": "HowlFromBeyond",
+            "upgraded": true,
+            "cost": 3,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AllEnemies",
+            "valid_targets": null
+          },
+          {
+            "index": 6,
+            "id": "PactsEnd",
+            "upgraded": false,
+            "cost": 0,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AllEnemies",
+            "valid_targets": null
+          },
+          {
+            "index": 7,
+            "id": "PactsEnd",
+            "upgraded": true,
+            "cost": 0,
+            "kind": "Attack",
+            "playable": true,
+            "unplayable_reason": null,
+            "target_type": "AllEnemies",
+            "valid_targets": null
+          }
+        ],
+        "draw": [],
+        "discard": [],
+        "exhaust": [
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          },
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          },
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          },
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          },
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          },
+          {
+            "id": "StrikeIronclad",
+            "upgraded": false,
+            "cost": 1,
+            "kind": "Attack"
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Breakthrough",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Breakthrough"
+      },
+      "carry": {
+        "cards_played_this_turn": 0,
+        "attacks_played_this_turn": 0,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          },
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 4,
+          "hp": 79,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 79,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 9,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 391,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "SLICE_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 6,
+                    "hits": 2,
+                    "total_damage": 6
+                  },
+                  {
+                    "kind": "Defend",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            },
+            {
+              "index": 1,
+              "entity_id": "Nibbit_1",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 391,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "HISS_MOVE",
+                "parts": [
+                  {
+                    "kind": "Buff",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Breakthrough",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "Conflagration",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 2,
+                "id": "Conflagration",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 3,
+                "id": "HowlFromBeyond",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 4,
+                "id": "HowlFromBeyond",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 5,
+                "id": "PactsEnd",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 6,
+                "id": "PactsEnd",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Breakthrough",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Breakthrough",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "Breakthrough+"
+      },
+      "carry": {
+        "cards_played_this_turn": 1,
+        "attacks_played_this_turn": 1,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          },
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 4,
+          "hp": 78,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 78,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 8,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 378,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "SLICE_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 6,
+                    "hits": 2,
+                    "total_damage": 6
+                  },
+                  {
+                    "kind": "Defend",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            },
+            {
+              "index": 1,
+              "entity_id": "Nibbit_1",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 378,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "HISS_MOVE",
+                "parts": [
+                  {
+                    "kind": "Buff",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Conflagration",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "Conflagration",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 2,
+                "id": "HowlFromBeyond",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 3,
+                "id": "HowlFromBeyond",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 4,
+                "id": "PactsEnd",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 5,
+                "id": "PactsEnd",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Breakthrough",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Breakthrough",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Conflagration",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "Conflagration"
+      },
+      "carry": {
+        "cards_played_this_turn": 2,
+        "attacks_played_this_turn": 2,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          },
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 4,
+          "hp": 78,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 78,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 7,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 370,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "SLICE_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 6,
+                    "hits": 2,
+                    "total_damage": 6
+                  },
+                  {
+                    "kind": "Defend",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            },
+            {
+              "index": 1,
+              "entity_id": "Nibbit_1",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 370,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "HISS_MOVE",
+                "parts": [
+                  {
+                    "kind": "Buff",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "Conflagration",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "HowlFromBeyond",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 2,
+                "id": "HowlFromBeyond",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 3,
+                "id": "PactsEnd",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 4,
+                "id": "PactsEnd",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Breakthrough",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Breakthrough",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Conflagration",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "Conflagration",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "Conflagration+"
+      },
+      "carry": {
+        "cards_played_this_turn": 3,
+        "attacks_played_this_turn": 3,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          },
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 4,
+          "hp": 78,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 78,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 6,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 360,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "SLICE_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 6,
+                    "hits": 2,
+                    "total_damage": 6
+                  },
+                  {
+                    "kind": "Defend",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            },
+            {
+              "index": 1,
+              "entity_id": "Nibbit_1",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 360,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "HISS_MOVE",
+                "parts": [
+                  {
+                    "kind": "Buff",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "HowlFromBeyond",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "HowlFromBeyond",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 2,
+                "id": "PactsEnd",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 3,
+                "id": "PactsEnd",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Breakthrough",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Breakthrough",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Conflagration",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Conflagration",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "HowlFromBeyond",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "HowlFromBeyond"
+      },
+      "carry": {
+        "cards_played_this_turn": 4,
+        "attacks_played_this_turn": 4,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          },
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 4,
+          "hp": 78,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 78,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 3,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 344,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "SLICE_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 6,
+                    "hits": 2,
+                    "total_damage": 6
+                  },
+                  {
+                    "kind": "Defend",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            },
+            {
+              "index": 1,
+              "entity_id": "Nibbit_1",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 344,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "HISS_MOVE",
+                "parts": [
+                  {
+                    "kind": "Buff",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "HowlFromBeyond",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "PactsEnd",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 2,
+                "id": "PactsEnd",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Breakthrough",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Breakthrough",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Conflagration",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Conflagration",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "HowlFromBeyond",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "HowlFromBeyond",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "HowlFromBeyond+"
+      },
+      "carry": {
+        "cards_played_this_turn": 5,
+        "attacks_played_this_turn": 5,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          },
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 4,
+          "hp": 78,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 78,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 0,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 323,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "SLICE_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 6,
+                    "hits": 2,
+                    "total_damage": 6
+                  },
+                  {
+                    "kind": "Defend",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            },
+            {
+              "index": 1,
+              "entity_id": "Nibbit_1",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 323,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "HISS_MOVE",
+                "parts": [
+                  {
+                    "kind": "Buff",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "PactsEnd",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              },
+              {
+                "index": 1,
+                "id": "PactsEnd",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Breakthrough",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Breakthrough",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Conflagration",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Conflagration",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "HowlFromBeyond",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "HowlFromBeyond",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "PactsEnd",
+              "upgraded": false
+            },
+            "target": null
+          }
+        },
+        "card": "PactsEnd"
+      },
+      "carry": {
+        "cards_played_this_turn": 6,
+        "attacks_played_this_turn": 6,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          },
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 4,
+          "hp": 78,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 78,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 0,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 306,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "SLICE_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 6,
+                    "hits": 2,
+                    "total_damage": 6
+                  },
+                  {
+                    "kind": "Defend",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            },
+            {
+              "index": 1,
+              "entity_id": "Nibbit_1",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 306,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "HISS_MOVE",
+                "parts": [
+                  {
+                    "kind": "Buff",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [
+              {
+                "index": 0,
+                "id": "PactsEnd",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack",
+                "playable": true,
+                "unplayable_reason": null,
+                "target_type": "AllEnemies",
+                "valid_targets": null
+              }
+            ],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Breakthrough",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Breakthrough",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Conflagration",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Conflagration",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "HowlFromBeyond",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "HowlFromBeyond",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "PactsEnd",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": {
+        "action": {
+          "PlayCard": {
+            "card": {
+              "id": "PactsEnd",
+              "upgraded": true
+            },
+            "target": null
+          }
+        },
+        "card": "PactsEnd+"
+      },
+      "carry": {
+        "cards_played_this_turn": 7,
+        "attacks_played_this_turn": 7,
+        "times_damaged_this_combat": 0,
+        "hp_lost_this_turn": false,
+        "exhausted_this_turn": false,
+        "blocks_gained_this_turn": 0,
+        "last_attacker": null,
+        "combat_counters": {},
+        "monsters": [
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          },
+          {
+            "last_move": null,
+            "move_streak": 0,
+            "moves_used": []
+          }
+        ]
+      },
+      "game_after": {
+        "screen": "COMBAT_PLAYER_TURN",
+        "run": {
+          "act": 1,
+          "floor": 4,
+          "hp": 78,
+          "max_hp": 80,
+          "gold": 99,
+          "character": "Ironclad",
+          "ascension": 0,
+          "seed": "HOL108FIX",
+          "relics": [
+            "BurningBlood"
+          ],
+          "deck": []
+        },
+        "combat": {
+          "round": 1,
+          "is_player_turn": true,
+          "player": {
+            "hp": 78,
+            "max_hp": 80,
+            "block": 0,
+            "energy": 0,
+            "max_energy": 3,
+            "powers": []
+          },
+          "enemies": [
+            {
+              "index": 0,
+              "entity_id": "Nibbit_0",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 43,
+              "block": 283,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "SLICE_MOVE",
+                "parts": [
+                  {
+                    "kind": "Attack",
+                    "damage": 6,
+                    "hits": 2,
+                    "total_damage": 6
+                  },
+                  {
+                    "kind": "Defend",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            },
+            {
+              "index": 1,
+              "entity_id": "Nibbit_1",
+              "name": "Nibbit",
+              "hp": 40,
+              "max_hp": 45,
+              "block": 283,
+              "is_alive": true,
+              "powers": [],
+              "intent": {
+                "move_id": "HISS_MOVE",
+                "parts": [
+                  {
+                    "kind": "Buff",
+                    "damage": null,
+                    "hits": null,
+                    "total_damage": null
+                  }
+                ]
+              }
+            }
+          ],
+          "piles": {
+            "hand": [],
+            "draw": [],
+            "discard": [
+              {
+                "id": "Breakthrough",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Breakthrough",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Conflagration",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "Conflagration",
+                "upgraded": true,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "HowlFromBeyond",
+                "upgraded": false,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "HowlFromBeyond",
+                "upgraded": true,
+                "cost": 3,
+                "kind": "Attack"
+              },
+              {
+                "id": "PactsEnd",
+                "upgraded": false,
+                "cost": 0,
+                "kind": "Attack"
+              },
+              {
+                "id": "PactsEnd",
+                "upgraded": true,
+                "cost": 0,
+                "kind": "Attack"
+              }
+            ],
+            "exhaust": [
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              },
+              {
+                "id": "StrikeIronclad",
+                "upgraded": false,
+                "cost": 1,
+                "kind": "Attack"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
