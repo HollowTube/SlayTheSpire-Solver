@@ -233,3 +233,26 @@ fn infested_keeps_its_count_and_non_positive_binary_statuses_are_rejected() {
     p.player.statuses = vec![("Vulnerable".to_string(), 0)];
     assert!(matches!(CombatState::from_parts(p), Err(SimError::BadParts { .. })));
 }
+
+#[test]
+fn pyre_raises_max_energy_and_energy_refills_to_it_after_end_turn() {
+    let mut p = parts();
+    p.hand = vec![CardInstance::new(CardId::Pyre), strike(), defend()];
+    let state = CombatState::from_parts(p).unwrap();
+    let after = apply(&state, &SimAction::PlayCard { card: CardId::Pyre, upgrades: 0 }).unwrap();
+    assert_eq!(after.max_energy(), 4);
+    let end = apply(&after, &SimAction::EndTurn).unwrap();
+    assert_eq!(end.energy(), 4);
+
+    let mut p = parts();
+    p.hand = vec![
+        CardInstance { id: CardId::Pyre, upgrade_level: 1 },
+        strike(),
+        defend(),
+    ];
+    let state = CombatState::from_parts(p).unwrap();
+    let after = apply(&state, &SimAction::PlayCard { card: CardId::Pyre, upgrades: 1 }).unwrap();
+    assert_eq!(after.max_energy(), 5);
+    let end = apply(&after, &SimAction::EndTurn).unwrap();
+    assert_eq!(end.energy(), 5);
+}

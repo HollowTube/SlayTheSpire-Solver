@@ -114,8 +114,9 @@ pub enum Status {
     // PlayCard branch); if unused, decays at the start of the next turn —
     // same one-shot lifecycle as `OneTwoPunch`.
     FreeAttack,
-    // Pyre: at the start of each turn, gain 1 Energy.
-    Pyre,
+    // Pyre: raises the player's max energy by its amount for the rest of the
+    // combat (mirrors PyrePower.ModifyMaxEnergy).
+    Pyre(i32),
     // Constrict: at the end of the player's turn, the holder takes `n`
     // unblockable damage (bypasses block, unaffected by damage modifiers).
     // Stacks add when reapplied (counter-style, like Strength); does NOT
@@ -201,7 +202,7 @@ impl Status {
             Status::Slippery(_) => "Slippery",
             Status::StrengthThisTurn(_) => "StrengthThisTurn",
             Status::FreeAttack => "FreeAttack",
-            Status::Pyre => "Pyre",
+            Status::Pyre(_) => "Pyre",
             Status::Constrict(_) => "Constrict",
             Status::Artifact(_) => "Artifact",
             Status::Frail(_) => "Frail",
@@ -241,7 +242,8 @@ impl Status {
             | Status::OneTwoPunch(n)
             | Status::Vicious(n)
             | Status::Juggling(n)
-            | Status::Unmovable(n) => Some(*n),
+            | Status::Unmovable(n)
+            | Status::Pyre(n) => Some(*n),
             Status::Vulnerable
             | Status::Weak
             | Status::Rage
@@ -256,7 +258,6 @@ impl Status {
             | Status::Corruption
             | Status::Cruelty
             | Status::FreeAttack
-            | Status::Pyre
             | Status::Minion { .. }
             | Status::Stun
             | Status::Infested { .. }
@@ -297,7 +298,7 @@ impl Status {
             "Enrage" => vec![Status::Enrage(amount)],
             "StrengthThisTurn" => vec![Status::StrengthThisTurn(amount)],
             "FreeAttack" => vec![Status::FreeAttack; amount.max(0) as usize],
-            "Pyre" => vec![Status::Pyre; amount.max(0) as usize],
+            "Pyre" => vec![Status::Pyre(amount)],
             "Constrict" | "CONSTRICT" => vec![Status::Constrict(amount)],
             "Artifact" | "ARTIFACT" => vec![Status::Artifact(amount)],
             "Frail" | "FRAIL" => vec![Status::Frail(amount)],
@@ -446,7 +447,6 @@ impl Status {
             (Status::FlameBarrier, GameEvent::DamageReceived) => {
                 vec![EffectOp::DealDamageToLastAttacker(4)]
             }
-            (Status::Pyre, GameEvent::TurnStart) => vec![EffectOp::GainEnergy(1)],
             // Plating: grant block at end of player turn equal to current stack.
             (Status::Plating(n), GameEvent::PlayerTurnEnd) => {
                 vec![EffectOp::GainBlock(*n)]
@@ -1100,6 +1100,13 @@ pub fn run_effect_ops(state: &mut CombatState, ops: &[EffectOp], actor: Actor, t
                 }
             }
             EffectOp::ApplyStatusToSelf(status) => {
+                // Pyre raises the player's max energy for the rest of combat
+                // (PyrePower.ModifyMaxEnergy), not granting energy per turn.
+                if actor == Actor::Player {
+                    if let Status::Pyre(n) = status {
+                        state.player_max_energy += *n;
+                    }
+                }
                 state.fighter_mut(actor).statuses.push(status.clone());
                 fire_event(state, GameEvent::StatusApplied { to: actor, by: actor, which: status.clone() });
             }

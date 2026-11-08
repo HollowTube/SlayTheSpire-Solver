@@ -473,8 +473,9 @@ fn upgrade_delta(id: CardId) -> Option<UpgradeDelta> {
             description: Some("If you Exhausted a card this turn, gain 4[E].\nExhaust."),
             ..Default::default()
         }),
-        // Pyre+: 1 → 2 energy per turn (not modelled: the status is binary).
+        // Pyre+: 1 → 2 max energy raised.
         CardId::Pyre => Some(UpgradeDelta {
+            effects_override: Some(vec![EffectOp::ApplyStatusToSelf(Status::Pyre(2))]),
             description: Some("Gain [E][E] at the start of each turn."),
             ..Default::default()
         }),
@@ -1488,13 +1489,13 @@ fn card_data_base(id: CardId) -> CardData {
             rarity: CardRarity::Uncommon,
             description: "If you Exhausted a card this turn, gain [E][E][E].\nExhaust.",
         },
-        // Pyre (Power) costs 2. At the start of each turn, gain
-        // 1 Energy — identical shape to DemonForm's TurnStart->Strength.
+        // Pyre (Power) costs 2 and raises the player's max energy by 1 for
+        // the rest of the combat.
         CardId::Pyre => CardData {
             cost: 2,
             targeted: false,
             card_type: CardType::Power,
-            effects: vec![EffectOp::ApplyStatusToSelf(Status::Pyre)],
+            effects: vec![EffectOp::ApplyStatusToSelf(Status::Pyre(1))],
             keywords: HashSet::new(),
             rarity: CardRarity::Rare,
             description: "Gain [E] at the start of each turn.",
