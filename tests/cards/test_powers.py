@@ -499,11 +499,18 @@ def test_pyre_applies_pyre_status():
     assert "Pyre" in after.player_statuses
 
 
-def test_pyre_grants_energy_at_start_of_each_turn():
+def test_pyre_raises_max_energy():
     state = _pyre_state(["Pyre", "Strike", "Strike", "Strike", "Defend"])
     after = apply(state, PlayCardAction("Pyre"))
     after_end_turn = apply(after, EndTurnAction())
     assert after_end_turn.player_energy == 4  # base 3 + Pyre 1
+
+
+def test_pyre_plus_raises_max_energy():
+    state = _pyre_state(["Pyre+", "Strike", "Strike", "Strike", "Defend"])
+    after = apply(state, PlayCardAction("Pyre+"))
+    after_end_turn = apply(after, EndTurnAction())
+    assert after_end_turn.player_energy == 5  # base 3 + Pyre+ 2
 
 
 # ── StoneArmor (Plating) ──────────────────────────────────────────────────────

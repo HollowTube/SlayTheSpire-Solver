@@ -199,7 +199,7 @@ CARD_PROBES: dict[str, dict[str, Probe]] = {
     "Mangle": {"StrengthLoss": negated(status_amount("Strength"))},
     "OneTwoPunch": {"Attacks": status_amount("OneTwoPunch")},
     "PactsEnd": {"Cards": _in_engine("the Exhaust Pile threshold is a play condition")},
-    "Pyre": {"Energy": _in_engine("binary status; energy is in the reaction")},
+    "Pyre": {"Energy": status_amount("Pyre")},
     "Rampage": {
         "Damage": field("DealDamageWithCombatBonus", "base"),
         "Increase": field("DealDamageWithCombatBonus", "increment"),
